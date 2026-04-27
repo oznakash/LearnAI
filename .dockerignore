@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+.git
+.gitignore
+.github
+.DS_Store
+*.log
+**/.vite
+**/.cache
+DESIGN_DOC.md
+HOW_IT_WORKS.md
+SPRINTS.md
+README.md

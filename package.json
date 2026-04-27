@@ -1,0 +1,17 @@
+{
+  "name": "builderquest",
+  "private": true,
+  "version": "0.1.0",
+  "description": "BuilderQuest — gamified AI learning platform",
+  "scripts": {
+    "install:app": "npm install --prefix app",
+    "build": "npm install --prefix app && npm run build --prefix app",
+    "test": "npm test --prefix app",
+    "dev": "npm run dev --prefix app",
+    "preview": "npm run preview --prefix app",
+    "postinstall": "npm install --prefix app"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
