@@ -82,6 +82,10 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
 
   const onAnswer = (correct: boolean, explain?: string) => {
     if (!spark) return;
+    // Lock: each Spark can only award XP once. Subsequent clicks on
+    // the same Spark (e.g. spamming "I got it" on a MicroRead/Tip) are
+    // ignored until Continue advances to the next Spark.
+    if (feedback) return;
     const { result, newBadges } = completeSpark(topicId, activeLevel.id, spark, correct);
     setSessionLog((arr) => [...arr, { sparkId: spark.id, correct }]);
     setCompletedThisSession((arr) => Array.from(new Set([...arr, spark.id])));
@@ -189,7 +193,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         <div className="absolute -right-6 -top-6 w-32 h-32 opacity-20 pointer-events-none">
           <Illustration k={topic.visual ?? "spark"} />
         </div>
-        <ExerciseSparkView spark={spark} topicVisual={topic.visual} onAnswer={onAnswer} />
+        <ExerciseSparkView spark={spark} topicVisual={topic.visual} locked={feedback !== null} onAnswer={onAnswer} />
       </div>
 
       {feedback && (
@@ -221,10 +225,12 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
 function ExerciseSparkView({
   spark,
   topicVisual,
+  locked,
   onAnswer,
 }: {
   spark: Spark;
   topicVisual?: import("../types").VisualKey;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
   return (
@@ -232,6 +238,7 @@ function ExerciseSparkView({
       exercise={spark.exercise as Exercise}
       title={spark.title}
       topicVisual={topicVisual}
+      locked={locked}
       onAnswer={onAnswer}
     />
   );

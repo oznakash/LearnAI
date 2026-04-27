@@ -298,12 +298,24 @@ It returns Sparks that match the schema (`microread`, `tip`, `quickpick`) calibr
 
 ## 10. Admin Console
 
-The Admin Console is reachable from Settings (visible only to admins). It has four tabs:
+The Admin Console is reachable from Settings (visible only to admins). It has **seven tabs**, exposing every variable and editable artifact in the product:
 
-- **Users** — list, search, sort, filter (active, banned, by tier). For local-only mode this includes mock cohort data plus the current local user. Operations: ban/unban, send template email (mocked send queue when no SMTP backend), reset progress.
-- **Analytics** — onboarding funnel (signup → onboarded → first Spark → 1d streak → 7d streak), DAU/WAU, sparks per user, topic popularity, retention table, conversion rate from sign-up to active.
-- **Emails** — SMTP/provider config + lifecycle template editor with live preview. Default templates: Welcome, First Spark, Daily reminder, Streak save, Weekly digest, Re-engagement, Level up, Boss beaten.
-- **Config** — feature flags (allow demo mode, allow API keys, public leaderboard), default daily minutes, brand name, accent color, admin email allowlist, dynamic content generation toggle.
+- **👥 Users** — list, search, sort, filter (active, banned, by tier). Mock cohort + the current local user; in production talks to admin endpoints. Ban/unban, reset progress, send template email.
+- **📊 Analytics** — onboarding funnel (signup → onboarded → first Spark → 1-day streak → 7-day streak), DAU/WAU/MAU, sparks per user, topic popularity, retention table.
+- **📧 Emails** — provider + SMTP/credentials + lifecycle template editor with live preview + send-queue. **Real send paths** (browser-safe):
+  - **Resend** — paste API key, calls `https://api.resend.com/emails` directly.
+  - **SMTP relay** — POST endpoint URL of your own (your backend, n8n, Make, Cloudflare Worker) which receives `{from, to, subject, html, smtp, …}` and opens the SMTP socket on its end. Optional bearer auth. SMTP host/port/user/pass fields are still here for the relay to read.
+  - **EmailJS** — service id + template id + public user id, browser-safe by design.
+  - Postmark / SendGrid / SES — accepted in the type, but the UI warns to wire them through a server-side relay.
+  - **none** — leaves messages in the local queue.
+  Default templates: Welcome, First Spark, Daily reminder, Streak save, Weekly digest, Re-engagement, Level up, Boss beaten. The "Send queue" button actually flushes the queue using the configured provider; per-message status (queued / sent / failed + error) is shown.
+- **🎮 Tuning** — every variable in the game. XP table per Spark type, Focus regen, max focus, Guild Tier thresholds, Boss pass ratio. Changes apply immediately at runtime.
+- **📚 Content** — read/write the entire curriculum. Pick any topic, edit it as JSON, save → it overrides the seed. Reset to seed any time. Export + import the whole override bundle (or a Topic[] array) for version control.
+- **📝 Prompt Studio** — assembles the **long content-generation prompt** with topic / level / count / audience / custom note.
+  - With an API key (Anthropic or OpenAI, in Settings): one-click generation, validates JSON, lets you append the new Sparks straight into a chosen topic + level.
+  - Without an API key: copy the prompt, paste it into Claude/ChatGPT/Gemini/etc., paste the JSON response back. Same insertion path.
+  - The same prompt is used by the `generateSparks()` library function, so both flows produce identical content.
+- **⚙️ Config** — feature flags (allow demo mode, allow API keys, public leaderboard, voice mode, Build Card verification), default daily minutes, brand name, accent color, logo emoji, admin email allowlist, per-user daily token cap.
 
 All admin settings are stored in `localStorage` under `builderquest:admin:v1`. In a production deployment with a backend, this same UI would talk to admin endpoints — the layout and types are designed to be portable.
 

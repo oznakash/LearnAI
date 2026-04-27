@@ -7,10 +7,23 @@ import type {
   TopicId,
 } from "../types";
 import { TOPICS, getTopic } from "../content";
+import { getRuntimeTuning } from "../admin/runtime";
 
 export const STORAGE_KEY = "builderquest:v1";
+/** Default; admin-tuning overrides at runtime via {@link getRuntimeTuning}. */
 export const MAX_FOCUS = 5;
-export const FOCUS_REGEN_MIN = 18; // 1 focus every 18 minutes
+/** Default; admin-tuning overrides at runtime via {@link getRuntimeTuning}. */
+export const FOCUS_REGEN_MIN = 18;
+
+function tuning() {
+  return getRuntimeTuning();
+}
+export function maxFocus(): number {
+  return tuning().focus.max;
+}
+export function focusRegenMin(): number {
+  return tuning().focus.regenMinutes;
+}
 
 export function defaultState(): PlayerState {
   return {
@@ -52,40 +65,47 @@ export function saveState(s: PlayerState) {
 }
 
 export function regenFocus(s: PlayerState, now = Date.now()): PlayerState {
-  if (s.focus >= MAX_FOCUS) return { ...s, focusUpdatedAt: now };
+  const max = maxFocus();
+  const regen = focusRegenMin();
+  if (s.focus >= max) return { ...s, focusUpdatedAt: now };
   const elapsedMin = (now - s.focusUpdatedAt) / 1000 / 60;
-  const gain = Math.floor(elapsedMin / FOCUS_REGEN_MIN);
+  const gain = Math.floor(elapsedMin / regen);
   if (gain <= 0) return s;
   return {
     ...s,
-    focus: Math.min(MAX_FOCUS, s.focus + gain),
-    focusUpdatedAt: s.focusUpdatedAt + gain * FOCUS_REGEN_MIN * 60 * 1000,
+    focus: Math.min(max, s.focus + gain),
+    focusUpdatedAt: s.focusUpdatedAt + gain * regen * 60 * 1000,
   };
 }
 
 export function tierForXP(xp: number): GuildTier {
-  if (xp >= 5000) return "Singularity";
-  if (xp >= 1500) return "Founder";
-  if (xp >= 500) return "Visionary";
-  if (xp >= 100) return "Architect";
+  const t = tuning().tiers;
+  if (xp >= t.singularity) return "Singularity";
+  if (xp >= t.founder) return "Founder";
+  if (xp >= t.visionary) return "Visionary";
+  if (xp >= t.architect) return "Architect";
   return "Builder";
 }
 
 export function xpForExercise(ex: Exercise, correct: boolean): number {
+  const t = tuning().xp;
   switch (ex.type) {
     case "microread":
-      return 8;
+      return t.microread;
     case "tip":
-      return ex.bonusXP ?? 5;
+      return ex.bonusXP ?? t.tip;
     case "buildcard":
-      return 20;
+      return t.buildcard;
     case "quickpick":
+      return correct ? t.quickpickCorrect : t.quickpickWrong;
     case "fillstack":
+      return correct ? t.fillstackCorrect : t.fillstackWrong;
     case "scenario":
+      return correct ? t.scenarioCorrect : t.scenarioWrong;
     case "patternmatch":
-      return correct ? 12 : 4;
+      return correct ? t.patternmatchCorrect : t.patternmatchWrong;
     case "boss":
-      return correct ? 60 : 10;
+      return correct ? t.bossPass : t.bossFail;
   }
 }
 

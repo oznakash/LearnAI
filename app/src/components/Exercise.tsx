@@ -6,25 +6,27 @@ interface Props {
   exercise: Exercise;
   title: string;
   topicVisual?: VisualKey;
+  /** True once this Spark has been answered; the renderer disables further input. */
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }
 
-export function ExerciseRenderer({ exercise, title, topicVisual, onAnswer }: Props) {
+export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswer }: Props) {
   switch (exercise.type) {
     case "microread":
-      return <MicroReadView ex={exercise} title={title} topicVisual={topicVisual} onAnswer={onAnswer} />;
+      return <MicroReadView ex={exercise} title={title} topicVisual={topicVisual} locked={locked} onAnswer={onAnswer} />;
     case "tip":
-      return <TipView ex={exercise} title={title} onAnswer={onAnswer} />;
+      return <TipView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "quickpick":
-      return <QuickPickView ex={exercise} title={title} onAnswer={onAnswer} />;
+      return <QuickPickView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "fillstack":
-      return <FillStackView ex={exercise} title={title} onAnswer={onAnswer} />;
+      return <FillStackView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "scenario":
-      return <ScenarioView ex={exercise} title={title} onAnswer={onAnswer} />;
+      return <ScenarioView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "patternmatch":
-      return <PatternMatchView ex={exercise} title={title} onAnswer={onAnswer} />;
+      return <PatternMatchView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "buildcard":
-      return <BuildCardView ex={exercise} title={title} onAnswer={onAnswer} />;
+      return <BuildCardView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "boss":
       return <BossView ex={exercise} title={title} onAnswer={onAnswer} />;
   }
@@ -34,13 +36,21 @@ function MicroReadView({
   ex,
   title,
   topicVisual,
+  locked,
   onAnswer,
 }: {
   ex: Extract<Exercise, { type: "microread" }>;
   title: string;
   topicVisual?: VisualKey;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
+  const [taken, setTaken] = useState(false);
+  const click = () => {
+    if (taken || locked) return;
+    setTaken(true);
+    onAnswer(true);
+  };
   return (
     <div>
       <div className="chip mb-2">📖 MicroRead · 60s</div>
@@ -53,7 +63,9 @@ function MicroReadView({
         💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
       </div>
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
-      <button className="btn-primary mt-4" onClick={() => onAnswer(true)}>I got it ⚡</button>
+      <button className="btn-primary mt-4" disabled={taken || locked} onClick={click}>
+        {taken || locked ? "✓ Logged" : "I got it ⚡"}
+      </button>
     </div>
   );
 }
@@ -61,19 +73,29 @@ function MicroReadView({
 function TipView({
   ex,
   title,
+  locked,
   onAnswer,
 }: {
   ex: Extract<Exercise, { type: "tip" }>;
   title: string;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
+  const [taken, setTaken] = useState(false);
+  const click = () => {
+    if (taken || locked) return;
+    setTaken(true);
+    onAnswer(true);
+  };
   return (
     <div>
       <div className="chip mb-2 bg-warn/10 border-warn/30 text-warn">💡 Tip & Trick</div>
       <h2 className="h2 mb-2">{ex.title}</h2>
       <p className="text-white/85 text-[15px] leading-relaxed">{ex.body}</p>
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
-      <button className="btn-primary mt-4" onClick={() => onAnswer(true)}>Got the trick ⚡</button>
+      <button className="btn-primary mt-4" disabled={taken || locked} onClick={click}>
+        {taken || locked ? "✓ Logged" : "Got the trick ⚡"}
+      </button>
     </div>
   );
 }
@@ -81,13 +103,16 @@ function TipView({
 function QuickPickView({
   ex,
   title,
+  locked,
   onAnswer,
 }: {
   ex: Extract<Exercise, { type: "quickpick" }>;
   title: string;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
+  const isLocked = picked !== null || locked === true;
   return (
     <div>
       <div className="chip mb-2 bg-accent/10 border-accent/30 text-accent">🎯 Quick Pick</div>
@@ -100,8 +125,9 @@ function QuickPickView({
           return (
             <button
               key={i}
+              disabled={isLocked}
               onClick={() => {
-                if (picked !== null) return;
+                if (isLocked) return;
                 setPicked(i);
                 onAnswer(i === ex.answer, ex.explain);
               }}
@@ -129,13 +155,16 @@ function QuickPickView({
 function FillStackView({
   ex,
   title,
+  locked,
   onAnswer,
 }: {
   ex: Extract<Exercise, { type: "fillstack" }>;
   title: string;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
+  const isLocked = picked !== null || locked === true;
   const [a, b] = useMemo(() => ex.prompt.split(/_{3,}/), [ex.prompt]);
   return (
     <div>
@@ -153,8 +182,9 @@ function FillStackView({
         {ex.options.map((o, i) => (
           <button
             key={i}
+            disabled={isLocked}
             onClick={() => {
-              if (picked !== null) return;
+              if (isLocked) return;
               setPicked(i);
               onAnswer(i === ex.answer, ex.explain);
             }}
@@ -180,13 +210,16 @@ function FillStackView({
 function ScenarioView({
   ex,
   title,
+  locked,
   onAnswer,
 }: {
   ex: Extract<Exercise, { type: "scenario" }>;
   title: string;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
+  const isLocked = picked !== null || locked === true;
   return (
     <div>
       <div className="chip mb-2 bg-warn/10 border-warn/30 text-warn">🧪 Field Scenario</div>
@@ -196,8 +229,9 @@ function ScenarioView({
         {ex.options.map((o, i) => (
           <button
             key={i}
+            disabled={isLocked}
             onClick={() => {
-              if (picked !== null) return;
+              if (isLocked) return;
               setPicked(i);
               onAnswer(i === ex.answer, ex.explain);
             }}
@@ -223,15 +257,19 @@ function ScenarioView({
 function PatternMatchView({
   ex,
   title,
+  locked,
   onAnswer,
 }: {
   ex: Extract<Exercise, { type: "patternmatch" }>;
   title: string;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
   const [pickedLeft, setPickedLeft] = useState<number | null>(null);
   const [matches, setMatches] = useState<Record<number, number>>({});
-  const [done, setDone] = useState(false);
+  const [doneLocal, setDoneLocal] = useState(false);
+  const done = doneLocal || locked === true;
+  const setDone = setDoneLocal;
 
   const rights = useMemo(
     () => ex.pairs.map((_, i) => i).sort(() => Math.random() - 0.5),
@@ -314,13 +352,22 @@ function PatternMatchView({
 function BuildCardView({
   ex,
   title,
+  locked,
   onAnswer,
 }: {
   ex: Extract<Exercise, { type: "buildcard" }>;
   title: string;
+  locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [taken, setTaken] = useState(false);
+  const isLocked = taken || locked === true;
+  const finish = () => {
+    if (isLocked) return;
+    setTaken(true);
+    onAnswer(true);
+  };
   return (
     <div>
       <div className="chip mb-2 bg-accent2/10 border-accent2/30 text-accent2">🛠️ Build Card · try in Claude Code</div>
@@ -346,8 +393,12 @@ function BuildCardView({
       </div>
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
       <div className="flex gap-2 mt-3">
-        <button className="btn-primary" onClick={() => onAnswer(true)}>Mark as tried ⚡</button>
-        <button className="btn-ghost" onClick={() => onAnswer(true)}>Save for later</button>
+        <button className="btn-primary" disabled={isLocked} onClick={finish}>
+          {isLocked ? "✓ Logged" : "Mark as tried ⚡"}
+        </button>
+        <button className="btn-ghost" disabled={isLocked} onClick={finish}>
+          Save for later
+        </button>
       </div>
     </div>
   );
