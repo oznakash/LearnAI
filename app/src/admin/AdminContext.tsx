@@ -18,6 +18,7 @@ import {
 } from "./store";
 import { defaultAdminConfig } from "./defaults";
 import { buildAnalytics, buildMockUsers } from "./mockUsers";
+import { sendEmail } from "./sender";
 import { usePlayer } from "../store/PlayerContext";
 
 type Action =
@@ -50,7 +51,8 @@ interface Ctx {
     templateId: EmailTemplateId,
     extraVars?: Record<string, string | number>
   ) => void;
-  flushQueue: () => void;
+  flushQueue: () => Promise<void> | void;
+  sendTestEmail: (to: string, templateId: EmailTemplateId) => Promise<{ ok: boolean; error?: string }>;
   resetAdminConfig: () => void;
 }
 
@@ -216,13 +218,77 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     [mockUsers, setConfig]
   );
 
-  /** Pretend-send everything in the queue (no real SMTP). */
-  const flushQueue = useCallback(() => {
-    setConfig((cfg) => ({
-      ...cfg,
-      emailQueue: cfg.emailQueue.map((q) => ({ ...q, status: "sent" })),
+  /**
+   * Send everything in the queue using the configured provider. Each message
+   * is updated with `sent` or `failed` (+ error). Browser-side providers
+   * supported: Resend, EmailJS, smtp-relay (your own webhook). For
+   * Postmark/SendGrid/SES use a server-side relay.
+   */
+  const flushQueue = useCallback(async () => {
+    const cfg = config;
+    const queued = cfg.emailQueue.filter((q) => q.status === "queued");
+    if (queued.length === 0) return;
+    const results = await Promise.all(
+      queued.map(async (q) => ({ q, res: await sendEmail(cfg.emailConfig, q) }))
+    );
+    setConfig((cur) => ({
+      ...cur,
+      emailQueue: cur.emailQueue.map((q) => {
+        const hit = results.find((r) => r.q.id === q.id);
+        if (!hit) return q;
+        return {
+          ...q,
+          status: hit.res.ok ? "sent" : "failed",
+          error: hit.res.error,
+        };
+      }),
     }));
-  }, [setConfig]);
+  }, [config, setConfig]);
+
+  /**
+   * Manually drop a one-off message into the queue & send. Useful for the
+   * "Send test email" button in the Emails tab.
+   */
+  const sendTestEmail = useCallback(
+    async (to: string, templateId: EmailTemplateId): Promise<{ ok: boolean; error?: string }> => {
+      const tpl = config.emailTemplates[templateId];
+      if (!tpl) return { ok: false, error: "Unknown template id." };
+      const vars = {
+        appName: config.branding.appName,
+        appUrl: typeof window !== "undefined" ? window.location.origin : "",
+        accent: config.branding.accentColor,
+        accent2: config.branding.accent2Color,
+        logoEmoji: config.branding.logoEmoji,
+        firstName: "Friend",
+        fullName: "BuilderQuest test",
+        email: to,
+        streak: 7,
+        xp: 320,
+        tier: "Architect",
+        topicName: "AI Foundations",
+        level: 1,
+      };
+      const { cfg: nextCfg, queued } = queueEmail(config, to, templateId, vars);
+      const res = await sendEmail(nextCfg.emailConfig, queued);
+      setConfig((cur) => ({
+        ...nextCfg,
+        emailQueue: nextCfg.emailQueue.map((q) =>
+          q.id === queued.id ? { ...q, status: res.ok ? "sent" : "failed", error: res.error } : q
+        ),
+        // preserve other admin-config edits the admin made since
+        // flushQueue might race with this:
+        admins: cur.admins,
+        bootstrapped: cur.bootstrapped,
+        branding: cur.branding,
+        flags: cur.flags,
+        defaultDailyMinutes: cur.defaultDailyMinutes,
+        emailConfig: cur.emailConfig,
+        emailTemplates: cur.emailTemplates,
+      }));
+      return res;
+    },
+    [config, setConfig]
+  );
 
   const resetAdminConfig = useCallback(() => {
     if (typeof window !== "undefined") window.localStorage.removeItem(ADMIN_STORAGE_KEY);
@@ -246,6 +312,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       resetUserProgress,
       sendTemplateToUser,
       flushQueue,
+      sendTestEmail,
       resetAdminConfig,
     }),
     [
@@ -262,6 +329,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       resetUserProgress,
       sendTemplateToUser,
       flushQueue,
+      sendTestEmail,
       resetAdminConfig,
     ]
   );

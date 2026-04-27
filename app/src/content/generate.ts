@@ -1,4 +1,5 @@
 import type { Spark } from "../types";
+import { buildGenerationPrompt } from "./prompt";
 
 interface GenerateOpts {
   apiKey: string;
@@ -8,6 +9,7 @@ interface GenerateOpts {
   level: number;
   audience: string;
   count?: number;
+  customNote?: string;
 }
 
 /**
@@ -28,17 +30,16 @@ export async function generateSparks({
   level,
   audience,
   count = 3,
+  customNote,
 }: GenerateOpts): Promise<Spark[]> {
-  const sys = `You generate JSON for a gamified AI learning app called BuilderQuest.
-Audience profile: ${audience}.
-Topic: ${topicName} — ${topicTagline}.
-Level: ${level} (1=easy, 10=advanced).
-Return ONLY valid JSON of this shape:
-{ "sparks": [ { "type": "microread"|"quickpick"|"tip", ...fields... } ] }
-microread: { "type":"microread","title":"...","body":"60-100 words","takeaway":"one sentence" }
-tip: { "type":"tip","title":"💡 Tip & Trick","body":"30-60 words" }
-quickpick: { "type":"quickpick","prompt":"...","options":["a","b","c","d"],"answer":1,"explain":"..." }
-Make ${count} sparks total, mixed types, calibrated to the level. No markdown, no prose, JSON only.`;
+  const sys = buildGenerationPrompt({
+    topicName,
+    topicTagline,
+    level,
+    count,
+    audience,
+    customNote,
+  });
 
   const user = "Generate now.";
   let text = "";

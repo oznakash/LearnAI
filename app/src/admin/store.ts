@@ -19,6 +19,18 @@ export function loadAdminConfig(): AdminConfig {
       emailTemplates: { ...base.emailTemplates, ...(parsed.emailTemplates ?? {}) },
       admins: parsed.admins ?? [],
       emailQueue: parsed.emailQueue ?? [],
+      tuning: {
+        ...base.tuning,
+        ...(parsed.tuning ?? {}),
+        xp: { ...base.tuning.xp, ...((parsed.tuning?.xp) ?? {}) },
+        focus: { ...base.tuning.focus, ...((parsed.tuning?.focus) ?? {}) },
+        tiers: { ...base.tuning.tiers, ...((parsed.tuning?.tiers) ?? {}) },
+      },
+      contentOverrides: {
+        topics: parsed.contentOverrides?.topics ?? {},
+        extras: parsed.contentOverrides?.extras ?? [],
+      },
+      promptStudio: { ...base.promptStudio, ...(parsed.promptStudio ?? {}) },
     };
   } catch {
     return defaultAdminConfig();

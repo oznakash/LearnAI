@@ -1,4 +1,33 @@
-import type { AdminConfig, EmailTemplate, EmailTemplateId } from "./types";
+import type { AdminConfig, EmailTemplate, EmailTemplateId, GameTuning } from "./types";
+
+export const DEFAULT_TUNING: GameTuning = {
+  xp: {
+    microread: 8,
+    tip: 5,
+    quickpickCorrect: 12,
+    quickpickWrong: 4,
+    fillstackCorrect: 12,
+    fillstackWrong: 4,
+    scenarioCorrect: 12,
+    scenarioWrong: 4,
+    patternmatchCorrect: 12,
+    patternmatchWrong: 4,
+    buildcard: 20,
+    bossPass: 60,
+    bossFail: 10,
+  },
+  focus: {
+    max: 5,
+    regenMinutes: 18,
+  },
+  tiers: {
+    architect: 100,
+    visionary: 500,
+    founder: 1500,
+    singularity: 5000,
+  },
+  bossPassRatio: 2 / 3,
+};
 
 export const DEFAULT_TEMPLATES: Record<EmailTemplateId, EmailTemplate> = {
   welcome: {
@@ -165,5 +194,15 @@ export function defaultAdminConfig(): AdminConfig {
     },
     emailTemplates: { ...DEFAULT_TEMPLATES },
     emailQueue: [],
+    tuning: { ...DEFAULT_TUNING, xp: { ...DEFAULT_TUNING.xp }, focus: { ...DEFAULT_TUNING.focus }, tiers: { ...DEFAULT_TUNING.tiers } },
+    contentOverrides: { topics: {}, extras: [] },
+    promptStudio: {
+      audience: "Active AI builders + curious starters, mixed audience, plain English with concrete examples.",
+      topicName: "AI Foundations",
+      topicTagline: "What AI is, how it learns, and why it works (or doesn't).",
+      level: 1,
+      count: 3,
+      customNote: "",
+    },
   };
 }
