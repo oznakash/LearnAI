@@ -1,0 +1,163 @@
+import { useState } from "react";
+import { usePlayer } from "../store/PlayerContext";
+import { TOPICS } from "../content";
+import type { TopicId } from "../types";
+import { STORAGE_KEY } from "../store/game";
+
+export function Settings() {
+  const { state, signOut, setState, setApiKey, setGoogleClientId, setProfile } = usePlayer();
+  const [apiKeyDraft, setApiKeyDraft] = useState(state.apiKey ?? "");
+  const [provider, setProvider] = useState<"anthropic" | "openai">(state.apiProvider ?? "anthropic");
+  const [clientIdDraft, setClientIdDraft] = useState(state.googleClientId ?? "");
+  const [interestsDraft, setInterestsDraft] = useState<TopicId[]>(state.profile?.interests ?? []);
+  const [dailyMins, setDailyMins] = useState(state.profile?.dailyMinutes ?? 10);
+
+  const toggle = (id: TopicId) =>
+    setInterestsDraft((arr) => (arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]));
+
+  const saveInterests = () => {
+    if (!state.profile) return;
+    setProfile({ ...state.profile, interests: interestsDraft, dailyMinutes: dailyMins });
+  };
+
+  const reset = () => {
+    if (!confirm("Erase all local progress? This cannot be undone.")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  };
+
+  return (
+    <div className="space-y-5">
+      <header>
+        <h1 className="h1">Settings</h1>
+        <p className="muted">Profile, API keys, sign-in, preferences.</p>
+      </header>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="h2">Profile</h2>
+        <div className="text-sm text-white/70">
+          {state.identity ? (
+            <>
+              Signed in as <span className="text-white">{state.identity.name ?? state.identity.email}</span>
+              <div className="text-xs text-white/50">{state.identity.email}</div>
+            </>
+          ) : (
+            "Not signed in"
+          )}
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <div className="label">Daily minutes</div>
+            <input type="number" className="input" value={dailyMins} min={1} max={120} onChange={(e) => setDailyMins(Number(e.target.value))} />
+          </div>
+          <div>
+            <div className="label">Skill level</div>
+            <select
+              className="input"
+              value={state.profile?.skillLevel ?? "explorer"}
+              onChange={(e) =>
+                state.profile && setProfile({ ...state.profile, skillLevel: e.target.value as never })
+              }
+            >
+              <option value="starter">Curious starter</option>
+              <option value="explorer">Hobby explorer</option>
+              <option value="builder">Active builder</option>
+              <option value="architect">Senior architect</option>
+              <option value="visionary">Frontier visionary</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div className="label">Interests</div>
+          <div className="grid sm:grid-cols-2 gap-2 mt-1">
+            {TOPICS.map((t) => {
+              const on = interestsDraft.includes(t.id);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => toggle(t.id)}
+                  className={`p-2 rounded-xl border text-left ${on ? "bg-accent/15 border-accent" : "bg-white/5 border-white/10 hover:border-white/30"}`}
+                >
+                  <span className="mr-2">{t.emoji}</span>
+                  <span className="text-white">{t.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <button className="btn-primary" onClick={saveInterests}>Save profile</button>
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="h2">API key (for dynamic content)</h2>
+        <p className="muted text-xs">
+          Optional. With an Anthropic or OpenAI key, BuilderQuest can generate fresh Sparks + tips on demand.
+          Your key is stored in this browser only and used to call the provider directly.
+        </p>
+        <div className="grid sm:grid-cols-3 gap-2">
+          <select className="input" value={provider} onChange={(e) => setProvider(e.target.value as never)}>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+          </select>
+          <input
+            className="input sm:col-span-2"
+            type="password"
+            placeholder={provider === "anthropic" ? "sk-ant-…" : "sk-…"}
+            value={apiKeyDraft}
+            onChange={(e) => setApiKeyDraft(e.target.value)}
+          />
+        </div>
+        <button className="btn-primary" onClick={() => setApiKey(apiKeyDraft.trim(), provider)}>
+          Save API key
+        </button>
+        {state.apiKey && (
+          <div className="text-xs text-good">✓ Key set ({state.apiProvider})</div>
+        )}
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="h2">Google OAuth Client ID</h2>
+        <p className="muted text-xs">
+          Used for Gmail-only sign-in. You can replace it any time. Get one at console.cloud.google.com → APIs &amp; Services → Credentials.
+        </p>
+        <input
+          className="input"
+          placeholder="123-xxxxxx.apps.googleusercontent.com"
+          value={clientIdDraft}
+          onChange={(e) => setClientIdDraft(e.target.value.trim())}
+        />
+        <button className="btn-primary" onClick={() => setGoogleClientId(clientIdDraft)}>
+          Save Client ID
+        </button>
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="h2">Preferences</h2>
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={state.prefs.sound}
+            onChange={(e) => setState((s) => ({ ...s, prefs: { ...s.prefs, sound: e.target.checked } }))}
+          />
+          Play sounds (coming soon)
+        </label>
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={state.prefs.haptics}
+            onChange={(e) => setState((s) => ({ ...s, prefs: { ...s.prefs, haptics: e.target.checked } }))}
+          />
+          Haptic feedback (mobile)
+        </label>
+      </section>
+
+      <section className="card p-5 space-y-3 border-bad/30">
+        <h2 className="h2 text-bad">Account</h2>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-ghost" onClick={signOut}>Sign out</button>
+          <button className="btn-bad" onClick={reset}>Erase all local data</button>
+        </div>
+      </section>
+    </div>
+  );
+}
