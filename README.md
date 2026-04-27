@@ -30,10 +30,10 @@ BuilderQuest helps active AI builders **stay sharp in 5–10 minute bursts**, an
 npm install     # installs the app workspace under ./app
 npm run dev     # dev server
 npm test        # vitest (39 tests)
-npm run build   # production build → app/dist
+npm run build   # production build → ./dist (repo root)
 ```
 
-> The real project lives in `./app`. The root `package.json` delegates every script there, so most cloud deployers ("`npm install && npm run build`") just work without configuration.
+> The real project lives in `./app`. The root `package.json` delegates every script there, so most cloud deployers ("`npm install && npm run build`") just work without configuration. The built output lands in `/dist/` at the repo root and is **committed + kept fresh by GitHub Actions** so static-mirror deployers serve a working SPA immediately.
 
 ## Deploy
 
@@ -41,13 +41,14 @@ The output is a static SPA — works on any static host.
 
 | Host | How |
 |---|---|
-| **Docker / generic nginx** | `docker build -t builderquest .` → `docker run -p 80:80 builderquest`. Uses the included `Dockerfile` + `nginx.conf` (multi-stage build → nginx alpine, gzipped, hashed-asset caching, SPA fallback to `index.html`). |
-| **Vercel** | Push the repo. `vercel.json` already points the build to `app/`. |
-| **Netlify** | Push the repo. `netlify.toml` already sets `base = "app"`. |
-| **Cloudflare Pages / Render / Railway** | Build command `npm run build`, output `app/dist`. |
-| **GitHub Pages / S3 / Cloudfront** | Run `npm run build` locally, upload `app/dist/`. |
+| **Static-mirror deployers** (cloud-claude.com, etc.) | Point the web root at `/dist/`. The repo ships a prebuilt SPA there, kept fresh by GitHub Actions. No build step required. |
+| **Docker / generic nginx** | `docker build -t builderquest .` → `docker run -p 80:80 builderquest`. Multi-stage build → nginx alpine, gzipped, hashed-asset caching, SPA fallback to `index.html`. |
+| **Vercel** | Push the repo. `vercel.json` already points the build to `./dist`. |
+| **Netlify** | Push the repo. `netlify.toml` already publishes `./dist`. |
+| **Cloudflare Pages / Render / Railway** | Build command `npm run build`, output `dist`. |
+| **GitHub Pages / S3 / CloudFront** | The committed `/dist/` can be served directly. |
 
-If your host shows the **default nginx welcome page**, the build step didn't actually run — point the build command at `npm run build` from the repo root and the output directory at `app/dist`.
+If your host shows the **default nginx welcome page**, point its web root at `/dist/`. The repo now ships a prebuilt SPA there, so a build step at the host is no longer required.
 
 ## Sign-in setup
 
