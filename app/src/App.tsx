@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PlayerProvider, usePlayer } from "./store/PlayerContext";
+import { AdminProvider } from "./admin/AdminContext";
 import { SignIn } from "./views/SignIn";
 import { Onboarding } from "./views/Onboarding";
 import { Home } from "./views/Home";
@@ -10,6 +11,7 @@ import { Dashboard } from "./views/Dashboard";
 import { Settings } from "./views/Settings";
 import { Leaderboard } from "./views/Leaderboard";
 import { Calibration } from "./views/Calibration";
+import { AdminConsole } from "./admin/AdminConsole";
 import type { TopicId } from "./types";
 import { TopBar } from "./components/TopBar";
 import { TabBar } from "./components/TabBar";
@@ -22,7 +24,8 @@ export type View =
   | { name: "dashboard" }
   | { name: "settings" }
   | { name: "leaderboard" }
-  | { name: "calibration" };
+  | { name: "calibration" }
+  | { name: "admin" };
 
 function Shell() {
   const { state } = usePlayer();
@@ -49,9 +52,10 @@ function Shell() {
         )}
         {view.name === "tasks" && <Tasks />}
         {view.name === "dashboard" && <Dashboard onNav={go} />}
-        {view.name === "settings" && <Settings />}
+        {view.name === "settings" && <Settings onNav={go} />}
         {view.name === "leaderboard" && <Leaderboard />}
         {view.name === "calibration" && <Calibration onDone={() => go({ name: "home" })} />}
+        {view.name === "admin" && <AdminConsole onExit={() => go({ name: "home" })} />}
       </main>
       <TabBar view={view} onNav={go} />
     </div>
@@ -61,7 +65,9 @@ function Shell() {
 export default function App() {
   return (
     <PlayerProvider>
-      <Shell />
+      <AdminProvider>
+        <Shell />
+      </AdminProvider>
     </PlayerProvider>
   );
 }
