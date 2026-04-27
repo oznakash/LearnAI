@@ -36,15 +36,15 @@ Prereqs: Node 20+ (Node 22 tested), npm 10+.
 
 ```bash
 git clone https://github.com/oznakash/learnai.git
-cd learnai/app
-npm install
+cd learnai
+npm install      # delegates to ./app
 npm run dev      # local dev at http://localhost:5173
-npm test         # vitest
-npm run build    # production build → app/dist
+npm test         # vitest (39 tests)
+npm run build    # production build → ./dist (repo root)
 npm run preview  # preview production build locally
 ```
 
-That's it. The built `app/dist/` directory is a static site you can drop on any host.
+That's it. The built `./dist/` directory at the repo root is a static site you can drop on any host. Output is committed to the repo and kept in sync by GitHub Actions on every push to `main`, so static-mirror deployers (e.g. an nginx PaaS that doesn't run a build step) serve a working SPA immediately without any build configuration.
 
 ## 3. Configuration checklist
 
@@ -325,11 +325,15 @@ The app builds to a static directory. The repo is structured so that **running `
 
 ### Got the nginx welcome page?
 
-That means the host is up but no build was placed in the web root. Most likely your platform's auto-deploy didn't find a build step at the repo root. Fixes:
+That means the host is up but no build was placed in the web root. The repo now ships with a **prebuilt `/dist/`** at the root, kept fresh by GitHub Actions on every push to `main`. So most static-mirror deployers will serve a working SPA immediately without any build step.
 
-1. Use the included `Dockerfile` (it does the build + the nginx swap for you).
-2. Or set the platform's build command to `npm run build` and the output directory to `app/dist`.
-3. Or place a copy of one of the included `vercel.json` / `netlify.toml` / `static.json` at the platform's expected path.
+If your platform still serves the welcome page:
+
+1. **Point its web root at `/dist/`** (not the repo root).
+2. Or use the included `Dockerfile` — it builds + swaps nginx's content for you.
+3. Or set its build command to `npm run build` and its output directory to `dist`.
+
+The `vercel.json`, `netlify.toml`, and `static.json` files at the repo root already do this for those platforms.
 
 ### After deployment
 

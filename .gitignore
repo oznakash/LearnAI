@@ -1,0 +1,16 @@
+# Node + tooling
+node_modules
+*.log
+.DS_Store
+
+# Vite per-folder build (stale, kept for safety)
+app/dist/
+
+# IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# We DO commit the built /dist/ output at the repo root so static-mirror
+# deployers (e.g. nginx-backed PaaS that don't run a build step) serve a
+# working SPA immediately. CI keeps it fresh on every push to main.

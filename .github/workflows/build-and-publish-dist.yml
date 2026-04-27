@@ -1,0 +1,58 @@
+name: Build & publish /dist
+
+# Keeps the committed `/dist/` directory in sync with the source on every
+# push to `main`, so static-mirror deployers (e.g. cloud-claude.com nginx)
+# always serve the latest built SPA without having to run a build themselves.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build-and-publish-dist.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dist-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install + build
+        run: |
+          npm install --prefix app
+          npm run build --prefix app
+
+      - name: Test
+        run: npm test --prefix app
+
+      - name: Commit /dist/ if changed
+        run: |
+          git config user.name "builderquest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A dist
+          if git diff --cached --quiet; then
+            echo "No /dist/ changes — skipping commit."
+            exit 0
+          fi
+          git commit -m "ci: rebuild /dist/ from ${GITHUB_SHA::7}"
+          git push origin HEAD:main
