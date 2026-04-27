@@ -26,14 +26,28 @@ BuilderQuest helps active AI builders **stay sharp in 5–10 minute bursts**, an
 ## Quick start
 
 ```bash
-cd app
-npm install
-npm run dev    # dev server
-npm test       # vitest (31 tests)
-npm run build  # production build → app/dist
+# from the repo root
+npm install     # installs the app workspace under ./app
+npm run dev     # dev server
+npm test        # vitest (39 tests)
+npm run build   # production build → app/dist
 ```
 
-The `app/dist` folder is a static site — deploy to Vercel, Netlify, Cloudflare Pages, or any static host.
+> The real project lives in `./app`. The root `package.json` delegates every script there, so most cloud deployers ("`npm install && npm run build`") just work without configuration.
+
+## Deploy
+
+The output is a static SPA — works on any static host.
+
+| Host | How |
+|---|---|
+| **Docker / generic nginx** | `docker build -t builderquest .` → `docker run -p 80:80 builderquest`. Uses the included `Dockerfile` + `nginx.conf` (multi-stage build → nginx alpine, gzipped, hashed-asset caching, SPA fallback to `index.html`). |
+| **Vercel** | Push the repo. `vercel.json` already points the build to `app/`. |
+| **Netlify** | Push the repo. `netlify.toml` already sets `base = "app"`. |
+| **Cloudflare Pages / Render / Railway** | Build command `npm run build`, output `app/dist`. |
+| **GitHub Pages / S3 / Cloudfront** | Run `npm run build` locally, upload `app/dist/`. |
+
+If your host shows the **default nginx welcome page**, the build step didn't actually run — point the build command at `npm run build` from the repo root and the output directory at `app/dist`.
 
 ## Sign-in setup
 

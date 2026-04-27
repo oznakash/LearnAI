@@ -311,15 +311,29 @@ To bootstrap admin access on first run, sign in with the email you want to be th
 
 ## 11. Deployment
 
-The app builds to a static directory. Any of these hosts work zero-config:
+The app builds to a static directory. The repo is structured so that **running `npm install && npm run build` at the root works on any cloud deployer** — the root `package.json` delegates to `./app`. Output is in `app/dist/`.
 
-- **Vercel**: `vercel --prod` from the `app/` directory.
-- **Netlify**: drag `app/dist/` into the Netlify dashboard, or `netlify deploy --prod --dir=dist`.
-- **Cloudflare Pages**: connect the repo, set Build command `npm run build`, Output directory `dist`, Root directory `app`.
-- **GitHub Pages**: build locally, push `app/dist/` to a `gh-pages` branch.
-- **S3 / Cloudfront**: `aws s3 sync app/dist/ s3://your-bucket --delete`.
+### Easiest paths
 
-After deployment, **add the deployed URL** to your Google OAuth client's Authorized JavaScript origins so sign-in works.
+- **Docker / nginx** (most universal): `docker build -t builderquest .` then `docker run -p 80:80 builderquest`. The included `Dockerfile` is a multi-stage build (Node → nginx alpine) with a tuned `nginx.conf` that enables gzip, long-cache hashed assets, and SPA fallback (`try_files … /index.html`).
+- **Vercel**: connect the repo. `vercel.json` already points the build to `app/`.
+- **Netlify**: connect the repo. `netlify.toml` already sets `base = "app"`.
+- **Cloudflare Pages**: build command `npm run build`, output `app/dist`.
+- **Render / Railway / Fly**: a Docker deployment using the included `Dockerfile` is the fastest path.
+- **GitHub Pages**: run `npm run build` locally, push `app/dist/` to a `gh-pages` branch.
+- **S3 / CloudFront**: `aws s3 sync app/dist/ s3://your-bucket --delete`.
+
+### Got the nginx welcome page?
+
+That means the host is up but no build was placed in the web root. Most likely your platform's auto-deploy didn't find a build step at the repo root. Fixes:
+
+1. Use the included `Dockerfile` (it does the build + the nginx swap for you).
+2. Or set the platform's build command to `npm run build` and the output directory to `app/dist`.
+3. Or place a copy of one of the included `vercel.json` / `netlify.toml` / `static.json` at the platform's expected path.
+
+### After deployment
+
+**Add the deployed URL** to your Google OAuth client's Authorized JavaScript origins so sign-in works. The Client ID is per-origin — `localhost:5173`, `your-staging.example.com`, and `your-prod.example.com` all need to be listed there.
 
 ## 12. Testing
 
