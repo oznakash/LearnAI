@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { usePlayer } from "../store/PlayerContext";
+import { useAdmin } from "../admin/AdminContext";
+import { ADMIN_STORAGE_KEY } from "../admin/store";
 import { TOPICS } from "../content";
 import type { TopicId } from "../types";
 import { STORAGE_KEY } from "../store/game";
+import type { View } from "../App";
 
-export function Settings() {
+export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
   const { state, signOut, setState, setApiKey, setGoogleClientId, setProfile } = usePlayer();
+  const { config: adminCfg, isAdmin, bootstrapAdmin } = useAdmin();
   const [apiKeyDraft, setApiKeyDraft] = useState(state.apiKey ?? "");
   const [provider, setProvider] = useState<"anthropic" | "openai">(state.apiProvider ?? "anthropic");
   const [clientIdDraft, setClientIdDraft] = useState(state.googleClientId ?? "");
@@ -23,7 +27,13 @@ export function Settings() {
   const reset = () => {
     if (!confirm("Erase all local progress? This cannot be undone.")) return;
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(ADMIN_STORAGE_KEY);
     location.reload();
+  };
+
+  const onBootstrap = () => {
+    if (!state.identity?.email) return;
+    bootstrapAdmin(state.identity.email);
   };
 
   return (
@@ -149,6 +159,31 @@ export function Settings() {
           />
           Haptic feedback (mobile)
         </label>
+      </section>
+
+      <section className="card p-5 space-y-3">
+        <h2 className="h2">Admin</h2>
+        {isAdmin ? (
+          <>
+            <p className="muted text-xs">You're an admin. Open the console to manage users, analytics, emails, and config.</p>
+            <button
+              className="btn-primary"
+              onClick={() => onNav?.({ name: "admin" })}
+            >
+              🛠 Open Admin Console
+            </button>
+            <p className="text-[11px] text-white/50">Allowlist: {adminCfg.admins.length} admin{adminCfg.admins.length === 1 ? "" : "s"}.</p>
+          </>
+        ) : adminCfg.bootstrapped ? (
+          <p className="text-xs text-white/60">Admin allowlist already initialized. Ask an existing admin to add your Gmail.</p>
+        ) : (
+          <>
+            <p className="muted text-xs">No admin yet — bootstrap yourself ({state.identity?.email}) as the first admin.</p>
+            <button className="btn-primary" onClick={onBootstrap} disabled={!state.identity?.email}>
+              Bootstrap me as admin
+            </button>
+          </>
+        )}
       </section>
 
       <section className="card p-5 space-y-3 border-bad/30">

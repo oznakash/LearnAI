@@ -4,7 +4,10 @@
 
 BuilderQuest helps active AI builders **stay sharp in 5–10 minute bursts**, and helps curious starters **ramp up without fear**. Pick a topic, run a Spark, watch your Build Streak climb. 12 topics, 10 levels each, hundreds of bite-sized exercises — plus optional API-key-driven dynamic content.
 
-📘 See **[DESIGN_DOC.md](./DESIGN_DOC.md)** for the full game design (terminology, mechanics, onboarding, registration, leaderboard, content).
+📘 Docs:
+- **[HOW_IT_WORKS.md](./HOW_IT_WORKS.md)** — install, configure, mechanics, UX, architecture.
+- **[DESIGN_DOC.md](./DESIGN_DOC.md)** — full game design rationale.
+- **[SPRINTS.md](./SPRINTS.md)** — the next 5 sprints (starter → deep researcher).
 
 ## Highlights
 
@@ -18,6 +21,7 @@ BuilderQuest helps active AI builders **stay sharp in 5–10 minute bursts**, an
 - 🎨 Vivid mascot, confetti, 20+ illustrations, glowing UI.
 - 🔐 **Gmail-only sign-in** via Google Identity Services.
 - 🤖 Optional Anthropic / OpenAI API key for unlimited fresh content.
+- 🛠 **Admin Console** — Users management, Analytics, Lifecycle Emails (with template editor + live preview), Branding & Config. Gated by Gmail allowlist.
 
 ## Quick start
 
@@ -46,6 +50,18 @@ Or use **Demo mode** to skip OAuth setup and just enter a Gmail address (still r
 
 Settings → API key → paste an Anthropic or OpenAI key. The app can then generate fresh Sparks calibrated to your topic + level + audience. Keys are stored in your browser only.
 
+## Admin Console
+
+Settings → **Bootstrap me as admin** (first time, the signed-in Gmail becomes the seed admin) → **Open Admin Console**.
+
+The console has four tabs:
+- **👥 Users** — search, filter, sort; ban/unban, reset progress, send any enabled lifecycle template to a user (queues outbound).
+- **📊 Analytics** — onboarding funnel (signup → onboarded → first Spark → 1d streak → 7d streak), DAU/WAU/MAU, signup sparkline, topic popularity, cohort retention table, power users.
+- **📧 Emails** — choose a provider (Resend, Postmark, SendGrid, SES, generic SMTP, or queue-only) + edit any of the 8 lifecycle templates with **live HTML preview** and `{{placeholder}}` substitution.
+- **⚙️ Config** — branding (app name, accent colors, logo), feature flags, default daily minutes, per-user token cap, admin allowlist.
+
+All admin state is stored in `localStorage` under `builderquest:admin:v1`. In a production deployment with a backend, the same UI would talk to admin endpoints — the layout and types are designed to be portable.
+
 ## Tech
 
 React 19 · Vite 8 · TypeScript · Tailwind 3 · Vitest · Google Identity Services. No backend. State persists to `localStorage`.
@@ -71,6 +87,7 @@ app/
 │   │                              # Leaderboard, Calibration
 │   ├── components/                # TopBar, TabBar, Exercise, AddToTaskButton
 │   ├── visuals/                   # Mascot, Illustrations, Charts, Confetti
+│   ├── admin/                     # Admin Console + types + mock data + store
 │   ├── types.ts
 │   └── __tests__/                 # Vitest
 └── ...
