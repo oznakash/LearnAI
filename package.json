@@ -9,7 +9,9 @@
     "test": "npm test --prefix app",
     "dev": "npm run dev --prefix app",
     "preview": "npm run preview --prefix app",
-    "postinstall": "npm install --prefix app"
+    "postinstall": "npm install --prefix app",
+    "deploy:mem0": "./scripts/deploy-mem0.sh",
+    "smoke:memory": "node ./scripts/smoke-memory.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
