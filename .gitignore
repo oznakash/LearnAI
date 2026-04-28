@@ -3,6 +3,10 @@ node_modules
 *.log
 .DS_Store
 
+# Local env (mem0 secrets, LLM keys, etc.)
+.env
+.env.local
+
 # Vite per-folder build (stale, kept for safety)
 app/dist/
 

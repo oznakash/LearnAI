@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getTopic, TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
+import { useMemory } from "../memory/MemoryContext";
 import {
   completedSparkIds,
   isLevelUnlocked,
@@ -29,6 +30,7 @@ interface PlayedSparkLog {
 
 export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const { state, completeSpark, passBoss, recordSession } = usePlayer();
+  const { remember } = useMemory();
   const topic = getTopic(topicId);
 
   // Pick the level: explicit, otherwise next recommended
@@ -87,10 +89,38 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
     // ignored until Continue advances to the next Spark.
     if (feedback) return;
     const { result, newBadges } = completeSpark(topicId, activeLevel.id, spark, correct);
-    setSessionLog((arr) => [...arr, { sparkId: spark.id, correct }]);
+    setSessionLog((arr) => {
+      const next = [...arr, { sparkId: spark.id, correct }];
+      // Inferred strength: 3 correct in a row in this topic+level.
+      const tail = next.slice(-3);
+      if (correct && tail.length === 3 && tail.every((l) => l.correct)) {
+        void remember({
+          text: `Strong on ${topic?.name ?? topicId} L${activeLevel.index} (3 correct in a row).`,
+          category: "strength",
+          metadata: { topicId, levelId: activeLevel.id, levelIndex: activeLevel.index },
+        });
+      }
+      // Inferred gap: 2 wrong in a row in this topic+level.
+      const tail2 = next.slice(-2);
+      if (!correct && tail2.length === 2 && tail2.every((l) => !l.correct)) {
+        void remember({
+          text: `Struggling on ${topic?.name ?? topicId} L${activeLevel.index} (2 wrong in a row).`,
+          category: "gap",
+          metadata: { topicId, levelId: activeLevel.id, levelIndex: activeLevel.index },
+        });
+      }
+      return next;
+    });
     setCompletedThisSession((arr) => Array.from(new Set([...arr, spark.id])));
     if (correct) setConfettiTrigger((n) => n + 1);
-    if (newBadges.length > 0) setConfettiTrigger((n) => n + 1);
+    if (newBadges.length > 0) {
+      setConfettiTrigger((n) => n + 1);
+      void remember({
+        text: `Earned badge: ${newBadges[0].name}.`,
+        category: "history",
+        metadata: { badgeId: newBadges[0].id },
+      });
+    }
     const moodPick: MascotMood = correct ? (Math.random() > 0.5 ? "happy" : "wow") : "thinking";
     const msg = correct
       ? newBadges.length > 0
@@ -126,6 +156,18 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
     const completed = levelCompletion(state, topicId, activeLevel.id);
     if (last?.exercise.type === "boss" && completed.pct >= 100) {
       passBoss(activeLevel.id);
+      void remember({
+        text: `Beat Boss Cell: ${topic?.name ?? topicId} Level ${activeLevel.index}.`,
+        category: "history",
+        metadata: { topicId, levelId: activeLevel.id, levelIndex: activeLevel.index },
+      });
+    }
+    if (completed.pct >= 100 && correct >= Math.ceil(sessionLog.length * 0.66)) {
+      void remember({
+        text: `Cleared ${topic?.name ?? topicId} Level ${activeLevel.index} (${correct}/${sessionLog.length} correct).`,
+        category: "history",
+        metadata: { topicId, levelId: activeLevel.id, levelIndex: activeLevel.index, accuracy: sessionLog.length ? correct / sessionLog.length : 0 },
+      });
     }
     setDone(true);
   };

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
+import { useMemory } from "../memory/MemoryContext";
 import type { TopicId, SkillLevel } from "../types";
 import { Mascot } from "../visuals/Mascot";
 import { Confetti } from "../visuals/Confetti";
@@ -81,6 +82,7 @@ const INTEREST_PROMPTS = TOPICS.map((t) => ({ id: t.id, label: `${t.emoji} ${t.n
 
 export function Calibration({ onDone }: { onDone: () => void }) {
   const { state, setProfile } = usePlayer();
+  const { remember } = useMemory();
   const [stage, setStage] = useState<"intro" | "quiz" | "interests" | "result">("intro");
   const [picks, setPicks] = useState<(number | null)[]>([null, null, null, null, null]);
   const quiz = useMemo(() => POOL.slice().sort(() => Math.random() - 0.5).slice(0, 5), []);
@@ -96,6 +98,22 @@ export function Calibration({ onDone }: { onDone: () => void }) {
         ...state.profile,
         skillLevel: suggested,
         interests: interests.length > 0 ? interests : state.profile.interests,
+      });
+    }
+    void remember({
+      text: `Recalibration result: ${correct}/5 correct → suggested level "${suggested}".`,
+      category: "calibration",
+      metadata: { source: "calibration", correct, suggested, total: 5 },
+    });
+    if (interests.length > 0) {
+      const interestNames = interests
+        .map((id) => TOPICS.find((t) => t.id === id)?.name)
+        .filter(Boolean)
+        .join(", ");
+      void remember({
+        text: `Wants more of: ${interestNames}`,
+        category: "preference",
+        metadata: { source: "calibration", interests },
       });
     }
     setConfetti((n) => n + 1);

@@ -61,6 +61,25 @@ export interface FeatureFlags {
   liveModeForApiKeyHolders: boolean;
   voiceMode: boolean;
   buildCardVerification: boolean;
+  /**
+   * Master switch for the cognition / memory layer. When true, BuilderQuest
+   * runs entirely on the device with no remote brain (the v1 behaviour). When
+   * false, MemoryService talks to the configured mem0 server.
+   */
+  offlineMode: boolean;
+  /** When true, individual players can override the global flag in Settings. */
+  memoryPlayerOptIn: boolean;
+}
+
+export interface MemoryConfig {
+  /** Base URL of the self-hosted mem0 server (e.g. https://mem0.example.com). */
+  serverUrl: string;
+  /** Bearer token for the mem0 server. */
+  apiKey?: string;
+  /** Cap on memory writes per user per day. 0 = unlimited. */
+  perUserDailyCap: number;
+  /** Optional retention in days. Empty/undefined = keep forever. */
+  retentionDays?: number;
 }
 
 export interface Branding {
@@ -133,6 +152,7 @@ export interface AdminConfig {
   tuning: GameTuning;
   contentOverrides: ContentOverrides;
   promptStudio: PromptStudioState;
+  memoryConfig: MemoryConfig;
 }
 
 export interface QueuedEmail {

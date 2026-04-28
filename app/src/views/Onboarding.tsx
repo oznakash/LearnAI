@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
+import { useMemory } from "../memory/MemoryContext";
 import type { AgeBand, PlayerProfile, SkillLevel, TopicId } from "../types";
 import { Mascot } from "../visuals/Mascot";
 import { Illustration } from "../visuals/Illustrations";
@@ -41,6 +42,7 @@ const GOAL_PRESETS = [
 
 export function Onboarding() {
   const { state, setProfile } = usePlayer();
+  const { remember } = useMemory();
   const [stepIdx, setStepIdx] = useState(0);
   const step: StepId = STEPS[stepIdx].id;
 
@@ -83,6 +85,37 @@ export function Onboarding() {
       createdAt: Date.now(),
     };
     setProfile(profile);
+
+    // Seed the memory layer with onboarding facts. Fire-and-forget;
+    // failures degrade gracefully (the next session still works).
+    void remember({
+      text: `Goal: ${goal}`,
+      category: "goal",
+      metadata: { source: "onboarding" },
+    });
+    if (experience.trim()) {
+      void remember({
+        text: `Background: ${experience.trim()}`,
+        category: "preference",
+        metadata: { source: "onboarding" },
+      });
+    }
+    if (interests.length > 0) {
+      const interestNames = interests
+        .map((id) => TOPICS.find((t) => t.id === id)?.name)
+        .filter(Boolean)
+        .join(", ");
+      void remember({
+        text: `Picked interests at onboarding: ${interestNames}`,
+        category: "preference",
+        metadata: { source: "onboarding", interests },
+      });
+    }
+    void remember({
+      text: `Wants to spend ~${dailyMinutes} min/day at skill level "${skill}".`,
+      category: "preference",
+      metadata: { source: "onboarding", dailyMinutes, skill },
+    });
   };
 
   const next = () => {
