@@ -145,24 +145,36 @@ Defaults:
 
 ### 6.2 Cloud — Fly.io (recommended)
 
-A `fly.toml` is checked in at the repo root. Three commands and you're up:
+A `fly.toml` is checked in at the repo root. **One command** and you're up:
 
 ```sh
-# 1. Provision Postgres + pgvector and attach it to the app.
-fly postgres create --name builderquest-mem0-db --region iad
-fly postgres attach -a builderquest-mem0 builderquest-mem0-db
-
-# 2. Set the secrets (API key + LLM key).
-fly secrets set \
-  MEM0_API_KEY="$(openssl rand -hex 32)" \
-  OPENAI_API_KEY="sk-..." \
-  -a builderquest-mem0
-
-# 3. Deploy.
-fly deploy --image ghcr.io/oznakash/mem0:latest
+OPENAI_API_KEY=sk-... npm run deploy:mem0
 ```
 
-The `fly.toml` is set up for `auto_stop_machines = "stop"` + `min_machines_running = 0`, so the app sleeps when idle (cheap). Bump `min_machines_running` to `1` once you have real users.
+That runs `scripts/deploy-mem0.sh`, which:
+
+1. Verifies `fly` is installed and you're logged in.
+2. Creates the app `builderquest-mem0` in `iad` if it doesn't exist (or reuses).
+3. Provisions a managed Postgres `builderquest-mem0-db` and attaches it.
+4. Generates a bearer key (`openssl rand -hex 32`), stores secrets.
+5. `fly deploy --image ghcr.io/oznakash/mem0:latest`.
+6. Prints the URL + bearer key.
+
+The script is **idempotent** — safe to re-run; existing resources are reused.
+
+Override defaults via env: `APP=…`, `REGION=…`, `MEM0_IMAGE=…`. Use `LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=…` if you'd rather have Claude do mem0's fact extraction.
+
+`fly.toml` is set up for `auto_stop_machines = "stop"` + `min_machines_running = 0`, so the app sleeps when idle (cheap). Bump `min_machines_running` to `1` once you have real users.
+
+#### Smoke-test the deployment
+
+After the deploy script prints the URL + key, verify end-to-end:
+
+```sh
+npm run smoke:memory -- https://builderquest-mem0.fly.dev <bearerKey>
+```
+
+The smoke test (`scripts/smoke-memory.mjs`) does a real round-trip: health check → add a goal → list → search → wipe. Exits 0 on full pass, non-zero with the failing step on any error.
 
 ### 6.3 Cloud — anywhere else
 
