@@ -7,10 +7,20 @@
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent the rubber-band/overscroll bounce past the content edges. */
+  overscroll-behavior: none;
+  /* iOS Safari: stop pinch zoom + double-tap zoom. */
+  touch-action: pan-x pan-y;
+  /* Prevent the iOS Safari font-size auto-bump on orientation change. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html, body, #root {
   height: 100%;
+  /* Required for overscroll-behavior to actually take effect on the
+     scrolling container in some browsers. */
+  overscroll-behavior: none;
 }
 
 body {
