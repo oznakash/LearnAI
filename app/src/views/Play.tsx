@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getTopic, TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
 import { useMemory } from "../memory/MemoryContext";
+import type { MemoryItem } from "../memory/types";
 import {
   completedSparkIds,
   isLevelUnlocked,
@@ -30,7 +31,8 @@ interface PlayedSparkLog {
 
 export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const { state, completeSpark, passBoss, recordSession } = usePlayer();
-  const { remember } = useMemory();
+  const { remember, recall } = useMemory();
+  const [nudge, setNudge] = useState<MemoryItem | null>(null);
   const topic = getTopic(topicId);
 
   // Pick the level: explicit, otherwise next recommended
@@ -63,9 +65,28 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
     setFeedback(null);
     setCompletedThisSession([]);
     setDone(false);
+    setNudge(null);
     sessionStart.current = Date.now();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId, initialLevel?.id]);
+
+  // In-session memory nudge: after every 6th completed Spark, surface
+  // a memory-tied suggestion. Fire-and-forget; failures degrade silently.
+  useEffect(() => {
+    const count = completedThisSession.length;
+    if (count === 0 || count % 6 !== 0) return;
+    let cancelled = false;
+    const query = topic?.name
+      ? `What does the user know or want about ${topic.name}?`
+      : "What does the user want to learn next?";
+    void recall(query, { topK: 1 }).then((items) => {
+      if (cancelled) return;
+      setNudge(items[0] ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [completedThisSession.length, recall, topic?.name]);
 
   if (!topic || !activeLevel) {
     return <div>Topic not found.</div>;
@@ -258,6 +279,22 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
           <span>🌀</span>
           <span className="flex-1">Switch it up? Try a quick {switchTopic.emoji} {switchTopic.name} Spark to keep your brain fresh.</span>
           <button className="btn-ghost text-xs" onClick={() => onSwitchTopic(switchTopic.id)}>Switch</button>
+        </div>
+      )}
+
+      {!feedback && nudge && (
+        <div
+          className="card p-3 text-sm flex items-start gap-3 border border-accent/30 bg-accent/5"
+          role="status"
+        >
+          <span className="text-lg">💡</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] uppercase tracking-wider text-accent font-semibold">Reminder from your memory</div>
+            <div className="text-white/85 mt-0.5">{nudge.text}</div>
+          </div>
+          <button className="btn-ghost text-xs" onClick={() => setNudge(null)} aria-label="Dismiss reminder">
+            ✕
+          </button>
         </div>
       )}
     </div>

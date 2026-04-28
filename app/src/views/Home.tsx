@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
 import { activityByDay, nextRecommendedSpark, suggestSwitchTopic, topicCompletion } from "../store/game";
+import { useTodayInsight } from "../memory/insight";
 import type { View } from "../App";
 import { Mascot } from "../visuals/Mascot";
 import { Sparkline, Ring } from "../visuals/Charts";
@@ -9,16 +11,25 @@ import type { TopicId } from "../types";
 
 export function Home({ onNav }: { onNav: (v: View) => void }) {
   const { state } = usePlayer();
+  const { insight } = useTodayInsight(state);
+  const [whyOpen, setWhyOpen] = useState(false);
   const interests: TopicId[] = state.profile?.interests?.length ? state.profile.interests : TOPICS.map((t) => t.id);
   const featured = TOPICS.filter((t) => interests.includes(t.id));
   const others = TOPICS.filter((t) => !interests.includes(t.id));
   const activity = activityByDay(state, 14).map((d) => d.sparks);
 
-  // Pick a "today" target topic = least recently touched among interests
-  const target =
+  // Pick a "today" target topic. If the cognition layer has an insight,
+  // prefer its topic; otherwise fall back to the heuristic of the
+  // least-recently-touched interest. Either way, the existing "Today's
+  // quest" UI keeps working.
+  const heuristicTarget =
     featured.sort(
       (a, b) => (state.progress.topicLastTouched[a.id] ?? 0) - (state.progress.topicLastTouched[b.id] ?? 0)
     )[0] ?? TOPICS[0];
+  const target = insight
+    ? TOPICS.find((t) => t.id === insight.topicId) ?? heuristicTarget
+    : heuristicTarget;
+  const insightTopic = insight ? TOPICS.find((t) => t.id === insight.topicId) ?? null : null;
 
   const next = nextRecommendedSpark(state, target.id);
   const switchSuggestion = suggestSwitchTopic(state, target.id);
@@ -26,6 +37,67 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
 
   return (
     <div className="space-y-6">
+      {insight && insightTopic && (
+        <section
+          className="card p-4 sm:p-5 border border-accent/30 bg-accent/5 relative overflow-hidden"
+          aria-label="Today, for you"
+        >
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">✨</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] uppercase tracking-wider text-accent font-semibold">
+                For you, today
+              </div>
+              <div className="font-display font-semibold text-white text-lg leading-tight mt-1">
+                Pick up your {insightTopic.emoji} {insightTopic.name} thread
+              </div>
+              <div className="text-sm text-white/70 mt-1">{insight.reason}</div>
+              {whyOpen && (
+                <div className="mt-3 text-xs bg-white/5 border border-white/10 rounded-lg p-3 text-white/70 space-y-1">
+                  <div>
+                    <span className="text-white/50">Memory text:</span>{" "}
+                    <span className="text-white">{insight.memory.text}</span>
+                  </div>
+                  {insight.memory.category && (
+                    <div>
+                      <span className="text-white/50">Category:</span>{" "}
+                      <span className="text-white">{insight.memory.category}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-white/50">Recorded:</span>{" "}
+                    <span className="text-white">
+                      {new Date(insight.memory.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <button
+                    className="text-accent hover:underline mt-1"
+                    onClick={() => onNav({ name: "memory" })}
+                  >
+                    Open Your Memory →
+                  </button>
+                </div>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  className="btn-primary text-sm"
+                  onClick={() => onNav({ name: "play", topicId: insightTopic.id })}
+                >
+                  ▶ Continue this thread
+                </button>
+                <button
+                  className="btn-ghost text-sm"
+                  onClick={() => setWhyOpen((v) => !v)}
+                  aria-expanded={whyOpen}
+                >
+                  {whyOpen ? "Hide why" : "Why?"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="card p-5 sm:p-6 relative overflow-hidden">
         <div className="absolute -right-6 -top-6 w-44 h-44 opacity-30 pointer-events-none">
           <Illustration k={target.visual ?? "spark"} />
