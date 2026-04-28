@@ -1,4 +1,4 @@
-import type { GameTuning, ContentOverrides, AdminConfig } from "./types";
+import type { GameTuning, ContentOverrides, AdminConfig, MemoryConfig } from "./types";
 import { DEFAULT_TUNING } from "./defaults";
 import { ADMIN_STORAGE_KEY } from "./store";
 
@@ -44,6 +44,21 @@ export function getRuntimeContentOverrides(): ContentOverrides {
     topics: cfg.contentOverrides.topics ?? {},
     extras: cfg.contentOverrides.extras ?? [],
   };
+}
+
+/** Returns true when the admin has the cognition layer turned off. */
+export function isOfflineMode(): boolean {
+  const cfg = readAdminConfig();
+  // Default to true (offline) when admin config hasn't been initialized yet —
+  // matches `defaultAdminConfig`, keeps the zero-infra path safe.
+  return cfg?.flags?.offlineMode ?? true;
+}
+
+export function getRuntimeMemoryConfig(): MemoryConfig {
+  const cfg = readAdminConfig();
+  const fallback: MemoryConfig = { serverUrl: "", apiKey: "", perUserDailyCap: 200 };
+  if (!cfg?.memoryConfig) return fallback;
+  return { ...fallback, ...cfg.memoryConfig };
 }
 
 /** For tests: clear the in-memory cache so localStorage changes are visible. */

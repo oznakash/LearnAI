@@ -1,0 +1,66 @@
+# Self-hosted mem0 + Postgres-pgvector for BuilderQuest's cognition layer.
+#
+# Run:  docker compose -f docker-compose.mem0.yml up -d
+# Stop: docker compose -f docker-compose.mem0.yml down
+#
+# Configuration is in .env (copy from .env.example). After it's up, point
+# the BuilderQuest Admin Console → Memory tab at http://localhost:8000
+# (or wherever you deploy this) and paste the bearer key from MEM0_API_KEY.
+#
+# See docs/mem0.md for the full architecture.
+
+name: builderquest-mem0
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: builderquest-mem0-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mem0}
+      POSTGRES_USER: ${POSTGRES_USER:-mem0}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - mem0_pg_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mem0}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mem0:
+    image: mem0/mem0:latest
+    container_name: builderquest-mem0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Mem0 server config
+      MEM0_API_KEY: ${MEM0_API_KEY}
+      # Underlying Postgres + pgvector
+      DATABASE_URL: postgres://${POSTGRES_USER:-mem0}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-mem0}
+      VECTOR_STORE: pgvector
+      VECTOR_DB_HOST: postgres
+      VECTOR_DB_PORT: 5432
+      VECTOR_DB_NAME: ${POSTGRES_DB:-mem0}
+      VECTOR_DB_USER: ${POSTGRES_USER:-mem0}
+      VECTOR_DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      # Provider for fact-extraction. Pick one.
+      MEM0_LLM_PROVIDER: ${MEM0_LLM_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Embeddings provider (optional override)
+      MEM0_EMBEDDING_PROVIDER: ${MEM0_EMBEDDING_PROVIDER:-openai}
+    ports:
+      - "${MEM0_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mem0_pg_data:

@@ -1,10 +1,18 @@
 import { usePlayer } from "../store/PlayerContext";
+import { useMemory } from "../memory/MemoryContext";
 import { tierForXP } from "../store/game";
 import type { View } from "../App";
 
 export function TopBar({ onNav }: { onNav: (v: View) => void }) {
   const { state } = usePlayer();
+  const { backend, status } = useMemory();
   const tier = tierForXP(state.xp);
+  const memoryBadge =
+    backend === "offline"
+      ? { emoji: "📴", label: "Offline mode", classes: "bg-white/5 text-white/70 border-white/10" }
+      : status?.ok
+      ? { emoji: "🧠", label: "Memory on", classes: "bg-good/10 text-good border-good/30" }
+      : { emoji: "🟡", label: "Memory pause", classes: "bg-warn/10 text-warn border-warn/30" };
   const initials = (state.identity?.name ?? state.identity?.email ?? "?")
     .split(/[\s@.]+/)
     .filter(Boolean)
@@ -42,6 +50,13 @@ export function TopBar({ onNav }: { onNav: (v: View) => void }) {
           <div className="hidden md:block pill bg-good/10 text-good border border-good/30" title="Guild Tier">
             🏅 {tier}
           </div>
+          <button
+            onClick={() => onNav({ name: "memory" })}
+            className={`hidden md:inline-flex pill border ${memoryBadge.classes}`}
+            title={memoryBadge.label}
+          >
+            {memoryBadge.emoji}
+          </button>
           <button
             onClick={() => onNav({ name: "settings" })}
             className="ml-1 w-9 h-9 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold ring-2 ring-white/10 hover:ring-accent/60 transition"

@@ -31,6 +31,7 @@ export function loadAdminConfig(): AdminConfig {
         extras: parsed.contentOverrides?.extras ?? [],
       },
       promptStudio: { ...base.promptStudio, ...(parsed.promptStudio ?? {}) },
+      memoryConfig: { ...base.memoryConfig, ...(parsed.memoryConfig ?? {}) },
     };
   } catch {
     return defaultAdminConfig();

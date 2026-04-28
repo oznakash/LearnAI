@@ -142,6 +142,19 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
       </section>
 
       <section className="card p-5 space-y-3">
+        <h2 className="h2">Your memory</h2>
+        <p className="muted text-xs">
+          See, edit, and forget anything BuilderQuest remembers about you.
+        </p>
+        <button
+          className="btn-primary"
+          onClick={() => onNav?.({ name: "memory" })}
+        >
+          🧠 Open Your Memory
+        </button>
+      </section>
+
+      <section className="card p-5 space-y-3">
         <h2 className="h2">Preferences</h2>
         <label className="flex items-center gap-3 text-sm">
           <input

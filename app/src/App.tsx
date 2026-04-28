@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PlayerProvider, usePlayer } from "./store/PlayerContext";
 import { AdminProvider } from "./admin/AdminContext";
+import { MemoryProvider } from "./memory/MemoryContext";
 import { SignIn } from "./views/SignIn";
 import { Onboarding } from "./views/Onboarding";
 import { Home } from "./views/Home";
@@ -11,6 +12,7 @@ import { Dashboard } from "./views/Dashboard";
 import { Settings } from "./views/Settings";
 import { Leaderboard } from "./views/Leaderboard";
 import { Calibration } from "./views/Calibration";
+import { Memory } from "./views/Memory";
 import { AdminConsole } from "./admin/AdminConsole";
 import type { TopicId } from "./types";
 import { TopBar } from "./components/TopBar";
@@ -25,6 +27,7 @@ export type View =
   | { name: "settings" }
   | { name: "leaderboard" }
   | { name: "calibration" }
+  | { name: "memory" }
   | { name: "admin" };
 
 function Shell() {
@@ -55,6 +58,7 @@ function Shell() {
         {view.name === "settings" && <Settings onNav={go} />}
         {view.name === "leaderboard" && <Leaderboard />}
         {view.name === "calibration" && <Calibration onDone={() => go({ name: "home" })} />}
+        {view.name === "memory" && <Memory onExit={() => go({ name: "home" })} />}
         {view.name === "admin" && <AdminConsole onExit={() => go({ name: "home" })} />}
       </main>
       <TabBar view={view} onNav={go} />
@@ -66,7 +70,9 @@ export default function App() {
   return (
     <PlayerProvider>
       <AdminProvider>
-        <Shell />
+        <MemoryProvider>
+          <Shell />
+        </MemoryProvider>
       </AdminProvider>
     </PlayerProvider>
   );

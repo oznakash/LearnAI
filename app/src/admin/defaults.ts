@@ -184,6 +184,11 @@ export function defaultAdminConfig(): AdminConfig {
       liveModeForApiKeyHolders: true,
       voiceMode: false,
       buildCardVerification: false,
+      // Offline by default — BuilderQuest works without a remote brain.
+      // The admin opts in to the cognition layer by configuring mem0 below
+      // and flipping this to false.
+      offlineMode: true,
+      memoryPlayerOptIn: false,
     },
     defaultDailyMinutes: 10,
     perUserDailyTokenCap: 0,
@@ -203,6 +208,11 @@ export function defaultAdminConfig(): AdminConfig {
       level: 1,
       count: 3,
       customNote: "",
+    },
+    memoryConfig: {
+      serverUrl: "",
+      apiKey: "",
+      perUserDailyCap: 200,
     },
   };
 }

@@ -21,6 +21,7 @@ BuilderQuest helps active AI builders **stay sharp in 5–10 minute bursts**, an
 - 🎨 Vivid mascot, confetti, 20+ illustrations, glowing UI.
 - 🔐 **Gmail-only sign-in** via Google Identity Services.
 - 🤖 Optional Anthropic / OpenAI API key for unlimited fresh content.
+- 🧠 **Per-user evolving memory** via self-hosted [mem0](https://github.com/mem0ai/mem0) (opt-in, gated by an admin Offline Mode flag — the app works fully without it). See [`docs/mem0.md`](./docs/mem0.md), [`docs/technical.md`](./docs/technical.md), [`docs/ux.md`](./docs/ux.md).
 - 🛠 **Admin Console** — Users management, Analytics, Lifecycle Emails (with template editor + live preview), Branding & Config. Gated by Gmail allowlist.
 
 ## Quick start
