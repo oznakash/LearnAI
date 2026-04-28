@@ -1,4 +1,4 @@
-# BuilderQuest — UX of the evolving memory layer
+# LearnAI — UX of the evolving memory layer
 
 > What the player actually sees, when, why, and how. The cognition layer (mem0)
 > is the engine; this doc is the dashboard, the steering wheel, and the trust
@@ -12,7 +12,7 @@ Sister docs:
 
 ## 1. The promise to the player
 
-> *"BuilderQuest gets to know you. Your progress, your goals, the things that
+> *"LearnAI gets to know you. Your progress, your goals, the things that
 > click for you, the things you keep dodging — they're remembered. Over weeks,
 > the path you walk is *yours*, not a default."*
 
@@ -82,7 +82,7 @@ Tapping "why?" expands to the linked memories. This is the **transparency switch
 
 - **Privacy switch:** Toggle whether mem0 is on at all (mirrors the admin offline mode for this user).
 - **Export:** Download all memories as JSON.
-- **Wipe:** "Delete everything BuilderQuest knows about me" → calls mem0 `DELETE /memories?user_id=…`. Hard delete. Confirm dialog with the count of memories about to be erased.
+- **Wipe:** "Delete everything LearnAI knows about me" → calls mem0 `DELETE /memories?user_id=…`. Hard delete. Confirm dialog with the count of memories about to be erased.
 - **Time travel:** Memories are immutable-ish — you can edit text but the history is preserved (with a strikethrough). Useful for the educational angle.
 
 ### 2.5 Cold-start (first session)
@@ -116,7 +116,7 @@ A new **Memory** tab in the Admin Console:
 
 ## 4. Why the user benefits — the value, in concrete terms
 
-Without memory, BuilderQuest is a great curriculum. With memory, it becomes a **personal coach**. Concretely:
+Without memory, LearnAI is a great curriculum. With memory, it becomes a **personal coach**. Concretely:
 
 | Without memory | With evolving memory |
 |---|---|
@@ -139,7 +139,7 @@ Three rules we won't break:
 
 | Case | What happens |
 |---|---|
-| User signs in on a new device | mem0 retrieves memories by their Gmail. Familiar BuilderQuest from minute one. |
+| User signs in on a new device | mem0 retrieves memories by their Gmail. Familiar LearnAI from minute one. |
 | User changes Gmail | We do not migrate memories silently. We show a one-time card: "Want to bring memories from `old@gmail.com`? Yes / No / Ask later". |
 | User signs out | Local progress wipes (existing). Memories on the server are kept until the user explicitly wipes them. |
 | Admin toggles offline mode on | All write paths become no-ops. Existing memories are not deleted. Toggle off → memory resumes. |

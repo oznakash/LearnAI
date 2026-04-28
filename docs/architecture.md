@@ -11,7 +11,7 @@ For the deeper service-by-service breakdown, see [`technical.md`](./technical.md
 ```
                    ┌──────────────────────────────────────────┐
                    │  ╔════════════════════════════════════╗  │
-                   │  ║   BuilderQuest SPA (React + Vite)   ║  │
+                   │  ║   LearnAI SPA (React + Vite)   ║  │
                    │  ║                                      ║  │
                    │  ║   • Game loop (Sparks, Boss, XP)     ║  │
                    │  ║   • Onboarding · Recalibration       ║  │
@@ -143,7 +143,7 @@ The critical UX path (next Spark, next screen) **never blocks** on a memory call
 
 Three forces shaped it:
 
-1. **Default to no infra.** Most early users will see BuilderQuest as a SPA. We let them.
+1. **Default to no infra.** Most early users will see LearnAI as a SPA. We let them.
 2. **Make the cognition layer additive, not foundational.** Adding intelligence shouldn't require a server-side rewrite.
 3. **Decouple every layer.** SPA build, image build, deploy, content edits — all separately versionable and deployable.
 

@@ -20,14 +20,14 @@ We do this with a learning experience that is:
 
 > **The social network of education for AI builders.** Where the curriculum is a graph, the teachers are the community, and the brain that recommends what you should learn next is *yours, evolved by your own use.*
 
-Where LinkedIn was the social graph of jobs and Duolingo the gym of language, **BuilderQuest is the gym + social graph + memory of building in AI** — the place you go every day to stay sharp, to ship, and to find the next people you'll work with.
+LinkedIn became the social graph of jobs by measuring *who you know*. **LearnAI is the social network of education for the AI era** — measuring what you learned, what you built, what you taught, and what knowledge you helped distribute. The place you go every day to stay current, to ship, to share, and to be discovered by the next people you'll work with.
 
 ## 🏁 End game
 
 A platform where:
 
 1. **Anyone can start at any level.** Curious 12-year-old, working PM, frontier researcher — the same product fits all three because the cognition layer adapts.
-2. **Knowledge compounds.** Every Spark, Build Card, and player insight feeds back into the system. Year-2 BuilderQuest knows things that no individual instructor could keep up with.
+2. **Knowledge compounds.** Every Spark, Build Card, and player insight feeds back into the system. Year-2 LearnAI knows things that no individual instructor could keep up with.
 3. **Reputation is earned, not claimed.** XP, Build Streaks, contribution counts, and *what you've actually built* form a public profile that recruiters trust more than a resume.
 4. **Talent finds itself.** Companies don't post jobs and hope; they search the graph for *people who shipped X with Y last month*. The platform becomes a hiring channel by accident — the **new LinkedIn** for AI talent.
 5. **The format forks.** A Spanish teacher, a chess coach, a quantum-computing researcher all clone the engine for their own community. We're a category-defining shape of learning, not just a niche app.
@@ -40,7 +40,7 @@ Three forces collided in 2023–2026 to make this product possible *and* necessa
 2. **AI itself can teach AI.** A frontier model can extract micro-lessons, evaluate answers, infer the learner's state, and personalize content cheaper than any human at scale.
 3. **The audience is huge and underserved.** Tens of millions of working professionals feel they're falling behind. Existing options — Twitter firehose, $5,000 bootcamps, YouTube binges — are bad on every axis (signal, time, engagement, retention).
 
-**The product that wins this moment** is the one that does what Duolingo did for languages — turn learning into a 5-minute habit — but with a *cognition layer* that no language app needed because no language ever changed weekly. That's BuilderQuest.
+**The product that wins this moment** is the one that does what Duolingo did for languages — turn learning into a 5-minute habit — but with a *cognition layer* that no language app needed because no language ever changed weekly. That's LearnAI.
 
 ## 🪞 Strategic pillars
 
@@ -58,7 +58,7 @@ The platform is MIT-licensed. The curriculum is text. The cognition is mem0. The
 
 ### 4. Social is added on top of value, never below it
 
-We will **not** ship a leaderboard or follow graph until the individual learning experience is so good that users want to share. The first-week ethic: a user with zero followers must still feel BuilderQuest is the best 10 minutes of their day.
+We will **not** ship a leaderboard or follow graph until the individual learning experience is so good that users want to share. The first-week ethic: a user with zero followers must still feel LearnAI is the best 10 minutes of their day.
 
 ### 5. Build, don't just read
 
@@ -66,14 +66,14 @@ Every level has a Build Card — a pasteable prompt for Claude Code that produce
 
 ## 🔭 The five-year arc
 
-| Year | What "BuilderQuest" means |
+| Year | What "LearnAI" means |
 |---|---|
 | **0** (today) | A great solo product. 12 topics × 10 levels. Optional cognition. Local leaderboard. |
 | **1** | Cognition default-on. First 10k weekly active builders. Real cohort leaderboards. Community-contributed Sparks reviewed by AI + maintainers. |
 | **2** | Public builder profiles. Discovery feed. First "Talent Match" pilots: companies search for "people who shipped a RAG agent with eval suite in last 90 days." |
 | **3** | Forks emerge: kids-AI, on-call-engineering, sales-AI, climate-tech-builder. Engine becomes infrastructure. |
 | **4** | The platform is where AI engineers credibly point recruiters. Replaces a meaningful slice of LinkedIn for technical hiring. |
-| **5** | The category — *evolving cognitive micro-learning* — is named, and BuilderQuest is its default. |
+| **5** | The category — *evolving cognitive micro-learning* — is named, and LearnAI is its default. |
 
 ## 🧭 What we will *not* do
 

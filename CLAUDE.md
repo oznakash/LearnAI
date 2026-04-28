@@ -7,7 +7,7 @@
 
 ## Project at a glance
 
-**BuilderQuest** is a gamified, micro-dosed AI learning platform. A static React SPA in front, an opt-in self-hosted **mem0** cognition layer behind, and 12 community-curated AI Constellations as the seed curriculum.
+**LearnAI** is the AI-native learning network for builders, creators, and curious people. A static React SPA in front, an opt-in self-hosted **mem0** cognition layer behind, and 12 community-curated AI Constellations as the seed curriculum. The in-app, gamified experience is named **BuilderQuest** — that name lives on inside the app shell (mascot, copy, brand strings) but the project, network, and public identity is **LearnAI**.
 
 - **Live:** `https://learnai-b94d78.cloud-claude.com`
 - **Source:** [`oznakash/learnai`](https://github.com/oznakash/learnai)

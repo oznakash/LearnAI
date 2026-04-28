@@ -1,12 +1,14 @@
 <div align="center">
 
-![BuilderQuest — the second brain that teaches you AI](./docs/hero.svg)
+![LearnAI — the AI-native learning network](./docs/hero.svg)
 
-# BuilderQuest
+# LearnAI
 
-### The second brain that teaches you AI.
+### The AI-native learning network for builders, creators, and curious people.
 
-**5-minute bites · personalized to your goals · social by design · open source · forever free.**
+LearnAI turns the AI firehose into personalized 5-minute Sparks, practical challenges, and shareable projects.
+
+**Learn what matters. Build what sticks. Share what helps others.**
 
 [![Tests](https://img.shields.io/badge/tests-100%2F100-success)](./app/src/__tests__) [![Build](https://img.shields.io/badge/build-passing-success)](./.github/workflows/build-and-publish-dist.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](#license) [![Stack](https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20mem0-7c5cff)](#-tech) [![Vibe](https://img.shields.io/badge/vibe-shipping-ff5d8f)](./docs/vision.md)
 
@@ -18,21 +20,17 @@
 
 ## 💡 What this is
 
-BuilderQuest started as a second brain.
+AI is moving faster than traditional education can keep up.
 
-It became a social network.
+The most useful insight might be buried inside a YouTube video, a paper, a Hacker News thread, a release note, a newsletter, or a founder's weekend experiment.
 
-The original mission was hypertechnical: a memory and cognition layer that could **remember a person across sessions** — their goals, their gaps, the stack they were trying to ship.
+The problem isn't that the knowledge doesn't exist. The problem is that it's scattered, long, unstructured, and not shaped around what *you* are trying to learn or build.
 
-Then a question landed sideways: *what if this isn't a personal tool, but an education engine?*
+**LearnAI is a new shape for AI education.**
 
-Because the AI gap isn't a knowledge problem. It's a shape problem.
+A daily learning network where people consume, create, and share bite-size AI knowledge. Each lesson is a **Spark** — short, practical, personalized, and designed to end with understanding, action, or something you can build.
 
-The 60-second insight inside any YouTube video, newsletter, paper, Hacker News thread, or release note would move you forward — *if* you could find it, in time, in the right shape, on the day you needed it.
-
-**BuilderQuest is that shape.**
-
-A second brain that teaches you AI. Five minutes at a time. In the lens of what *you* are trying to build.
+Over time, LearnAI becomes more than a learning app. It becomes your **living AI profile**: what you learned, what you built, what you taught, what you're curious about, and where you're going next.
 
 ---
 
@@ -44,115 +42,161 @@ Twitter is a firehose.
 
 YouTube wants 47 minutes you don't have.
 
-Coursera is stale by week 4.
+Courses go stale.
 
-Bootcamps cost $5k and end at a fixed date.
+Newsletters are linear.
 
-Newsletters are linear, with no path.
+Vendor academies are biased toward their own tools.
 
-Vendor academies are vendor-locked.
+Most learning products help you consume, but not apply.
 
-Duolingo nailed the bite-size shape — but languages don't change weekly. AI does.
+Most professional networks show what you *claim*, not what you actually *do*.
 
----
+Duolingo proved bite-size learning can become a daily behavior. But AI needs a different model.
 
-What's missing is a daily 5-minute habit, **personalized to you**, **current to this week**, that ends in something you can actually ship.
+AI changes weekly. AI learning must be **current**, **personal**, **practical**, and turn into **visible work**.
 
-Education for fast-moving fields needs four things at once: **bite-size · personalized · real-time · practical.** Every existing product picks one or two. AI is what finally makes all four affordable.
+That's what LearnAI is built for.
 
 → Full breakdown: [`docs/problem.md`](./docs/problem.md).
 
 ---
 
-## 🌐 Why it's a social network
+## 🌅 Why now
 
-The most valuable AI content already exists.
+For the first time, AI can reshape education at the unit level.
 
-It's scattered across YouTube videos, newsletter issues, papers, Hacker News threads, vendor blogs, release notes, and weekend Twitter threads.
+→ A long video can become a 60-second Spark.
+→ A release note can become a practical challenge.
+→ A project can become a Build Card.
+→ A user's goals, skill, gaps, and interests can shape what they learn next.
+→ A creator can turn their expertise into reusable learning without building a course.
 
-The 60-second insight inside any of those would move you forward — but it's locked in the wrong shape.
+This wasn't possible at scale before.
 
-So **creators distill those sources into Sparks.** AI helps them shape it. Their name, voice, and a link to the source ride along. Every Spark has a *"Read more · Watch the full thing · Follow the creator"* handle.
-
-Which means as a learner, you're effectively **consuming the entire AI internet, in bite-size, through a lens that knows you** — your goals, your stack, what you learned yesterday.
-
-Creators don't have to be authors. They're **guides through the firehose.**
-
-That's the network:
-
-→ Creators curating
-→ The cognition layer personalizing
-→ Learners becoming teachers when they ship something worth teaching
+> **The old model was fixed curriculum. The new model is a living graph of knowledge, people, projects, and proof of work.**
 
 ---
 
-## 🧠 Why it's powered by AI
+## ⚙️ How it works
 
-AI isn't a feature here. It's the unlock.
+LearnAI is built around four loops.
 
-→ AI is the **cognition layer** — what lets the system remember 10,000 learners individually.
-→ AI is the **distillation engine** — what turns a 47-minute video into a 60-second Spark in the creator's voice.
-→ AI is the **freshness loop** — what keeps the curriculum current weekly instead of yearly.
+### 1. Learn
 
-A decade ago this would have cost ~$50/user/year in editor labor. Today it's ~$0.20.
+Personalized Sparks based on your goals, skill, interests, and progress.
 
-That's the math that makes a personalized, current, practical, bite-size learning network finally possible at scale.
+Sparks are short by design. Not watered down — *compressed signal*.
+
+### 2. Build
+
+Learning should create output.
+
+Some Sparks explain. Some quiz. Some simulate real situations. Some end with **Build Cards** that paste straight into Claude Code, Cursor, or any AI coding environment.
+
+The point isn't to finish lessons. The point is to build confidence through action.
+
+### 3. Share
+
+Every useful insight can become a Spark.
+
+Creators, builders, researchers, operators, and educators distill what they know into bite-size learning. A great video, post, repo, paper, or workflow becomes something others learn from.
+
+Creators get attribution, distribution, and eventually monetization.
+
+### 4. Remember
+
+LearnAI has a cognition layer.
+
+It remembers what you're trying to learn, what you already understand, what you keep missing, what you built, and the kinds of examples that move you faster.
+
+Your memory is **visible, editable, exportable, and deletable**.
+
+---
+
+## 🌐 Why it's social
+
+Learning AI is no longer a private course you complete alone.
+
+People learn by watching what others build. Creators learn by teaching. Builders learn by shipping. Communities learn by remixing each other's work.
+
+LearnAI is a social network for education and applied work.
+
+> **The feed is not status updates. The feed is useful Sparks, Build Cards, projects, mistakes, workflows, examples, and lessons learned.**
+
+> **The profile is not a resume. The profile is a living record of what you learned, built, taught, and shared.**
+
+The network isn't just who you know. The network is what knowledge you helped distribute.
 
 ---
 
 ## 🎯 Mission
 
-**Make every builder confident, current, and shipping** — from a 12-year-old asking their first question to a researcher tracking the frontier — regardless of where they started.
+**Make AI literacy practical, personal, and accessible to everyone.**
 
-The shape:
-
-- **Bite-size by default.** 5–10 minutes. Anything longer is the wrong shape for how AI moves.
-- **Personal, not generic.** A cognition layer learns *you* — your goals, your gaps, your stack — and bends the path toward what *you* are building.
-- **Always current.** The community + the AI grow the curriculum together.
-- **Built for doing.** Every chunk ends with something you can paste into Claude Code, run, and feel.
-- **Social by design.** Your build is a Spark. Your mistake is a Tip. Your weekly digest is a teaching post.
+From a curious student to a product leader, from a creator to a researcher, from someone learning the basics to someone shipping agents every week — LearnAI helps people stay current and turn knowledge into action.
 
 ---
 
 ## 🌌 Vision
 
-> **The social network of education for AI builders.** Where the curriculum is a graph, the teachers are the community, and the brain that recommends what you should learn next is *yours, evolved by your own use.*
+LearnAI is the **education network for the AI era**.
 
-LinkedIn was the social graph of jobs. Duolingo was the gym of language.
+A place where people learn from the frontier without drowning in it.
 
-**BuilderQuest is the gym + social graph + memory of building in AI** — the place you go every day to stay sharp, to ship, and to find the next people you'll work with.
+A place where creators turn expertise into Sparks, get credited, and grow an audience.
+
+A place where builders show progress through real work — not bullet points on a CV.
+
+A place where knowledge spreads faster because it is short, useful, credited, and remixable.
+
+A place where your learning path becomes your public proof of growth.
+
+The future of education won't look like a static course catalog. It will look like a **living network of people, knowledge, projects, and memory.**
+
+LearnAI is building that network.
 
 → Full vision: [`docs/vision.md`](./docs/vision.md).
 
 ---
 
-## 🪨 Principles we won't walk back
+## 🪨 Principles
 
-→ **Open source.** MIT licensed. Engine, curriculum, cognition layer — all of it. Fork it for any domain.
+### Bite-size by default
+Five minutes isn't a gimmick. It's the right unit for a field that changes every week.
 
-→ **Not a game for engagement's sake.** Every level ends in a Build Card you paste into Claude Code. You pass by *shipping*, not by tapping the right answer.
+### Practical over passive
+You don't pass by tapping the right answer. You progress by understanding, applying, building, and sharing.
 
-→ **Your data, your brain.** See, edit, forget, export what the system remembers about you. Privacy parity is non-negotiable.
+### Personalized, not generic
+The same path shouldn't be shown to a 12-year-old beginner, a working PM, a senior engineer, and a researcher tracking the frontier.
 
-→ **Bite-size is the unit.** 5–10 minutes. Anything longer is a different product.
+### Open by design
+Engine, curriculum, and cognition layer are inspectable, forkable, and extensible. MIT licensed.
 
-→ **No content lock-in.** Sparks are text. The curriculum stays text. Forever.
+### Creators get credit
+The best AI learning content already exists across the internet. LearnAI helps people distill it, attribute it, and distribute it.
+
+### Memory belongs to the user
+You can see, edit, forget, wipe, and export what the system remembers. Privacy parity is non-negotiable.
 
 ---
 
-## ✨ What's in the box (today's MVP)
+## ✨ What's in the MVP
 
 - 🌌 **12 Constellations × 10 Levels** — ~480 hand-authored micro-lessons across AI Foundations, LLMs & Cognition, Memory & Safety, AI PM, AI Builder mindset, Cybersecurity, Cloud, AI Dev Tools, AI Trends, Frontier Companies, AI News, Open Source AI.
 - ⚡ **8 Spark formats** — MicroRead · Tip & Trick · Quick Pick · Pattern Match · Fill the Stack · Field Scenario · Build Card · Boss Cell.
-- 🎯 **Personalized onboarding** — age band (kid/teen/adult), skill (starter → researcher), interests, daily minutes, goal.
-- 🔥 **Game mechanics that serve practice** — Synapses (XP) · Focus (regenerating lives) · Build Streak · Guild Tiers · 14 Badges.
-- 🧠 **Cognition layer (mem0)** — opt-in, self-hosted, inspectable. Default-off; flip the Offline Mode flag in admin to turn it on.
-- 📚 **"Your Memory" tab** — see, edit, forget, wipe, export. Read-write parity is the privacy ethic.
+- 🎯 **Personalized onboarding** — age band, skill level, interests, daily minutes, goals.
+- 🔥 **Game mechanics that serve practice** — XP, Focus, Build Streak, Guild Tiers, 14 Badges.
+- 🧠 **Cognition layer (mem0)** — opt-in, self-hosted, inspectable.
+- 📚 **"Your Memory" tab** — see, edit, forget, wipe, export.
 - 📊 **Per-topic + global dashboards** — sparkline, radar, ring, bars, 12-week heatmap.
-- ✅ **Tasks tab** — capture YouTube watches, articles, Build Cards. Auto-add from any Spark.
-- 🛠 **Admin Console (7 tabs)** — Users · Analytics · Memory · Emails (real send via Resend / SMTP-relay / EmailJS) · Tuning (every game variable live-editable) · Content (edit/import/export topics) · Prompt Studio (the long content-generation prompt) · Config (flags, branding, allowlist).
+- ✅ **Tasks tab** — capture YouTube watches, articles, Build Cards.
+- 🛠 **Admin Console (7 tabs)** — Users · Analytics · Memory · Emails · Tuning · Content · Prompt Studio · Config.
 - 🔐 **Gmail-only sign-in** via Google Identity Services.
 - 📦 **Static SPA** that auto-rebuilds on every push to `main`. Deploys anywhere with zero config.
+
+> The in-app experience is called **BuilderQuest** — the gamified, mascot-led learning shell that runs on top of the LearnAI network.
 
 Honest list of what's shipped vs. coming: [`docs/mvp.md`](./docs/mvp.md).
 
@@ -160,19 +204,46 @@ Honest list of what's shipped vs. coming: [`docs/mvp.md`](./docs/mvp.md).
 
 ## 👥 Who it's for
 
-Builders at every level. The cognition layer adapts so the same product fits a curious 12-year-old, a working PM, and a frontier researcher.
+### Curious learners
+People who want to understand AI without drowning in jargon, newsletters, and long videos.
 
-| If you are… | …it works because… |
-|---|---|
-| **A working PM** who wants to be a builder | 10 min/day fits between your meetings. Build Cards make you a builder, not a reader. |
-| **A senior engineer** tracking the frontier | Skip the basics. Daily 5-minute "Pulse" of fresh signal. |
-| **A curious starter (any age)** | Onboarding adapts. Mascot doesn't condescend. The 12-year-old and the 58-year-old both get traction. |
-| **A creator** with a YouTube / newsletter / blog | Turn any source into a Spark in seconds. Your name + link ride along on every learner who plays it. |
-| **A researcher** who wants to be discoverable | Public profile (coming Sprint 2) shows what you've shipped + taught — better signal than any resume. |
-| **A hiring manager** | Talent Match (coming Sprint 4) lets you search the behavioral graph: *"shipped a RAG agent with eval suite in last 90 days."* |
-| **An educator** in any fast-moving domain | Fork the engine. 30 minutes from clone to your own community-driven micro-learning app. |
+### Builders
+People who want to turn learning into projects, prototypes, workflows, and real output.
+
+### Product people and operators
+People who need to stay current, make better decisions, and understand what AI makes possible.
+
+### Engineers and researchers
+People who want a faster way to track the frontier and convert signal into experiments.
+
+### Creators
+People with great taste, expertise, or audience who want to turn what they know into bite-size education — credited and discoverable.
+
+### Educators and communities
+People who want to fork the engine and run a learning network for their own domain.
 
 Full personas: [`docs/use-cases.md`](./docs/use-cases.md).
+
+---
+
+## 🏁 The end game
+
+LearnAI becomes the **social network of education for the AI era**.
+
+People come to LearnAI to learn what matters, share what they know, and show what they built.
+
+→ **Creators** distribute knowledge, grow audiences, and monetize practical education.
+→ **Builders** stay sharp, ship projects, and build a public body of work.
+→ **Communities** turn scattered expertise into shared learning paths.
+→ **Companies and collaborators** discover people through proof of work, not credentials.
+
+The long-term arc is simple:
+
+> **Knowledge becomes Sparks. Sparks become practice. Practice becomes projects. Projects become profiles. Profiles become opportunity.**
+
+LearnAI is where people learn, build, teach, and get discovered.
+
+→ Long version: [`docs/vision.md`](./docs/vision.md) · [`docs/roadmap.md`](./docs/roadmap.md).
 
 ---
 
@@ -206,7 +277,7 @@ docker compose -f docker-compose.mem0.yml up -d
 
 # Or one-command Fly deploy:
 OPENAI_API_KEY=sk-... npm run deploy:mem0
-npm run smoke:memory -- https://builderquest-mem0.fly.dev <bearerKey>
+npm run smoke:memory -- https://learnai-mem0.fly.dev <bearerKey>
 ```
 
 Full guide: [`docs/mem0.md`](./docs/mem0.md).
@@ -221,7 +292,7 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 |---|---|---|
 | [`vision.md`](./docs/vision.md) — mission, end game | [`architecture.md`](./docs/architecture.md) — system diagram | [`contributing.md`](./docs/contributing.md) — how to PR |
 | [`problem.md`](./docs/problem.md) — what we're solving | [`technical.md`](./docs/technical.md) — services + types | [`fork-recipe.md`](./docs/fork-recipe.md) — fork for your domain |
-| [`use-cases.md`](./docs/use-cases.md) — 7 personas | [`mem0.md`](./docs/mem0.md) — cognition layer | |
+| [`use-cases.md`](./docs/use-cases.md) — personas | [`mem0.md`](./docs/mem0.md) — cognition layer | |
 | [`competitors.md`](./docs/competitors.md) — landscape | [`ux.md`](./docs/ux.md) — UX of memory | |
 | [`pitch-deck.md`](./docs/pitch-deck.md) — 12 slides | | |
 | [`mvp.md`](./docs/mvp.md) — what's shipped | | |
@@ -244,9 +315,9 @@ No backend at the SPA tier — state persists to `localStorage` until you opt in
 
 ## 🤝 Contributing
 
-> _Built for the community of builders, by the community of builders._
+> _Built for the community of builders, creators, and learners._
 
-Open a PR. Add a Spark. Distill a YouTube video. Fix a bug. Improve the brain. Fork the engine for your domain.
+Open a PR. Add a Spark. Distill a great source. Improve a Build Card. Fix the engine. Fork LearnAI for your own domain.
 
 **Five flavors of contribution → [`docs/contributing.md`](./docs/contributing.md).**
 
@@ -258,19 +329,7 @@ The 30-second pitch:
 - 🌐 New Constellation → open an issue first.
 - 🧠 Engine work → standard PR. Tests required.
 
-Every Spark you author is credited to you. When Talent Match ships, your contributions become a search axis recruiters use.
-
----
-
-## 🏁 The end game
-
-Year 1 — first 10k weekly active builders.
-Year 2 — public profiles + cohort leaderboards.
-Year 3 — Talent Match: companies search the behavioral graph for *"people who shipped X with Y last month"* — the new LinkedIn for AI roles.
-Year 4 — forks emerge for kids-AI, on-call drills, sales enablement, climate-tech.
-Year 5 — the category is named, and BuilderQuest is its default.
-
-→ Long version: [`docs/vision.md`](./docs/vision.md) · [`docs/roadmap.md`](./docs/roadmap.md).
+Every Spark you author is credited to you. Every useful contribution makes the network smarter.
 
 ---
 
@@ -296,7 +355,7 @@ learnai/
 │   ├── ux.md                       (cognition-layer UX)
 │   ├── technical.md                (engineer's view)
 │   └── mem0.md                     (cognition layer in depth)
-├── app/                            ← the SPA (React + Vite + Tailwind)
+├── app/                            ← the SPA (BuilderQuest experience)
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── auth/                   ← Gmail-only sign-in
@@ -331,9 +390,7 @@ learnai/
 
 <div align="center">
 
-**BuilderQuest started as one person trying to remember themselves.**
-
-**It became a place where the community remembers each other.**
+**Built for people who want to learn faster, build more, and help others keep up.**
 
 → [Open the live demo](https://learnai-b94d78.cloud-claude.com) · [Read the vision](./docs/vision.md) · [Open a PR](./docs/contributing.md)
 

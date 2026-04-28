@@ -11,7 +11,7 @@
                                          ▲
                                          │
                        Bootcamps         │           ╔═══════════════╗
-                       Maven cohorts     │           ║ BuilderQuest  ║
+                       Maven cohorts     │           ║ LearnAI  ║
                                          │           ║   (us)        ║
                                          │           ╚═══════════════╝
                                          │
@@ -47,7 +47,7 @@ We are the closest thing to "Duolingo for AI" — and we differ in exactly the p
 
 LinkedIn is the social network of *professional claims* — resumes, endorsements, headlines. In AI, where the field outpaces titles by months, claims are unreliable signal.
 
-| LinkedIn primitive | BuilderQuest equivalent |
+| LinkedIn primitive | LearnAI equivalent |
 |---|---|
 | Connections | Followers, study buddies, contributed Sparks |
 | Job posting | Talent Match search (*"shipped X with Y in last 90 days"*) |
@@ -59,7 +59,7 @@ We don't replace LinkedIn for sales or marketing roles. We replace it for **AI-b
 
 ### Brilliant.org — the closest cousin in shape
 
-| Brilliant | BuilderQuest |
+| Brilliant | LearnAI |
 |---|---|
 | Gamified problem-solving for math/CS/physics | Gamified building for AI |
 | Static-ish content (math doesn't change) | Living content (AI changes weekly) |
@@ -76,7 +76,7 @@ The "classroom in a screen" model.
 - **Loses for AI:** content rots fast, no personalization, ~5–10% completion rates, hours-long videos when the user has 7 minutes.
 - **Specifically what we steal:** none of the format. Some of the curriculum-design rigor.
 
-These are *complementary*, not competitive — a user might take a fast.ai course *and* keep BuilderQuest as their daily habit. We don't try to replace 12-week deep dives.
+These are *complementary*, not competitive — a user might take a fast.ai course *and* keep LearnAI as their daily habit. We don't try to replace 12-week deep dives.
 
 ### Twitter / X / LinkedIn feed / Reddit / Hacker News
 

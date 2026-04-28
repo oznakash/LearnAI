@@ -25,7 +25,7 @@
 
 **Day 30**
 - 28-day streak. Tier: Architect.
-- Has shipped two real prototypes at work using BuilderQuest Build Cards.
+- Has shipped two real prototypes at work using LearnAI Build Cards.
 - Her "Your Memory" tab shows 47 memories: goals, strengths (RAG basics, prompt engineering), gaps (cost engineering — fixing this week), preferences (vendor-neutral, prefers Anthropic).
 - Posts a Tip she discovered to her builder profile (when social ships).
 
@@ -39,7 +39,7 @@
 
 **The thing he has today:** 12 Twitter tabs, 4 newsletters he never has time to read, a backlog of 80 saved papers.
 
-**The thing BuilderQuest gives him:**
+**The thing LearnAI gives him:**
 - Onboards as `Frontier visionary`. Skips L1–L4 in every Constellation he marks "I know this."
 - Daily 5-minute "Pulse": 2–3 freshly-generated Sparks from the **AI Trends** + **AI News** Constellations, calibrated to his level. The cognition layer remembers the model versions he's worked with so it doesn't waste his time on basics.
 - A weekly Boss Cell that tests him on the *new* stuff — last week's news, distilled into 3 sharp questions.
@@ -53,7 +53,7 @@
 
 **Context:** Heard friends talking about ChatGPT. Tried Khan Academy AI; bored. Watched 3 minutes of a 60-minute YouTube video.
 
-**The age band shifts BuilderQuest's tone.** Onboarding picks `kid`. Sparks now use:
+**The age band shifts LearnAI's tone.** Onboarding picks `kid`. Sparks now use:
 - Playful examples (cats, soccer, video games).
 - Bigger illustrations, fewer code blocks.
 - Quick Picks with 3 options instead of 4.
@@ -62,7 +62,7 @@
 
 **Day 1:** A 60-second MicroRead about *"What is an AI? — it's a brain that learns from examples, like you learning what a cat looks like."* Sam earns 8 ⚡. Mascot dances. Sam plays one more.
 
-**Day 30:** Sam has earned the **First Spark**, **On Fire (3-day streak)**, and **Polymath** badges. He understands what tokens are, why models hallucinate, and how a recommender works. He shows it to his teacher. The teacher forks BuilderQuest for the school's after-school AI club.
+**Day 30:** Sam has earned the **First Spark**, **On Fire (3-day streak)**, and **Polymath** badges. He understands what tokens are, why models hallucinate, and how a recommender works. He shows it to his teacher. The teacher forks LearnAI for the school's after-school AI club.
 
 ---
 
@@ -87,7 +87,7 @@
 
 **Onboards as `Frontier visionary` / `AI Builder` + `AI Trends` + `Open Source`.**
 
-**She uses BuilderQuest in three ways:**
+**She uses LearnAI in three ways:**
 1. **Daily learning** — keeps her current outside her subfield (e.g. a vision researcher learning about agents).
 2. **Contributing** (when this ships) — writes Sparks and Build Cards for her area of expertise. They go through AI-assisted review and a maintainer pass. Her name is on every Spark she authored.
 3. **Public profile** — her builder profile shows: streak, tier, badges, contributed Sparks, topics mastered, recent Build Cards completed. Recruiters can search this.
@@ -100,13 +100,13 @@
 
 **Context:** Hiring manager at a mid-size AI startup. Needs three engineers who've shipped agentic systems with eval suites. LinkedIn search is full of resume keywords with no signal.
 
-**On BuilderQuest** (Talent Match feature, post-MVP):
+**On LearnAI** (Talent Match feature, post-MVP):
 - Searches: *"Active in last 30 days · Mastered: AI Builder L8+, Memory & Safety L8+ · Authored ≥ 3 Build Cards in agentic stack · Tier ≥ Visionary"*.
 - 47 candidates. He DMs 10. 6 reply. 4 take a call. 2 get hired in 3 weeks.
 
-**The *why* this works:** unlike a resume, the BuilderQuest profile is *behavioral*. You see what they actually completed, what they taught, what streaks they kept. It's hard to fake daily activity over 6 months.
+**The *why* this works:** unlike a resume, the LearnAI profile is *behavioral*. You see what they actually completed, what they taught, what streaks they kept. It's hard to fake daily activity over 6 months.
 
-**The *why* this beats LinkedIn:** LinkedIn measures connections + claims. BuilderQuest measures *learned + shipped + taught*. Different signal entirely.
+**The *why* this beats LinkedIn:** LinkedIn measures connections + claims. LearnAI measures *learned + shipped + taught*. Different signal entirely.
 
 ---
 
@@ -114,19 +114,19 @@
 
 **Context:** Spanish teacher. Loves the Duolingo shape. Hates that Duolingo only does languages. Wants this for her domain.
 
-**She forks BuilderQuest** (post-MVP open-source play):
+**She forks LearnAI** (post-MVP open-source play):
 - Renames it. Re-themes the brand in 5 minutes via the Admin → Branding tab.
 - Replaces the 12 AI topics with 12 Spanish topics — JSON imported via Admin → Content → Import.
 - Spins up her own mem0 instance (one Fly command).
 - Invites her 30 students.
 
-**Three months later:** Anya's fork has 800 weekly active learners across her school district. The engine maintained itself. She contributes a kid-friendly visualization back to mainline BuilderQuest. The platform becomes infrastructure for community-driven micro-learning.
+**Three months later:** Anya's fork has 800 weekly active learners across her school district. The engine maintained itself. She contributes a kid-friendly visualization back to mainline LearnAI. The platform becomes infrastructure for community-driven micro-learning.
 
 ---
 
 ## Cross-cutting moments worth designing for
 
-Across all seven personas, the moments that *make* BuilderQuest are the same:
+Across all seven personas, the moments that *make* LearnAI are the same:
 
 1. **The onboarding-to-first-spark moment** (~90 seconds). If they don't smile here, they don't come back.
 2. **The "you know me" moment** (~Day 5–7). When the cognition layer surfaces an insight that's clearly *theirs*. *"I see I've been weak on safety — here's a sharp Spark"* > *"Today's quest: random topic"*.

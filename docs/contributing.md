@@ -1,6 +1,6 @@
 # Contributing
 
-> _BuilderQuest is built for the community of builders, by the community of builders. Pull requests over arguments, every time._
+> _LearnAI is built for the community of builders, by the community of builders. Pull requests over arguments, every time._
 
 ## How to contribute, in five flavors
 

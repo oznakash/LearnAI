@@ -1,4 +1,4 @@
-# BuilderQuest — mem0 self-hosted architecture
+# LearnAI — mem0 self-hosted architecture
 
 > Sister docs: [`ux.md`](./ux.md), [`technical.md`](./technical.md).
 >
@@ -25,7 +25,7 @@ isolation. It runs as a Python service with a JSON HTTP API. Self-hostable.
 | Option | Why we didn't pick |
 |---|---|
 | **zep** | More powerful (knowledge graph) but heavier ops. We don't need graph queries on day one. Easier to graduate to later than to peel out. |
-| **letta (MemGPT)** | Imposes its own *agent* runtime. We already have one (the BuilderQuest game loop). Higher coupling, no payoff. |
+| **letta (MemGPT)** | Imposes its own *agent* runtime. We already have one (the LearnAI game loop). Higher coupling, no payoff. |
 | **Vector DB only (Chroma/Weaviate/pgvector)** | That's storage, not memory. We'd reimplement the extract → summarize → dedupe loop ourselves. Big undifferentiated lift. |
 | **mem0** ✅ | Smallest API surface. Memories are inspectable JSON (huge for our "Your Memory" tab). Pluggable LLM provider — uses our existing Anthropic / OpenAI key. Active project, MIT license, exactly the right level of opinion. |
 
@@ -196,7 +196,7 @@ fly deploy --image ghcr.io/oznakash/mem0:sha-abc1234
 
 After running docker-compose:
 
-1. Open the BuilderQuest Admin Console → **Memory** tab.
+1. Open the LearnAI Admin Console → **Memory** tab.
 2. Paste the mem0 server URL (e.g. `https://mem0.your-domain.com`).
 3. Paste the `MEM0_API_KEY` you set in the `.env`.
 4. Click **Health check** → should return `{ ok: true, backend: "mem0" }`.

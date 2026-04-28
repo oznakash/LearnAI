@@ -1,4 +1,4 @@
-# BuilderQuest — Documentation
+# LearnAI — Documentation
 
 > _The wiki. Strategy, technical, operator. Everything's a Markdown file. Nothing's hidden in a Notion._
 
@@ -45,7 +45,7 @@ These pre-date the structured wiki but contain useful detail. Read them when the
 
 ## Quick links by scenario
 
-**"I want to try BuilderQuest right now."**
+**"I want to try LearnAI right now."**
 → Live: `https://learnai-b94d78.cloud-claude.com`. Or run `npm install && npm run dev` from the repo root.
 
 **"I'm a contributor — show me where to start."**

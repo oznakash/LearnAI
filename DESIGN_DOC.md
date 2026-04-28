@@ -1,4 +1,4 @@
-# BuilderQuest — Design Document
+# LearnAI — Design Document
 
 > A gamified, micro-dosed AI playbook for builders.
 > Inspired by Duolingo. Built for short bursts, deep over time.
@@ -42,7 +42,7 @@ The AI field moves fast. The standard ways to learn it are bad for builders:
 
 Active AI builders need a way to **drip-feed sharp, current, opinionated knowledge** into 5–10 minute windows — and stay engaged long enough to compound real expertise. Curious starters need an on-ramp that doesn't feel intimidating.
 
-BuilderQuest is built for both: ramp up beginners gently, sharpen seasoned builders weekly, and **push them to actually try things in Claude Code** (not just read).
+LearnAI is built for both: ramp up beginners gently, sharpen seasoned builders weekly, and **push them to actually try things in Claude Code** (not just read).
 
 ## 2. Why we borrow from Duolingo
 
@@ -190,7 +190,7 @@ We use **Google Identity Services (GIS)** for one-tap-style sign-in. Only Gmail 
 
 1. Open `console.cloud.google.com` → APIs & Services → Credentials.
 2. Create an OAuth client ID (Web). Add your deployment URL to **Authorized JavaScript origins**.
-3. Paste the client ID into BuilderQuest's sign-in screen (or pre-fill via Settings).
+3. Paste the client ID into LearnAI's sign-in screen (or pre-fill via Settings).
 
 The Client ID is stored in localStorage. The user's identity (email, name, picture) is decoded client-side from the returned ID token. For production, you should also verify the JWT signature with Google's certs in your backend.
 
