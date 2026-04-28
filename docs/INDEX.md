@@ -20,6 +20,7 @@
 
 | Document | What's in it | When you'd read it |
 |---|---|---|
+| [`operator-checklist.md`](./operator-checklist.md) | Setup steps · Google OAuth · mem0 deploy · capabilities · gaps · risks · definition of production-ready | Taking LearnAI from demo to real product. |
 | [`architecture.md`](./architecture.md) | High-level diagram · box-by-box · failure modes · data classification · what changes for Sprint 2 | Onboarding an engineer. Reviewing a structural PR. |
 | [`technical.md`](./technical.md) | The engineer view: MemoryService interface · offline flag wiring · perf budget · rollout · tests | Implementing a feature that touches cognition. |
 | [`mem0.md`](./mem0.md) | Why mem0 · what we store + don't · self-host (docker-compose, Fly) · SHA-pinning · backups · GDPR | Running mem0 in any environment. |
