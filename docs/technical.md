@@ -1,4 +1,4 @@
-# BuilderQuest — Technical implementation: offline flag + mem0 layer
+# LearnAI — Technical implementation: offline flag + mem0 layer
 
 > Sister docs: [`ux.md`](./ux.md), [`mem0.md`](./mem0.md).
 >
@@ -7,7 +7,7 @@
 
 ## 1. Mental model in one paragraph
 
-BuilderQuest today is a pure SPA backed by `localStorage`. We're adding a thin
+LearnAI today is a pure SPA backed by `localStorage`. We're adding a thin
 **MemoryService** abstraction with two interchangeable implementations: an
 **offline** (no-op + local-only) one, and a **mem0** one that talks to a
 self-hosted mem0 server. A single **`offlineMode`** flag in the admin config
@@ -51,7 +51,7 @@ dependency.
 ### 2.4 Toggle UX (admin)
 
 `AdminConfigTab` already has a flags grid. We add `offlineMode` with a
-prominent banner: *"Cognition layer is OFF. BuilderQuest works exactly like
+prominent banner: *"Cognition layer is OFF. LearnAI works exactly like
 v1 — pure localStorage, no remote brain."* When toggled OFF (i.e. *cognition
 on*), the banner becomes *"Cognition layer is ON. mem0 server: <url>. Health:
 ✅"* with an inline ping check.

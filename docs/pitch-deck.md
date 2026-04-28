@@ -6,7 +6,7 @@
 
 ## Slide 1 — Title
 
-**BuilderQuest** — *the social network of AI education for builders.*
+**LearnAI** — *the social network of AI education for builders.*
 
 A cognitively personalized, bite-size, real-time learning platform for the millions of working professionals who feel they're falling behind on AI.
 
@@ -73,7 +73,7 @@ We start with **the working AI builder + the curious starter**:
 
 1. **The cognition layer is the moat.** Anyone can write Sparks. Few will build a memory layer that *truly* knows what each user has learned. We're already on mem0, self-hosted, end-to-end.
 2. **The format is right.** Duolingo proved bite-size habit-forming wins. We bring it to a domain that's 10× more lucrative.
-3. **The content compounds.** Every player's interaction makes the system smarter. Every contributed Spark grows the curriculum. Year-2 BuilderQuest has knowledge no individual instructor could keep up with.
+3. **The content compounds.** Every player's interaction makes the system smarter. Every contributed Spark grows the curriculum. Year-2 LearnAI has knowledge no individual instructor could keep up with.
 4. **Open source is the multiplier.** We become *infrastructure for community-driven micro-learning* — not just an AI app. (See *Slide 11*.)
 
 ---
@@ -102,7 +102,7 @@ Public builder profiles · followers · share what you learned · contributed Sp
                      ▲
                      │
                      │       ╔═══════════════╗
-   Bootcamps         │       ║ BuilderQuest  ║
+   Bootcamps         │       ║ LearnAI  ║
                      │       ╚═══════════════╝
                      │
    Static ◀────────┼────────▶ Real-time
@@ -204,7 +204,7 @@ The MIT license + the modular architecture mean **one win seeds many.** The bran
 
 ## Closing one-liner
 
-**BuilderQuest is the brain you build by using it. The first 5-minute habit that makes you better at AI than the day before — every day, forever.**
+**LearnAI is the brain you build by using it. The first 5-minute habit that makes you better at AI than the day before — every day, forever.**
 
 ---
 

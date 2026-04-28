@@ -1,4 +1,4 @@
-# BuilderQuest — Next 5 Sprints
+# LearnAI — Next 5 Sprints
 
 A tight, opinionated roadmap. Each sprint is roughly **2 weeks** and ships something a real user (or admin) can touch. The throughline: **work for everyone from curious starter to deep researcher**, with **API-key holders unlocking unlimited evolving fresh content**.
 
@@ -14,7 +14,7 @@ Each sprint advances all four tracks.
 
 ## Sprint 1 — Admin Console + lifecycle emails (foundation for scale)
 
-**Goal**: Operators can run BuilderQuest like a product. Admins can see what's happening, configure brand and feature flags, and design the lifecycle communications that bring users back.
+**Goal**: Operators can run LearnAI like a product. Admins can see what's happening, configure brand and feature flags, and design the lifecycle communications that bring users back.
 
 **Status when sprint ends**: ✅ Shipped in this PR.
 

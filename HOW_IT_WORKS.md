@@ -1,6 +1,6 @@
-# BuilderQuest — How it works
+# LearnAI — How it works
 
-Everything you need to install, configure, and understand BuilderQuest. For the deep design rationale (terminology, content philosophy, roadmap), see [DESIGN_DOC.md](./DESIGN_DOC.md).
+Everything you need to install, configure, and understand LearnAI. For the deep design rationale (terminology, content philosophy, roadmap), see [DESIGN_DOC.md](./DESIGN_DOC.md).
 
 ## Table of contents
 
@@ -23,7 +23,7 @@ Everything you need to install, configure, and understand BuilderQuest. For the 
 
 ## 1. What it is
 
-**BuilderQuest** is a gamified, micro-dosed AI learning platform inspired by Duolingo. It serves two audiences with one experience:
+**LearnAI** is a gamified, micro-dosed AI learning platform inspired by Duolingo. It serves two audiences with one experience:
 
 - **Curious starters** — gentle ramp into AI as literacy, no fear required.
 - **Active builders** — sharp, current, opinionated knowledge in 5–10 minute bursts to keep their edge.
@@ -48,7 +48,7 @@ That's it. The built `./dist/` directory at the repo root is a static site you c
 
 ## 3. Configuration checklist
 
-BuilderQuest works with zero configuration in **demo mode**. For real Gmail auth and dynamic content, do the following:
+LearnAI works with zero configuration in **demo mode**. For real Gmail auth and dynamic content, do the following:
 
 ### 3a. Google OAuth Client ID (required for real Gmail sign-in)
 
@@ -59,7 +59,7 @@ BuilderQuest works with zero configuration in **demo mode**. For real Gmail auth
    - `http://localhost:5173` for local dev
    - your deployment URL (e.g. `https://builderquest.app`)
 5. Copy the client ID — it ends in `.apps.googleusercontent.com`.
-6. Paste it on the BuilderQuest sign-in screen, or pre-fill via Settings.
+6. Paste it on the LearnAI sign-in screen, or pre-fill via Settings.
 
 The client ID is stored locally in `localStorage`. Players can update it any time from Settings.
 

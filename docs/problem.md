@@ -99,7 +99,7 @@ We then go further than Duolingo could, by adding:
 Don't try to do all of it on day one. Start with one segment and one wow:
 
 - **Segment:** working AI builders + curious starters.
-- **Wow:** "I have 5 minutes between meetings. BuilderQuest just taught me prompt caching with a working code snippet I can paste into Claude Code right now."
+- **Wow:** "I have 5 minutes between meetings. LearnAI just taught me prompt caching with a working code snippet I can paste into Claude Code right now."
 
 Earn that wow first. Layer the social, hiring, and forking on top once retention is proven.
 

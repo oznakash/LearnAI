@@ -1,6 +1,6 @@
 # Forking the engine for a new domain
 
-> _BuilderQuest is the engine. AI is the topic. Anyone can swap the topic._
+> _LearnAI is the engine. AI is the topic. Anyone can swap the topic._
 
 If you're a Spanish teacher, a chess coach, a quantum-computing researcher, an SRE on-call lead, or a sales-enablement manager — the engine fits your domain. This is how to bend it.
 
@@ -55,7 +55,7 @@ You now have your own gamified, micro-dosed, optionally-cognitive learning app.
 
 ## What you should *not* change
 
-- **The MIT license.** Keep it MIT in your fork, or BuilderQuest can't sync improvements with you.
+- **The MIT license.** Keep it MIT in your fork, or LearnAI can't sync improvements with you.
 - **The cognition contract** (`MemoryService` interface). Customize the impl, not the interface — otherwise you fall off our upstream.
 - **The Spark types.** Add new types in a way that's backward-compatible (a new `type: "..."` variant), so seed-shape changes don't break the renderer.
 
@@ -74,7 +74,7 @@ You now have your own gamified, micro-dosed, optionally-cognitive learning app.
 
 1. **Add yourself to the fork registry** (when we publish one — Sprint 3). Until then, just open an issue on the upstream repo with your fork URL.
 2. **Contribute back.** If you build a useful general capability (a new Spark type, a new chart, a new Admin tab), open a PR upstream. We'll credit you.
-3. **Brand cleanly.** Keep "Powered by BuilderQuest" in your footer (it's not required, just appreciated). When we ship the fork registry, mutual links amplify both communities.
+3. **Brand cleanly.** Keep "Powered by LearnAI" in your footer (it's not required, just appreciated). When we ship the fork registry, mutual links amplify both communities.
 
 ## A note on the cognition layer + privacy
 
