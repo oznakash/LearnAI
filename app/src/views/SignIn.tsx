@@ -6,7 +6,16 @@ import { Illustration } from "../visuals/Illustrations";
 
 export function SignIn() {
   const { state, signIn, setGoogleClientId } = usePlayer();
-  const [clientId, setLocalClientId] = useState(state.googleClientId ?? "");
+  const savedClientId = state.googleClientId ?? "";
+  // The persisted clientId arrives async (PlayerContext hydrates from
+  // localStorage in a useEffect after first paint). If we only read it
+  // in `useState`, the input stays empty after hydration and we ask the
+  // user for the Client ID over and over even though it's already saved.
+  // Track an `editing` flag instead: while editing, use the local draft;
+  // otherwise always show the saved value.
+  const [draft, setDraft] = useState("");
+  const [editing, setEditing] = useState(false);
+  const clientId = editing ? draft : savedClientId;
   const [err, setErr] = useState<string | null>(null);
   const [loadedSDK, setLoadedSDK] = useState(false);
   const [demoEmail, setDemoEmail] = useState("");
@@ -96,13 +105,19 @@ export function SignIn() {
               <input
                 className="input"
                 placeholder="123-xxxxxx.apps.googleusercontent.com"
-                value={clientId}
-                onChange={(e) => setLocalClientId(e.target.value.trim())}
+                value={draft}
+                onChange={(e) => {
+                  setEditing(true);
+                  setDraft(e.target.value.trim());
+                }}
               />
               <button
                 className="btn-primary w-full"
-                disabled={!clientId.endsWith(".apps.googleusercontent.com")}
-                onClick={() => setGoogleClientId(clientId)}
+                disabled={!draft.endsWith(".apps.googleusercontent.com")}
+                onClick={() => {
+                  setGoogleClientId(draft);
+                  setEditing(false);
+                }}
               >
                 Save Client ID
               </button>
@@ -126,7 +141,8 @@ export function SignIn() {
                 className="btn-ghost w-full text-xs"
                 onClick={() => {
                   setGoogleClientId("");
-                  setLocalClientId("");
+                  setDraft("");
+                  setEditing(true);
                 }}
               >
                 Use a different Client ID
