@@ -118,32 +118,65 @@ across admins, we'll migrate it into mem0 too as system-scoped memories.
 So: **one runtime data store: mem0. One static layer: the repo.** Clean and
 small.
 
-## 6. Self-hosting (docker-compose, repo-rooted)
+## 6. Self-hosting
 
-We commit a `docker-compose.mem0.yml` at the repo root. It provisions:
+We pull mem0 from a fork we control: **[`oznakash/mem0`](https://github.com/oznakash/mem0)**, published to **GitHub Container Registry** at `ghcr.io/oznakash/mem0:latest`. Building the image once in your fork (via the workflow at `docs/mem0-fork-publish.workflow.yml` — copy it into the fork) gives you per-commit SHA tags you can pin in production.
 
-- `mem0` — the official mem0 server image, listening on port 8000.
-- `postgres` — Postgres 16 with the `pgvector` extension; provides both
-  the relational tables mem0 needs and the vector index.
-- (No Redis: mem0 doesn't strictly need it for our scale.)
+### 6.1 Local — docker-compose
 
-Run it:
+`docker-compose.mem0.yml` at the repo root provisions:
+
+- `mem0` — pulled from `ghcr.io/oznakash/mem0:latest` (override via `MEM0_IMAGE` env).
+- `postgres` — Postgres 16 with `pgvector`. Relational tables + vector index in one place.
+- No Redis.
 
 ```sh
+cp .env.example .env
+# edit .env: set MEM0_API_KEY, OPENAI_API_KEY (or ANTHROPIC_API_KEY)
 docker compose -f docker-compose.mem0.yml up -d
 ```
 
 Defaults:
 
-- Postgres: localhost:5432, db `mem0`, user `mem0`, password from `.env`.
-- mem0: localhost:8000, bearer key from `.env` (`MEM0_API_KEY`).
-- LLM provider: configurable via env (`OPENAI_API_KEY` or
-  `ANTHROPIC_API_KEY`); mem0 uses it for fact extraction. We pick the
-  provider via `MEM0_LLM_PROVIDER`.
+- Postgres: `localhost:5432`, db `mem0`, user `mem0`, password from `.env`.
+- mem0: `localhost:8000`, bearer key from `.env` (`MEM0_API_KEY`).
+- LLM provider: configurable via env (`OPENAI_API_KEY` or `ANTHROPIC_API_KEY`); mem0 uses it for fact extraction. Pick via `MEM0_LLM_PROVIDER`.
 - Persistent volume: `mem0_pg_data`.
 
-Production deployment (e.g. Fly.io, Render, our own VPS) is the same image +
-the same env. We document Fly + Render as the two recommended hosts.
+### 6.2 Cloud — Fly.io (recommended)
+
+A `fly.toml` is checked in at the repo root. Three commands and you're up:
+
+```sh
+# 1. Provision Postgres + pgvector and attach it to the app.
+fly postgres create --name builderquest-mem0-db --region iad
+fly postgres attach -a builderquest-mem0 builderquest-mem0-db
+
+# 2. Set the secrets (API key + LLM key).
+fly secrets set \
+  MEM0_API_KEY="$(openssl rand -hex 32)" \
+  OPENAI_API_KEY="sk-..." \
+  -a builderquest-mem0
+
+# 3. Deploy.
+fly deploy --image ghcr.io/oznakash/mem0:latest
+```
+
+The `fly.toml` is set up for `auto_stop_machines = "stop"` + `min_machines_running = 0`, so the app sleeps when idle (cheap). Bump `min_machines_running` to `1` once you have real users.
+
+### 6.3 Cloud — anywhere else
+
+Render / Railway / your own VPS: same image (`ghcr.io/oznakash/mem0:latest`), same env vars, same Postgres requirement. Use whatever managed Postgres they offer (Neon's free tier is fine for our scale).
+
+### 6.4 Pin to a SHA tag for production
+
+Any time you ship to prod, replace `:latest` with the per-commit tag from your fork's package page:
+
+```sh
+fly deploy --image ghcr.io/oznakash/mem0:sha-abc1234
+```
+
+…or set `MEM0_IMAGE` in `.env`/Fly secrets to the same.
 
 `.env.example` checked in; real `.env` git-ignored.
 

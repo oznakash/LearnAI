@@ -31,7 +31,12 @@ services:
       retries: 5
 
   mem0:
-    image: mem0/mem0:latest
+    # BuilderQuest pulls mem0 from oznakash's fork via GitHub Container Registry.
+    # The fork (https://github.com/oznakash/mem0) publishes this image on every
+    # push to its `main` branch via the workflow at
+    # `.github/workflows/_mem0-fork-publish.example.yml` (copy that into the fork).
+    # Pin to a SHA tag (e.g. `ghcr.io/oznakash/mem0:sha-abc1234`) for prod.
+    image: ${MEM0_IMAGE:-ghcr.io/oznakash/mem0:latest}
     container_name: builderquest-mem0
     restart: unless-stopped
     depends_on:
