@@ -18,38 +18,85 @@
 
 ## 💡 What this is
 
-**BuilderQuest is a second brain that teaches you AI.** It learns your goals, evolves with the field, and connects you with the people learning beside you — five minutes at a time.
+BuilderQuest started as a second brain.
 
-Open the app, complete a few **Sparks** (60-second micro-lessons that teach + test + invite you to build). The system *remembers you* — your goals, your gaps, your strengths — and bends the path toward what *you* are trying to build. Every Spark you author is a teaching post for someone else. The curriculum isn't a course; it's a living graph the community grows together.
+It became a social network.
 
-- **Bite-size by default** — fits the cracks of a working day.
-- **Personal, not generic** — a cognition layer (mem0) learns *you*.
-- **Always current** — the curriculum is alive, not a 12-week course rotting on week 4.
-- **Built for doing** — every level has a Build Card you can paste into Claude Code.
-- **Social by design** — your build is a Spark. Your mistake is a Tip. The graph teaches the graph.
-- **Open source** — fork it for any domain. The engine is yours.
+The original mission was hypertechnical: a memory and cognition layer that could **remember a person across sessions** — their goals, their gaps, the stack they were trying to ship.
 
-> *Not a course, not a feed, not a bootcamp. The missing daily habit none of those are shaped to be.*
+Then a question landed sideways: *what if this isn't a personal tool, but an education engine?*
+
+Because the AI gap isn't a knowledge problem. It's a shape problem.
+
+The 60-second insight inside any YouTube video, newsletter, paper, Hacker News thread, or release note would move you forward — *if* you could find it, in time, in the right shape, on the day you needed it.
+
+**BuilderQuest is that shape.**
+
+A second brain that teaches you AI. Five minutes at a time. In the lens of what *you* are trying to build.
 
 ---
 
-## 🧱 The problem we're solving
+## 🧱 The problem
 
-AI is reshaping every knowledge job, but every existing way to keep up is broken. People feel guilty, scroll Twitter, save 50 articles, abandon a $300 cohort. Net knowledge gained: low. Net anxiety: high.
+Every existing way to keep up with AI is broken.
 
-| The option | Why it doesn't work |
-|---|---|
-| **Twitter / LinkedIn feed** | Infinite firehose. Optimized for engagement, not learning. |
-| **YouTube** | 60-minute videos when you have 7. No state across sessions. |
-| **Coursera / Udemy** | Stale by week 4 in AI. <10% completion rate. |
-| **Bootcamps** | $1k–$10k. Cohort-paced. Can't fit a day job. |
-| **Vendor academies** | Vendor-locked. No personalization. No social. |
-| **Newsletters** | Linear, no path, no progress, no doing. |
-| **Duolingo** | Right shape, wrong domain. Languages don't change weekly. AI does. |
+Twitter is a firehose.
 
-Education for fast-moving fields needs four things at once: **bite-size delivery · personalized path · real-time content · practical doing.** Every existing product picks one or two. Until AI made the unit economics work, no one could ship all four.
+YouTube wants 47 minutes you don't have.
+
+Coursera is stale by week 4.
+
+Bootcamps cost $5k and end at a fixed date.
+
+Newsletters are linear, with no path.
+
+Vendor academies are vendor-locked.
+
+Duolingo nailed the bite-size shape — but languages don't change weekly. AI does.
+
+---
+
+What's missing is a daily 5-minute habit, **personalized to you**, **current to this week**, that ends in something you can actually ship.
+
+Education for fast-moving fields needs four things at once: **bite-size · personalized · real-time · practical.** Every existing product picks one or two. AI is what finally makes all four affordable.
 
 → Full breakdown: [`docs/problem.md`](./docs/problem.md).
+
+---
+
+## 🌐 Why it's a social network
+
+The most valuable AI content already exists.
+
+It's scattered across YouTube videos, newsletter issues, papers, Hacker News threads, vendor blogs, release notes, and weekend Twitter threads.
+
+The 60-second insight inside any of those would move you forward — but it's locked in the wrong shape.
+
+So **creators distill those sources into Sparks.** AI helps them shape it. Their name, voice, and a link to the source ride along. Every Spark has a *"Read more · Watch the full thing · Follow the creator"* handle.
+
+Which means as a learner, you're effectively **consuming the entire AI internet, in bite-size, through a lens that knows you** — your goals, your stack, what you learned yesterday.
+
+Creators don't have to be authors. They're **guides through the firehose.**
+
+That's the network:
+
+→ Creators curating
+→ The cognition layer personalizing
+→ Learners becoming teachers when they ship something worth teaching
+
+---
+
+## 🧠 Why it's powered by AI
+
+AI isn't a feature here. It's the unlock.
+
+→ AI is the **cognition layer** — what lets the system remember 10,000 learners individually.
+→ AI is the **distillation engine** — what turns a 47-minute video into a 60-second Spark in the creator's voice.
+→ AI is the **freshness loop** — what keeps the curriculum current weekly instead of yearly.
+
+A decade ago this would have cost ~$50/user/year in editor labor. Today it's ~$0.20.
+
+That's the math that makes a personalized, current, practical, bite-size learning network finally possible at scale.
 
 ---
 
@@ -57,13 +104,13 @@ Education for fast-moving fields needs four things at once: **bite-size delivery
 
 **Make every builder confident, current, and shipping** — from a 12-year-old asking their first question to a researcher tracking the frontier — regardless of where they started.
 
-We do this with a learning experience that is:
+The shape:
 
-- **Bite-size by default.** 5–10 minutes is the unit. Anything longer is the wrong shape for how AI moves.
+- **Bite-size by default.** 5–10 minutes. Anything longer is the wrong shape for how AI moves.
 - **Personal, not generic.** A cognition layer learns *you* — your goals, your gaps, your stack — and bends the path toward what *you* are building.
-- **Always current.** The curriculum is a living, evolving body of knowledge that the community + the AI grow together.
+- **Always current.** The community + the AI grow the curriculum together.
 - **Built for doing.** Every chunk ends with something you can paste into Claude Code, run, and feel.
-- **Social by design.** What you learn is something other people can learn from. Your build is a Spark. Your mistake is a Tip. Your weekly digest is a teaching post.
+- **Social by design.** Your build is a Spark. Your mistake is a Tip. Your weekly digest is a teaching post.
 
 ---
 
@@ -71,9 +118,25 @@ We do this with a learning experience that is:
 
 > **The social network of education for AI builders.** Where the curriculum is a graph, the teachers are the community, and the brain that recommends what you should learn next is *yours, evolved by your own use.*
 
-LinkedIn was the social graph of jobs. Duolingo was the gym of language. **BuilderQuest is the gym + social graph + memory of building in AI** — the place you go every day to stay sharp, to ship, and to find the next people you'll work with.
+LinkedIn was the social graph of jobs. Duolingo was the gym of language.
+
+**BuilderQuest is the gym + social graph + memory of building in AI** — the place you go every day to stay sharp, to ship, and to find the next people you'll work with.
 
 → Full vision: [`docs/vision.md`](./docs/vision.md).
+
+---
+
+## 🪨 Principles we won't walk back
+
+→ **Open source.** MIT licensed. Engine, curriculum, cognition layer — all of it. Fork it for any domain.
+
+→ **Not a game for engagement's sake.** Every level ends in a Build Card you paste into Claude Code. You pass by *shipping*, not by tapping the right answer.
+
+→ **Your data, your brain.** See, edit, forget, export what the system remembers about you. Privacy parity is non-negotiable.
+
+→ **Bite-size is the unit.** 5–10 minutes. Anything longer is a different product.
+
+→ **No content lock-in.** Sparks are text. The curriculum stays text. Forever.
 
 ---
 
@@ -82,7 +145,7 @@ LinkedIn was the social graph of jobs. Duolingo was the gym of language. **Build
 - 🌌 **12 Constellations × 10 Levels** — ~480 hand-authored micro-lessons across AI Foundations, LLMs & Cognition, Memory & Safety, AI PM, AI Builder mindset, Cybersecurity, Cloud, AI Dev Tools, AI Trends, Frontier Companies, AI News, Open Source AI.
 - ⚡ **8 Spark formats** — MicroRead · Tip & Trick · Quick Pick · Pattern Match · Fill the Stack · Field Scenario · Build Card · Boss Cell.
 - 🎯 **Personalized onboarding** — age band (kid/teen/adult), skill (starter → researcher), interests, daily minutes, goal.
-- 🔥 **Game mechanics** — Synapses (XP) · Focus (regenerating lives) · Build Streak · Guild Tiers · 14 Badges.
+- 🔥 **Game mechanics that serve practice** — Synapses (XP) · Focus (regenerating lives) · Build Streak · Guild Tiers · 14 Badges.
 - 🧠 **Cognition layer (mem0)** — opt-in, self-hosted, inspectable. Default-off; flip the Offline Mode flag in admin to turn it on.
 - 📚 **"Your Memory" tab** — see, edit, forget, wipe, export. Read-write parity is the privacy ethic.
 - 📊 **Per-topic + global dashboards** — sparkline, radar, ring, bars, 12-week heatmap.
@@ -102,8 +165,9 @@ Builders at every level. The cognition layer adapts so the same product fits a c
 | If you are… | …it works because… |
 |---|---|
 | **A working PM** who wants to be a builder | 10 min/day fits between your meetings. Build Cards make you a builder, not a reader. |
-| **A senior engineer** tracking the frontier | Skip the basics, daily 5-minute "Pulse" of fresh signal. |
+| **A senior engineer** tracking the frontier | Skip the basics. Daily 5-minute "Pulse" of fresh signal. |
 | **A curious starter (any age)** | Onboarding adapts. Mascot doesn't condescend. The 12-year-old and the 58-year-old both get traction. |
+| **A creator** with a YouTube / newsletter / blog | Turn any source into a Spark in seconds. Your name + link ride along on every learner who plays it. |
 | **A researcher** who wants to be discoverable | Public profile (coming Sprint 2) shows what you've shipped + taught — better signal than any resume. |
 | **A hiring manager** | Talent Match (coming Sprint 4) lets you search the behavioral graph: *"shipped a RAG agent with eval suite in last 90 days."* |
 | **An educator** in any fast-moving domain | Fork the engine. 30 minutes from clone to your own community-driven micro-learning app. |
@@ -182,13 +246,14 @@ No backend at the SPA tier — state persists to `localStorage` until you opt in
 
 > _Built for the community of builders, by the community of builders._
 
-Open a PR. Add a Spark. Fix a bug. Improve the brain. Fork the engine for your domain.
+Open a PR. Add a Spark. Distill a YouTube video. Fix a bug. Improve the brain. Fork the engine for your domain.
 
 **Five flavors of contribution → [`docs/contributing.md`](./docs/contributing.md).**
 
 The 30-second pitch:
+
 - 🐛 Bug fix → PR with a test.
-- 📚 New Spark → edit a topic file in `app/src/content/topics/*.ts`, or use the Admin Prompt Studio to generate one.
+- 📚 New Spark → edit a topic file in `app/src/content/topics/*.ts`, or use the Admin Prompt Studio to distill from a source URL.
 - 🛠 New Build Card → same. Test it end-to-end first.
 - 🌐 New Constellation → open an issue first.
 - 🧠 Engine work → standard PR. Tests required.
@@ -199,9 +264,11 @@ Every Spark you author is credited to you. When Talent Match ships, your contrib
 
 ## 🏁 The end game
 
-The five-year arc, in one paragraph:
-
-> *Year 1 — first 10k weekly active builders. Year 2 — public profiles + cohort leaderboards. Year 3 — Talent Match: companies search the behavioral graph for "people who shipped X with Y last month" — the **new LinkedIn for AI roles**. Year 4 — forks emerge for kids-AI, on-call drills, sales enablement, climate-tech. Year 5 — the category is named, and BuilderQuest is its default.*
+Year 1 — first 10k weekly active builders.
+Year 2 — public profiles + cohort leaderboards.
+Year 3 — Talent Match: companies search the behavioral graph for *"people who shipped X with Y last month"* — the new LinkedIn for AI roles.
+Year 4 — forks emerge for kids-AI, on-call drills, sales enablement, climate-tech.
+Year 5 — the category is named, and BuilderQuest is its default.
 
 → Long version: [`docs/vision.md`](./docs/vision.md) · [`docs/roadmap.md`](./docs/roadmap.md).
 
@@ -264,7 +331,9 @@ learnai/
 
 <div align="center">
 
-**Built by builders, for builders. The brain you build by using it.**
+**BuilderQuest started as one person trying to remember themselves.**
+
+**It became a place where the community remembers each other.**
 
 → [Open the live demo](https://learnai-b94d78.cloud-claude.com) · [Read the vision](./docs/vision.md) · [Open a PR](./docs/contributing.md)
 
