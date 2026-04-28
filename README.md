@@ -1,12 +1,14 @@
 <div align="center">
 
-# 🚀 BuilderQuest
+![BuilderQuest — the second brain that teaches you AI](./docs/hero.svg)
 
-### The social network of AI education for builders.
+# BuilderQuest
 
-**A personal cognitive brain · 5-minute daily habit · open source · forever free.**
+### The second brain that teaches you AI.
 
-[![Tests](https://img.shields.io/badge/tests-90%2F90-success)](./app/src/__tests__) [![Build](https://img.shields.io/badge/build-passing-success)](./.github/workflows/build-and-publish-dist.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](#license) [![Stack](https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20mem0-7c5cff)](#-tech) [![Vibe](https://img.shields.io/badge/vibe-shipping-ff5d8f)](./docs/vision.md)
+**5-minute bites · personalized to your goals · social by design · open source · forever free.**
+
+[![Tests](https://img.shields.io/badge/tests-100%2F100-success)](./app/src/__tests__) [![Build](https://img.shields.io/badge/build-passing-success)](./.github/workflows/build-and-publish-dist.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](#license) [![Stack](https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20mem0-7c5cff)](#-tech) [![Vibe](https://img.shields.io/badge/vibe-shipping-ff5d8f)](./docs/vision.md)
 
 **Live demo →** [`learnai-b94d78.cloud-claude.com`](https://learnai-b94d78.cloud-claude.com) · **Wiki →** [`docs/INDEX.md`](./docs/INDEX.md) · **Pitch →** [`docs/pitch-deck.md`](./docs/pitch-deck.md)
 
@@ -16,32 +18,62 @@
 
 ## 💡 What this is
 
-BuilderQuest is **a daily 5-minute habit that closes the AI knowledge gap.** Open the app, complete a few **Sparks** (60-second micro-lessons that teach + test + invite you to build), watch your **Build Streak** climb. The system *remembers you* — your goals, gaps, strengths — and bends the path toward what you're actually trying to build.
+**BuilderQuest is a second brain that teaches you AI.** It learns your goals, evolves with the field, and connects you with the people learning beside you — five minutes at a time.
 
-Built for the way AI actually moves:
+Open the app, complete a few **Sparks** (60-second micro-lessons that teach + test + invite you to build). The system *remembers you* — your goals, your gaps, your strengths — and bends the path toward what *you* are trying to build. Every Spark you author is a teaching post for someone else. The curriculum isn't a course; it's a living graph the community grows together.
 
 - **Bite-size by default** — fits the cracks of a working day.
 - **Personal, not generic** — a cognition layer (mem0) learns *you*.
 - **Always current** — the curriculum is alive, not a 12-week course rotting on week 4.
 - **Built for doing** — every level has a Build Card you can paste into Claude Code.
+- **Social by design** — your build is a Spark. Your mistake is a Tip. The graph teaches the graph.
 - **Open source** — fork it for any domain. The engine is yours.
 
-> *We're not trying to be Coursera, YouTube, or Twitter. We're the missing daily habit that none of them are shaped to be.*
+> *Not a course, not a feed, not a bootcamp. The missing daily habit none of those are shaped to be.*
 
 ---
 
-## 🎯 Built for everyone with AI FOMO
+## 🧱 The problem we're solving
 
-| If you are… | …it works because… |
+AI is reshaping every knowledge job, but every existing way to keep up is broken. People feel guilty, scroll Twitter, save 50 articles, abandon a $300 cohort. Net knowledge gained: low. Net anxiety: high.
+
+| The option | Why it doesn't work |
 |---|---|
-| **A working PM** who wants to be a builder | 10 min/day fits between your meetings. Build Cards make you a builder, not a reader. |
-| **A senior engineer** tracking the frontier | Skip the basics, daily 5-minute "Pulse" of fresh signal. |
-| **A curious starter (any age)** | Onboarding adapts. Mascot doesn't condescend. The 12-year-old and the 58-year-old both get traction. |
-| **A researcher** who wants to be discoverable | Public profile (coming Sprint 2) shows what you've shipped + taught — better signal than any resume. |
-| **A hiring manager** | Talent Match (coming Sprint 4) lets you search the behavioral graph: *"shipped a RAG agent with eval suite in last 90 days."* |
-| **An educator** in any fast-moving domain | Fork the engine. 30 minutes from clone to your own community-driven micro-learning app. |
+| **Twitter / LinkedIn feed** | Infinite firehose. Optimized for engagement, not learning. |
+| **YouTube** | 60-minute videos when you have 7. No state across sessions. |
+| **Coursera / Udemy** | Stale by week 4 in AI. <10% completion rate. |
+| **Bootcamps** | $1k–$10k. Cohort-paced. Can't fit a day job. |
+| **Vendor academies** | Vendor-locked. No personalization. No social. |
+| **Newsletters** | Linear, no path, no progress, no doing. |
+| **Duolingo** | Right shape, wrong domain. Languages don't change weekly. AI does. |
 
-Full personas: [`docs/use-cases.md`](./docs/use-cases.md).
+Education for fast-moving fields needs four things at once: **bite-size delivery · personalized path · real-time content · practical doing.** Every existing product picks one or two. Until AI made the unit economics work, no one could ship all four.
+
+→ Full breakdown: [`docs/problem.md`](./docs/problem.md).
+
+---
+
+## 🎯 Mission
+
+**Make every builder confident, current, and shipping** — from a 12-year-old asking their first question to a researcher tracking the frontier — regardless of where they started.
+
+We do this with a learning experience that is:
+
+- **Bite-size by default.** 5–10 minutes is the unit. Anything longer is the wrong shape for how AI moves.
+- **Personal, not generic.** A cognition layer learns *you* — your goals, your gaps, your stack — and bends the path toward what *you* are building.
+- **Always current.** The curriculum is a living, evolving body of knowledge that the community + the AI grow together.
+- **Built for doing.** Every chunk ends with something you can paste into Claude Code, run, and feel.
+- **Social by design.** What you learn is something other people can learn from. Your build is a Spark. Your mistake is a Tip. Your weekly digest is a teaching post.
+
+---
+
+## 🌌 Vision
+
+> **The social network of education for AI builders.** Where the curriculum is a graph, the teachers are the community, and the brain that recommends what you should learn next is *yours, evolved by your own use.*
+
+LinkedIn was the social graph of jobs. Duolingo was the gym of language. **BuilderQuest is the gym + social graph + memory of building in AI** — the place you go every day to stay sharp, to ship, and to find the next people you'll work with.
+
+→ Full vision: [`docs/vision.md`](./docs/vision.md).
 
 ---
 
@@ -63,6 +95,23 @@ Honest list of what's shipped vs. coming: [`docs/mvp.md`](./docs/mvp.md).
 
 ---
 
+## 👥 Who it's for
+
+Builders at every level. The cognition layer adapts so the same product fits a curious 12-year-old, a working PM, and a frontier researcher.
+
+| If you are… | …it works because… |
+|---|---|
+| **A working PM** who wants to be a builder | 10 min/day fits between your meetings. Build Cards make you a builder, not a reader. |
+| **A senior engineer** tracking the frontier | Skip the basics, daily 5-minute "Pulse" of fresh signal. |
+| **A curious starter (any age)** | Onboarding adapts. Mascot doesn't condescend. The 12-year-old and the 58-year-old both get traction. |
+| **A researcher** who wants to be discoverable | Public profile (coming Sprint 2) shows what you've shipped + taught — better signal than any resume. |
+| **A hiring manager** | Talent Match (coming Sprint 4) lets you search the behavioral graph: *"shipped a RAG agent with eval suite in last 90 days."* |
+| **An educator** in any fast-moving domain | Fork the engine. 30 minutes from clone to your own community-driven micro-learning app. |
+
+Full personas: [`docs/use-cases.md`](./docs/use-cases.md).
+
+---
+
 ## 🚀 Try it
 
 ### In a browser, right now
@@ -78,7 +127,7 @@ git clone https://github.com/oznakash/learnai
 cd learnai
 npm install     # delegates to ./app
 npm run dev     # local dev at http://localhost:5173
-npm test        # vitest, 90 / 90
+npm test        # vitest, 100 / 100
 npm run build   # static SPA → ./dist
 ```
 
@@ -125,7 +174,7 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 **Google Identity Services** for Gmail-only auth.
 No backend at the SPA tier — state persists to `localStorage` until you opt into mem0.
 
-478 KB JS / 29 KB CSS gzipped, 75 modules. 90 / 90 tests across 12 files.
+478 KB JS / 29 KB CSS gzipped, 75 modules. 100 / 100 tests across 13 files.
 
 ---
 
@@ -148,7 +197,7 @@ Every Spark you author is credited to you. When Talent Match ships, your contrib
 
 ---
 
-## 🌍 The end game
+## 🏁 The end game
 
 The five-year arc, in one paragraph:
 
@@ -166,6 +215,7 @@ learnai/
 ├── CLAUDE.md                       ← operator manual for AI agents
 ├── docs/                           ← the wiki (strategy + technical)
 │   ├── INDEX.md                    ← documentation table of contents
+│   ├── hero.svg                    ← README hero banner
 │   ├── vision.md
 │   ├── problem.md
 │   ├── use-cases.md
