@@ -14,6 +14,7 @@ LearnAI turns the AI firehose into personalized 5-minute Sparks, practical chall
 
 **Live demo →** [`learnai-b94d78.cloud-claude.com`](https://learnai-b94d78.cloud-claude.com) · **Wiki →** [`docs/INDEX.md`](./docs/INDEX.md) · **Pitch →** [`docs/pitch-deck.md`](./docs/pitch-deck.md)
 
+· **Contact Email →** [`LearnAI@useyl.com`](mailto:LearnAI@useyl.com)
 </div>
 
 ---
