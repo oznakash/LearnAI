@@ -1,23 +1,39 @@
 import type { AdminConfig, EmailTemplate, EmailTemplateId, GameTuning, ServerAuthConfig } from "./types";
 
 /**
- * Build-time defaults for server-side sign-in. The operator's deployment
- * sets these via VITE_* env vars in the GitHub Actions workflow; forks
- * without those vars fall through to demo mode with empty strings, and the
- * operator configures via the Admin UI.
+ * Build-time defaults for server-side sign-in. Two layers, in priority:
  *
- * These are public values (URLs, OAuth client IDs) and safe to bake into
- * the SPA bundle.
+ * 1. `VITE_*` env vars at build time (set on the GitHub Actions runner via
+ *    repository variables, or `VITE_X=… npm run build` for self-hosters).
+ * 2. Hardcoded constants below — the LearnAI operator's production stack.
+ *
+ * Hardcoding the URL + production-mode default means deployers that build
+ * from source on their own infra (e.g. cloud-claude.com's own builder)
+ * still get a working SPA without having to plumb env vars through the
+ * deploy pipeline. The values are public by design (a URL and an OAuth
+ * client ID — no secrets).
+ *
+ * Forks that want demo mode either set `VITE_SERVER_AUTH_DEFAULT=demo` at
+ * build time, or flip the toggle in the Admin → Authentication tab once
+ * after first sign-in.
  */
+const FALLBACK_SERVER_AUTH_MODE: "demo" | "production" = "production";
+const FALLBACK_MEM0_URL = "https://mem0-09b7ea.cloud-claude.com";
+const FALLBACK_GOOGLE_CLIENT_ID = "";
+
 function defaultServerAuth(): ServerAuthConfig {
-  // import.meta.env is statically replaced by Vite at build time.
   const env = (typeof import.meta !== "undefined" && import.meta.env) || ({} as Record<string, string | undefined>);
   const rawMode = (env.VITE_SERVER_AUTH_DEFAULT ?? "").toLowerCase();
-  const mode: "demo" | "production" = rawMode === "production" ? "production" : "demo";
+  const mode: "demo" | "production" =
+    rawMode === "demo"
+      ? "demo"
+      : rawMode === "production"
+        ? "production"
+        : FALLBACK_SERVER_AUTH_MODE;
   return {
     mode,
-    googleClientId: env.VITE_GOOGLE_CLIENT_ID ?? "",
-    mem0Url: env.VITE_MEM0_URL ?? "",
+    googleClientId: env.VITE_GOOGLE_CLIENT_ID || FALLBACK_GOOGLE_CLIENT_ID,
+    mem0Url: env.VITE_MEM0_URL || FALLBACK_MEM0_URL,
   };
 }
 
