@@ -79,8 +79,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, [config, hydrated]);
 
   // Build the deterministic mock cohort once, then merge the current local user.
+  // The mock cohort is only included when the admin has flipped on
+  // `flags.showDemoData` — otherwise only the real signed-in player shows
+  // up in Users / Analytics / etc., which is the right default for a
+  // production deployment.
   useEffect(() => {
-    const base = buildMockUsers();
+    const base = config.flags.showDemoData ? buildMockUsers() : [];
     const merged: MockUser[] = base.slice();
     if (player.identity?.email) {
       const totalSparks = player.history.reduce((a, h) => a + h.sparkIds.length, 0);

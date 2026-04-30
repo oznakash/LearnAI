@@ -69,6 +69,13 @@ export interface FeatureFlags {
   offlineMode: boolean;
   /** When true, individual players can override the global flag in Settings. */
   memoryPlayerOptIn: boolean;
+  /**
+   * When true, the deterministic 30-user demo cohort is folded into the
+   * Admin → Users + Analytics views (alongside the real signed-in user).
+   * Useful for screenshots, demos, and stress-testing the UI; off by
+   * default so a clean production deployment doesn't surface fake users.
+   */
+  showDemoData: boolean;
 }
 
 /**
