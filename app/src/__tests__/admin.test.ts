@@ -121,6 +121,25 @@ describe("loadAdminConfig — legacy-string migration", () => {
     expect(cfg.branding.mascotName).toBe("Buddy");
   });
 
+  it("migrates stale flags.offlineMode=true to false (cognition on by default)", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ flags: { offlineMode: true, memoryPlayerOptIn: false } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.flags.offlineMode).toBe(false);
+    expect(cfg.flags.memoryPlayerOptIn).toBe(false);
+  });
+
+  it("preserves explicit flags.memoryPlayerOptIn=true on load", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ flags: { memoryPlayerOptIn: true } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.flags.memoryPlayerOptIn).toBe(true);
+  });
+
   it("seeds defaults when no branding stored at all", () => {
     const cfg = loadAdminConfig();
     expect(cfg.branding.appName).toBe("LearnAI");

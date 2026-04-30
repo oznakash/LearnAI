@@ -18,7 +18,6 @@ import {
   type MemoryService,
   type MemoryStatus,
 } from "./index";
-import { isOfflineMode } from "../admin/runtime";
 
 type Backend = MemoryStatus["backend"];
 
@@ -43,24 +42,30 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
   const { state: player } = usePlayer();
   const { config: adminCfg } = useAdmin();
 
-  // Resolve the active service whenever the offline flag, mem0 server, or
-  // signed-in user changes. We re-create on every meaningful change so the
-  // toggle is instant.
+  // Cognition is on by default for everyone. The player can only opt
+  // out when the admin has flipped `flags.memoryPlayerOptIn` on.
+  const userOptedOut = !!(adminCfg.flags.memoryPlayerOptIn && player.memoryOptOut);
+
+  // Production server-auth: bearer is the player's session JWT, URL is
+  // the operator's mem0. Demo / fallback: legacy memoryConfig fields.
+  const isProduction = adminCfg.serverAuth.mode === "production";
+  const serverUrl = isProduction
+    ? adminCfg.serverAuth.mem0Url || adminCfg.memoryConfig.serverUrl
+    : adminCfg.memoryConfig.serverUrl;
+  const bearerToken = isProduction
+    ? player.serverSession?.token
+    : adminCfg.memoryConfig.apiKey;
+
   const userId = player.identity?.email ?? "";
-  const sessionToken = player.serverSession?.token;
   const service = useMemo(
-    () => selectMemoryService(userId, { bearerToken: sessionToken }),
-    // We deliberately depend on the runtime-relevant inputs:
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      userId,
-      sessionToken,
-      adminCfg.flags.offlineMode,
-      adminCfg.memoryConfig.serverUrl,
-      adminCfg.memoryConfig.apiKey,
-      adminCfg.serverAuth.mode,
-      adminCfg.serverAuth.mem0Url,
-    ]
+    () =>
+      selectMemoryService({
+        userId,
+        serverUrl,
+        bearerToken,
+        forceOffline: userOptedOut,
+      }),
+    [userId, serverUrl, bearerToken, userOptedOut]
   );
   const serviceRef = useRef(service);
   useEffect(() => {
@@ -69,14 +74,18 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
 
   const [status, setStatus] = useState<MemoryStatus | null>(null);
 
+  // Backend label is derived from the live service, not from a stale
+  // localStorage cache (the source of the original race-condition bug).
+  const fallbackBackend: Backend = userOptedOut || !serverUrl ? "offline" : "mem0";
+
   const refreshHealth = useCallback(async () => {
     try {
       const s = await serviceRef.current.health();
       setStatus(s);
     } catch (e) {
-      setStatus({ ok: false, backend: isOfflineMode() ? "offline" : "mem0", reason: (e as Error).message });
+      setStatus({ ok: false, backend: fallbackBackend, reason: (e as Error).message });
     }
-  }, []);
+  }, [fallbackBackend]);
 
   useEffect(() => {
     refreshHealth();
@@ -114,7 +123,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
     await withMemoryGuard(async () => serviceRef.current.wipe(), undefined);
   }, []);
 
-  const backend: Backend = status?.backend ?? (isOfflineMode() ? "offline" : "mem0");
+  const backend: Backend = status?.backend ?? fallbackBackend;
 
   const value = useMemo<Ctx>(
     () => ({ service, backend, status, remember, recall, list, update, forget, wipe, refreshHealth }),

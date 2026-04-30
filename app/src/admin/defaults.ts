@@ -223,10 +223,13 @@ export function defaultAdminConfig(): AdminConfig {
       liveModeForApiKeyHolders: true,
       voiceMode: false,
       buildCardVerification: false,
-      // Offline by default — LearnAI works without a remote brain.
-      // The admin opts in to the cognition layer by configuring mem0 below
-      // and flipping this to false.
-      offlineMode: true,
+      // Cognition (mem0) is the product's value-prop. It's on by default
+      // for everyone. The deprecated `offlineMode` field is kept here only
+      // for the localStorage migration in store.ts; nothing reads it.
+      offlineMode: false,
+      // When true, the admin gives players a "Let LearnAI remember things
+      // about me" toggle in Settings — they can opt themselves out. When
+      // false (default), every signed-in user is on the cognition layer.
       memoryPlayerOptIn: false,
       // Demo cohort is off by default. Operators turn it on when they
       // want a populated UI for screenshots / demos / glitch hunting.

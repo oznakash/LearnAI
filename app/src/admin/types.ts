@@ -62,12 +62,22 @@ export interface FeatureFlags {
   voiceMode: boolean;
   buildCardVerification: boolean;
   /**
-   * Master switch for the cognition / memory layer. When true, LearnAI
-   * runs entirely on the device with no remote brain (the v1 behaviour). When
-   * false, MemoryService talks to the configured mem0 server.
+   * @deprecated kept for migration only. Cognition is on by default for
+   * everyone now. The previous "global kill switch" semantics confused
+   * the player privacy model and had a stale-cache race that defaulted
+   * users into offline mode unintentionally. The store loader migrates
+   * any saved `offlineMode: true` to `false` on read.
    */
-  offlineMode: boolean;
-  /** When true, individual players can override the global flag in Settings. */
+  offlineMode?: boolean;
+  /**
+   * When true, players see a "Let LearnAI remember things about me"
+   * toggle in Settings and can opt themselves out of the cognition
+   * layer. When false (default), every signed-in user is on the
+   * cognition layer — no per-user opt-out.
+   *
+   * The privacy promise: cognition is on by default for everyone, but
+   * the operator can flip this if their cohort needs the off-switch.
+   */
   memoryPlayerOptIn: boolean;
   /**
    * When true, the deterministic 30-user demo cohort is folded into the
