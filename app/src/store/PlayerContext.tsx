@@ -30,6 +30,23 @@ import {
 } from "./game";
 import { evaluateBadges } from "./badges";
 import { isSessionExpired, serverSignOut } from "../auth/server";
+import { loadRemoteState, mergeRemoteIntoLocal, pickSyncedFields, saveRemoteState } from "./sync";
+
+const SYNC_DEBOUNCE_MS = 1_000;
+
+/** Read mem0 URL straight from admin localStorage. The PlayerContext
+ *  doesn't import AdminContext to avoid a provider-cycle dependency. */
+function readMem0Url(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw = window.localStorage.getItem("builderquest:admin:v1");
+    if (!raw) return "";
+    const parsed = JSON.parse(raw) as { serverAuth?: { mem0Url?: string } };
+    return parsed?.serverAuth?.mem0Url ?? "";
+  } catch {
+    return "";
+  }
+}
 
 type Action =
   | { type: "init"; state: PlayerState }
@@ -100,6 +117,52 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return;
     saveState(state);
   }, [state, hydrated]);
+
+  // Cross-device sync: when there's a live server session, debounced PUT
+  // /v1/state on every state change. Per-device fields (identity,
+  // serverSession, googleClientId, apiKey) are stripped before send.
+  // Fire-and-forget — the local save above is the source of truth on this
+  // device; the remote write is best-effort.
+  useEffect(() => {
+    if (!hydrated) return;
+    const token = state.serverSession?.token;
+    if (!token) return;
+    const url = readMem0Url();
+    if (!url) return;
+    const handle = setTimeout(() => {
+      void saveRemoteState(url, token, pickSyncedFields(state));
+    }, SYNC_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [state, hydrated]);
+
+  // Cross-device sync: on hydrate, if there's a live session, fetch the
+  // server snapshot and merge over local. Server wins for synced fields,
+  // local wins for per-device fields. One-shot; subsequent updates flow
+  // through the debounced save effect above.
+  useEffect(() => {
+    if (!hydrated) return;
+    const token = state.serverSession?.token;
+    if (!token) return;
+    const url = readMem0Url();
+    if (!url) return;
+    let cancelled = false;
+    void loadRemoteState(url, token).then((env) => {
+      if (cancelled || !env) return;
+      // Skip if the server has nothing yet — preserve local progress.
+      if (!env.blob || Object.keys(env.blob).length === 0) return;
+      dispatch({
+        type: "set",
+        mutate: (s) => mergeRemoteIntoLocal(s, env.blob),
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // We deliberately don't depend on `state.serverSession?.token` here:
+    // we only want to pull on first hydrate / new sign-in, not on every
+    // state mutation. signInWithSession also triggers a fresh load below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, state.serverSession?.token]);
 
   // periodic focus regen
   useEffect(() => {

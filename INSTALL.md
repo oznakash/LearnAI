@@ -57,14 +57,15 @@ Required env vars on the mem0 service:
 | `ADMIN_EMAILS` | `you@gmail.com` | Comma-separated allowlist. Emails on this list get `is_admin: true` claims in their session JWT. |
 | `CORS_ORIGINS` | `https://learnai.cloud-claude.com,http://localhost:5173` | Comma-separated browser origins allowed to reach the API. |
 | `SESSION_TTL_DAYS` | `7` | Optional. Defaults to 7. |
-| `HISTORY_DB_PATH` | `/tmp/history.db` | Optional. mem0 creates this dir on boot. |
+| `HISTORY_DB_PATH` | `/app/data/history.db` | Optional. **Mount a persistent volume at `/app/data`** so the memory-history audit trail survives rebuilds. Setting this to `/tmp/...` makes the audit trail ephemeral (memories themselves remain safe in Postgres regardless). |
 
 After redeploy, smoke:
 
 ```sh
 curl https://<your-mem0>/health                # → {"status":"ok"}
-curl https://<your-mem0>/openapi.json | jq '.paths | keys[]' | grep '^"/auth/'
-# expect to see: "/auth/google", "/auth/session", "/auth/google/signout"
+curl https://<your-mem0>/openapi.json | jq '.paths | keys[]' | grep '^"/auth/\|^"/v1/state'
+# expect to see: "/auth/google", "/auth/session", "/auth/google/signout",
+#                "/auth/config", "/v1/state"
 ```
 
 ### 3. Provision a Google OAuth client
@@ -107,9 +108,13 @@ If you're running outside GitHub Actions, set the same env vars before `npm run 
 
 ### Cross-device test
 
-1. Sign in on browser A.
-2. Sign in on browser B with the same Gmail. Each browser gets its own session JWT — both are simultaneously valid.
-3. Sign out in browser A — browser B is unaffected (sessions are stateless JWTs, no server-side revocation).
+1. Sign in on browser A. Earn some XP (complete a Spark or two).
+2. Sign in on browser B with the same Gmail. Within ~1 second of sign-in, browser B should show the same XP, streak, history, profile, and badges as browser A.
+3. Earn more XP on B. Switch to A and refresh — B's progress shows up on A within ~1 second.
+4. Sign out on A. B is unaffected (sessions are stateless 7-day JWTs, no server-side revocation).
+5. Memory ("/memory" tab) is shared the same way — it's stored on the mem0 server keyed on the same email.
+
+The cross-device sync uses `GET / PUT /v1/state` on mem0 (per-user JSON blob, capped at 256 KB). Per-device fields — the session token, the local Anthropic/OpenAI API key, and demo-mode Client ID — never leave the device.
 
 ---
 
@@ -126,6 +131,18 @@ Replace the env var on mem0, redeploy. Every active session is invalidated; user
 ### Upgrade mem0
 
 `oznakash/mem0`'s `main` is the LearnAI fork. Pull and redeploy your image. Migrations run automatically on container boot.
+
+### Persistence checklist (what survives a rebuild)
+
+| Data | Where it lives | Survives mem0 rebuild |
+|---|---|---|
+| Memories (vector + payload) | Postgres + pgvector | ✅ Yes — separate service |
+| User accounts, API keys, sessions table, request logs | Postgres | ✅ Yes |
+| Cross-device PlayerState (XP, streak, history, profile, …) | Postgres `user_states` | ✅ Yes |
+| `JWT_SECRET` (active session validity) | Env var on the mem0 service | ✅ Yes |
+| `GOOGLE_OAUTH_CLIENT_ID`, `ADMIN_EMAILS`, `CORS_ORIGINS` | Env vars | ✅ Yes |
+| mem0 history audit trail (`HISTORY_DB_PATH`) | Wherever you point it | ⚠️ **Only if you mount a persistent volume**. The default is `/app/data/history.db`; mount a volume at `/app/data` (or override `HISTORY_DB_PATH` to a known persistent path). |
+| Per-browser AdminConfig (branding, flags, tuning) | Browser localStorage | Per-device today; sync follows in a later sprint. |
 
 ### Troubleshoot
 
