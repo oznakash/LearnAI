@@ -105,7 +105,7 @@ Names matter. The current naming system (Sparks, Constellations, Synapses, Guild
 | Mechanic | We will call it | We will *not* call it | Why |
 |---|---|---|---|
 | The asymmetric follow link | **Tune-in** (verb: *tune in*, *tune out*) | "Follow", "Subscribe" | The Constellation metaphor demands it. You don't *follow* a star — you *tune in* to its signal. |
-| The set of people you've tuned in to | **Your Constellation** | "Following list", "Friends" | Already in the metaphor. A player's Constellation is the people whose signal they want. |
+| The set of people you've tuned in to | **Your Crew** | "Your Constellation", "Following list", "Friends" | "Constellation" is already the user-facing word for our 12 topics — overloading it for people would confuse. "Crew" is plain English, builder-shaped, and short. |
 | The set of people who tune in to you | **Tuned-in to you** (count + list) | "Followers", "Audience" | Symmetric to the verb. Avoids "follower" baggage. |
 | The explore feed | **Spark Stream** | "Feed", "Timeline" | Sparks are already the unit. The Stream is the moving river of Sparks visible to you. |
 | Per-topic leaderboards | **Constellation Boards** | "Topic leaderboards" | Each Constellation has its own Board. The global one is the **Galaxy Board**. |
@@ -113,9 +113,11 @@ Names matter. The current naming system (Sparks, Constellations, Synapses, Guild
 | The privacy toggle (default public → opt-in private) | **Profile mode** with two values: *Open* and *Closed* | "Public / Private" | Closed implies an active gate (approval), Open implies discoverability. Cleaner than "private = hidden". |
 | A pending tune-in request to a Closed profile | **Signal request** | "Follow request" | Same word family as Signals. A request to be allowed to receive someone's signal. |
 
-> **Naming bar:** "If a 14-year-old player can't read it once and get the metaphor, we change it." Tune-in, Spark Stream, Constellation Boards, Galaxy Board, Signals, Signal requests — all pass the test.
+> **Naming bar:** "If a 14-year-old player can't read it once and get the metaphor, we change it." Tune-in, Your Crew, Spark Stream, Constellation Boards, Galaxy Board, Signals, Signal requests — all pass the test.
+>
+> **Why "Crew" and not "Constellation" for the follow list:** "Constellation" is already the established user-facing word for our 12 topics (AI Foundations, AI PM, etc., per [`vision.md`](./vision.md)). Reusing it for *people* would overload one word with two meanings on the same screen. We keep "Constellation Boards" (per-topic leaderboards) because that usage is consistent with the existing topic = Constellation metaphor.
 
-These names appear in copy, button labels, settings, and notifications. The engineering doc mirrors them in code identifiers (`tuneIn`, `tunedIns`, `sparkStream`, `signals`, `profileMode`).
+These names appear in copy, button labels, settings, and notifications. The engineering doc mirrors them in code identifiers (`tuneIn`, `tunedIns`, `crew`, `sparkStream`, `signals`, `profileMode`).
 
 ---
 
@@ -135,13 +137,13 @@ This is the connective tissue of the network. Without an asymmetric graph, there
 
 | Action | Available where | Outcome |
 |---|---|---|
-| **Tune in** | Any Open profile, Constellation Board row, Spark Stream card byline | Other player added to "Your Constellation" — instant for Open, Signal request for Closed. |
+| **Tune in** | Any Open profile, Constellation Board row, Spark Stream card byline | Other player added to "Your Crew" — instant for Open, Signal request for Closed. |
 | **Tune out** | Same surfaces, where I'm already tuned in | Removes the link. Their Sparks stop appearing in my Stream within 24 h. |
 | **Mute** | Any tune-in row, any Stream card | I stay tuned in (counts unchanged), but their Sparks stop appearing in my Stream. They are not notified. |
 | **Block** | Any profile, any Stream card | They cannot see my profile, cannot send me Signal requests. I cannot see theirs. Counts on both sides update. Mutual unfollow. |
 | **Report** | Any profile, any Stream card | Opens a 1-click reason picker (*spam* / *harassment* / *off-topic content* / *impersonation* / *other*) + optional 280-char note. Goes to a moderation queue (admin tab — see §6.2). I'm auto-muted from them on report submission. |
 | **Approve / decline Signal request** *(Closed profile only)* | Settings → Network → "Pending requests" | List view; bulk-approve and individual-deny supported. |
-| **Cancel a pending Signal request** | "Your Constellation" list (pending section) | Removes the request silently from the recipient's queue. |
+| **Cancel a pending Signal request** | "Your Crew" list (pending section) | Removes the request silently from the recipient's queue. |
 
 #### Rules and edge cases
 
@@ -194,7 +196,7 @@ This is the core artifact of the entire vision. From Sprint 2 of the roadmap: *"
 Layout, top to bottom:
 
 1. **Header** — display name (first name only by default; toggle in §4.3 to show full name), handle (`@maya`), avatar (Google picture or initials), Guild Tier badge, current streak, total Synapses. **No email. No age. No location.**
-2. **Constellation map** — a visual radar / chip cloud of the topics they've made progress in, ordered by Synapses-in-topic. Each chip is clickable → that Constellation Board, scrolled to this player. Toggle in §4.3 to hide.
+2. **Topic map** — a visual radar / chip cloud of the topics (Constellations) they've made progress in, ordered by Synapses-in-topic. Each chip is clickable → that Constellation Board, scrolled to this player. Toggle in §4.3 to hide.
 3. **Signals** — the topics this player has *opted into being discoverable for* (max 5; see §4.4). These are the topics they show up on in the Constellation Boards. Always visible if the player has set any.
 4. **What they're working on** — current Constellation + level, *if profile mode is Open and `currentWork` is enabled*. Player can hide this even when Open. Shows: *"Maya is on AI PM — Level 6 (Reframing requirements as evals)"*. **Never shows their answers, scores, or specific Sparks.**
 5. **Streak + activity** — a 14-day Sparkline of activity counts (no per-Spark detail). The same widget already on Home for the player themselves. Toggle-able.
@@ -249,7 +251,7 @@ Below the toggle, a set of **field-level visibility checkboxes** for the player 
 
 When my profile is Open, also show:
   ☑ My current Constellation + level (what I'm working on)
-  ☑ My Constellation map (topic affinities)
+  ☑ My Topic map (topic affinities)
   ☑ My 14-day activity sparkline
   ☑ My badges
   ☐ My full name (otherwise first-name only)
@@ -308,7 +310,7 @@ Settings → Network
   When Open, also show: [field-level checkboxes]
 
   ─────────────────────────────────
-  Your Constellation (12)         "Manage →"
+  Your Crew (12)                   "Manage →"
   Tuned in to you (4)              "Manage →"
   Signal requests (2 pending)      "Review →"
   Blocked (1)                       "Manage →"
@@ -527,10 +529,10 @@ A consolidated map of every UI change in the social MVP, by file. **The engineer
 | `app/src/App.tsx` | New views in the `View` union: `profile`, `stream`, `network`. Settings → Network sub-route. |
 | `app/src/components/TabBar.tsx` | 4 → 5 tabs. New `Stream` tab between Home and Tasks. Renamed Guild → Boards. |
 | `app/src/components/TopBar.tsx` | Avatar menu gains *View my profile* / *Network*. New Stream-unread dot. New Signal-request dot on avatar. |
-| `app/src/views/Home.tsx` | New "On your Stream" rail (3 most-recent cards) above Discover-more. New "People in your Constellation today" small card. |
+| `app/src/views/Home.tsx` | New "On your Stream" rail (3 most-recent cards) above Discover-more. New "People in your Crew today" small card. |
 | `app/src/views/TopicView.tsx` | New "On the {Topic} Constellation Board" rail (top 5) below Sparks-per-level. |
 | `app/src/views/Leaderboard.tsx` | Becomes the Boards view: tabbed (Galaxy / per-Signal / Following), period pills, real-cohort first then mock filler. |
-| `app/src/views/Settings.tsx` | New "Network" section above Preferences: Profile mode, field-level visibility, links to manage Constellation/Tuned-in/Pending/Blocked, Signals picker, Take-me-down. |
+| `app/src/views/Settings.tsx` | New "Network" section above Preferences: Profile mode, field-level visibility, links to manage Crew/Tuned-in/Pending/Blocked, Signals picker, Take-me-down. |
 | `app/src/views/Profile.tsx` | **New file.** Public profile view. |
 | `app/src/views/SparkStream.tsx` | **New file.** The feed. |
 | `app/src/views/Network.tsx` | **New file.** Sub-view for managing Constellation / Tuned-in / Pending / Blocked / Signals lists. |
