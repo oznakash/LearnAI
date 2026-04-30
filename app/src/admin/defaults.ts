@@ -1,4 +1,25 @@
-import type { AdminConfig, EmailTemplate, EmailTemplateId, GameTuning } from "./types";
+import type { AdminConfig, EmailTemplate, EmailTemplateId, GameTuning, ServerAuthConfig } from "./types";
+
+/**
+ * Build-time defaults for server-side sign-in. The operator's deployment
+ * sets these via VITE_* env vars in the GitHub Actions workflow; forks
+ * without those vars fall through to demo mode with empty strings, and the
+ * operator configures via the Admin UI.
+ *
+ * These are public values (URLs, OAuth client IDs) and safe to bake into
+ * the SPA bundle.
+ */
+function defaultServerAuth(): ServerAuthConfig {
+  // import.meta.env is statically replaced by Vite at build time.
+  const env = (typeof import.meta !== "undefined" && import.meta.env) || ({} as Record<string, string | undefined>);
+  const rawMode = (env.VITE_SERVER_AUTH_DEFAULT ?? "").toLowerCase();
+  const mode: "demo" | "production" = rawMode === "production" ? "production" : "demo";
+  return {
+    mode,
+    googleClientId: env.VITE_GOOGLE_CLIENT_ID ?? "",
+    mem0Url: env.VITE_MEM0_URL ?? "",
+  };
+}
 
 export const DEFAULT_TUNING: GameTuning = {
   xp: {
@@ -214,5 +235,6 @@ export function defaultAdminConfig(): AdminConfig {
       apiKey: "",
       perUserDailyCap: 200,
     },
+    serverAuth: defaultServerAuth(),
   };
 }

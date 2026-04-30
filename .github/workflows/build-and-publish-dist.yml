@@ -38,6 +38,14 @@ jobs:
           cache-dependency-path: app/package-lock.json
 
       - name: Install + build
+        env:
+          # Production deployment defaults — baked into the SPA bundle.
+          # All three are public values (URLs + an OAuth Client ID), so they
+          # live in repository variables, not secrets. Forks without these
+          # set will fall back to demo mode (handled in admin/defaults.ts).
+          VITE_SERVER_AUTH_DEFAULT: ${{ vars.VITE_SERVER_AUTH_DEFAULT }}
+          VITE_MEM0_URL: ${{ vars.VITE_MEM0_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
         run: |
           npm install --prefix app
           npm run build --prefix app

@@ -302,7 +302,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "init", cfg: defaultAdminConfig() });
   }, []);
 
-  const am = isAdmin(config, player.identity?.email);
+  // In production server-auth mode, trust the server-signed `is_admin`
+  // claim from the session JWT (sourced from the operator's ADMIN_EMAILS
+  // env var on mem0). The local `admins` allowlist is the demo-mode source
+  // of truth for forks running without a backend.
+  const am =
+    config.serverAuth.mode === "production" && player.serverSession
+      ? player.serverSession.isAdmin
+      : isAdmin(config, player.identity?.email);
 
   const value = useMemo<Ctx>(
     () => ({

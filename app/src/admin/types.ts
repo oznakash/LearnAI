@@ -71,6 +71,27 @@ export interface FeatureFlags {
   memoryPlayerOptIn: boolean;
 }
 
+/**
+ * Production server-side sign-in.
+ *
+ * - `mode: "demo"` (the default for forks) — current local-only sign-in:
+ *   the SPA decodes the Google ID token client-side, no server verification,
+ *   no cross-device sessions. Useful for someone cloning the repo locally
+ *   with no backend.
+ * - `mode: "production"` — the SPA hands the Google ID token to the mem0
+ *   server (POST /auth/google), which verifies it and returns a 7-day
+ *   session JWT. The session JWT is then used as the bearer for all mem0
+ *   calls and gates admin-only UI (via `is_admin` claim from ADMIN_EMAILS).
+ *
+ * `googleClientId` and `mem0Url` are public values — safe to bake into the
+ * SPA bundle. Defaults are read from `import.meta.env.VITE_*` at build time.
+ */
+export interface ServerAuthConfig {
+  mode: "demo" | "production";
+  googleClientId: string;
+  mem0Url: string;
+}
+
 export interface MemoryConfig {
   /** Base URL of the self-hosted mem0 server (e.g. https://mem0.example.com). */
   serverUrl: string;
@@ -153,6 +174,7 @@ export interface AdminConfig {
   contentOverrides: ContentOverrides;
   promptStudio: PromptStudioState;
   memoryConfig: MemoryConfig;
+  serverAuth: ServerAuthConfig;
 }
 
 export interface QueuedEmail {

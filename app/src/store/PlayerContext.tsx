@@ -11,6 +11,7 @@ import {
 import type {
   PlayerProfile,
   PlayerState,
+  ServerSessionState,
   Spark,
   SessionRecord,
   Task,
@@ -28,6 +29,7 @@ import {
   xpForExercise,
 } from "./game";
 import { evaluateBadges } from "./badges";
+import { isSessionExpired, serverSignOut } from "../auth/server";
 
 type Action =
   | { type: "init"; state: PlayerState }
@@ -51,6 +53,7 @@ interface Ctx {
   signIn: (
     identity: { email: string; name?: string; picture?: string; sub?: string }
   ) => void;
+  signInWithSession: (session: ServerSessionState) => void;
   signOut: () => void;
   setProfile: (p: PlayerProfile) => void;
   completeSpark: (
@@ -82,7 +85,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    dispatch({ type: "init", state: loadState() });
+    const loaded = loadState();
+    // Drop any expired server session on hydrate so we don't try to call
+    // mem0 with a dead JWT. The user falls back to the sign-in screen.
+    if (loaded.serverSession && isSessionExpired(loaded.serverSession)) {
+      loaded.serverSession = undefined;
+      loaded.identity = undefined;
+    }
+    dispatch({ type: "init", state: loaded });
     setHydrated(true);
   }, []);
 
@@ -108,8 +118,50 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }));
   }, [setState]);
 
+  const signInWithSession: Ctx["signInWithSession"] = useCallback(
+    (session) => {
+      setState((s) => ({
+        ...s,
+        identity: {
+          email: session.email,
+          name: session.name,
+          picture: session.picture,
+          provider: "google",
+        },
+        serverSession: session,
+      }));
+    },
+    [setState]
+  );
+
   const signOut: Ctx["signOut"] = useCallback(() => {
-    setState((s) => ({ ...s, identity: undefined }));
+    // Snapshot the server-side bits before we mutate so the network call has
+    // the URL and token; we don't await it (sessions are stateless JWTs, the
+    // client-side discard is the real act of signing out).
+    let mem0Url = "";
+    let token = "";
+    setState((s) => {
+      mem0Url = ""; // resolved below from admin config via runtime
+      token = s.serverSession?.token ?? "";
+      return { ...s, identity: undefined, serverSession: undefined };
+    });
+    // Ask the server to acknowledge the signout (best effort).
+    if (token) {
+      try {
+        // Read mem0 URL lazily to avoid an admin-context import cycle.
+        const adminRaw =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem("builderquest:admin:v1")
+            : null;
+        if (adminRaw) {
+          const parsed = JSON.parse(adminRaw);
+          mem0Url = parsed?.serverAuth?.mem0Url ?? "";
+        }
+      } catch {
+        /* ignore */
+      }
+      if (mem0Url) void serverSignOut(mem0Url, token);
+    }
   }, [setState]);
 
   const setProfile: Ctx["setProfile"] = useCallback(
@@ -197,6 +249,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       state,
       setState,
       signIn,
+      signInWithSession,
       signOut,
       setProfile,
       completeSpark,
@@ -208,7 +261,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       updateTask,
       removeTask,
     }),
-    [state, setState, signIn, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask]
+    [state, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask]
   );
 
   return <PlayerCtx.Provider value={value}>{children}</PlayerCtx.Provider>;

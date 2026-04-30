@@ -75,6 +75,43 @@ export function AdminConfigTab() {
       </section>
 
       <section className="card p-4 space-y-3">
+        <h3 className="h2">Authentication</h3>
+        <p className="muted text-xs">
+          Production mode verifies Google sign-in on the mem0 server, mints a 7-day session,
+          and gates admin-only UI by the server's <span className="font-mono">ADMIN_EMAILS</span> allowlist.
+          Demo mode is local-only — useful for forks running without any server.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <ModeToggle
+            label="Sign-in mode"
+            value={config.serverAuth.mode}
+            onChange={(v) =>
+              setConfig((cfg) => ({ ...cfg, serverAuth: { ...cfg.serverAuth, mode: v } }))
+            }
+          />
+          <Field
+            label="Google OAuth Client ID"
+            value={config.serverAuth.googleClientId}
+            onChange={(v) =>
+              setConfig((cfg) => ({ ...cfg, serverAuth: { ...cfg.serverAuth, googleClientId: v.trim() } }))
+            }
+          />
+          <Field
+            label="mem0 server URL"
+            value={config.serverAuth.mem0Url}
+            onChange={(v) =>
+              setConfig((cfg) => ({ ...cfg, serverAuth: { ...cfg.serverAuth, mem0Url: v.trim().replace(/\/+$/, "") } }))
+            }
+          />
+        </div>
+        {config.serverAuth.mode === "production" && (!config.serverAuth.mem0Url || !config.serverAuth.googleClientId) && (
+          <div className="text-xs text-bad bg-bad/10 border border-bad/30 rounded-lg p-2">
+            Production mode needs both a mem0 URL and a Google Client ID. Sign-in will fail until both are set.
+          </div>
+        )}
+      </section>
+
+      <section className="card p-4 space-y-3">
         <h3 className="h2">Feature flags</h3>
         <div className="grid sm:grid-cols-2 gap-2">
           <Toggle
@@ -190,6 +227,38 @@ function Field({
     <div>
       <div className="label">{label}</div>
       <input className="input" type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function ModeToggle({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: "demo" | "production";
+  onChange: (v: "demo" | "production") => void;
+}) {
+  return (
+    <div>
+      <div className="label">{label}</div>
+      <div className="flex gap-2 rounded-xl border border-white/10 p-1">
+        {(["demo", "production"] as const).map((m) => {
+          const active = value === m;
+          return (
+            <button
+              key={m}
+              onClick={() => onChange(m)}
+              className={`flex-1 rounded-lg py-2 text-sm capitalize transition ${
+                active ? "bg-accent/20 text-white border border-accent" : "text-white/60 hover:text-white"
+              }`}
+            >
+              {m}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,34 +1,45 @@
 import { useEffect, useRef, useState } from "react";
 import { decodeIdToken, isGmail, loadGoogleScript } from "../auth/google";
+import { serverSignIn, ServerAuthError } from "../auth/server";
 import { usePlayer } from "../store/PlayerContext";
+import { useAdmin } from "../admin/AdminContext";
 import { Mascot } from "../visuals/Mascot";
 import { Illustration } from "../visuals/Illustrations";
 
 export function SignIn() {
-  const { state, signIn, setGoogleClientId } = usePlayer();
-  const savedClientId = state.googleClientId ?? "";
+  const { state, signIn, signInWithSession, setGoogleClientId } = usePlayer();
+  const { config: adminCfg, setConfig: setAdminCfg } = useAdmin();
+  const isProduction = adminCfg.serverAuth.mode === "production";
 
-  // Three concerns, kept separate:
-  //   savedClientId — the persisted value (single source of truth for what
-  //                   to send to Google).
-  //   draft         — what's currently in the input box (transient).
-  //   draftMode     — user has clicked "Use a different Client ID" and
-  //                   wants to enter a new one even though one is saved.
-  //
-  // Form is visible iff there's no saved value OR the user is explicitly
-  // changing it. Crucially, the form's visibility does NOT depend on draft,
-  // so typing into the input doesn't make the form disappear before Save
-  // is clicked. (That was the prior bug: the form vanished after one
-  // keystroke, taking the Save button with it.)
+  // In production mode, the Client ID is operator-level and lives in
+  // admin config (so every browser visiting the deployment uses it).
+  // In demo mode it's per-browser and lives on PlayerState — matches the
+  // existing offline-first sign-in flow that forks rely on.
+  const savedClientId = isProduction
+    ? adminCfg.serverAuth.googleClientId
+    : state.googleClientId ?? "";
+
   const [draft, setDraft] = useState("");
   const [draftMode, setDraftMode] = useState(false);
   const showForm = !savedClientId || draftMode;
 
   const [err, setErr] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
   const [loadedSDK, setLoadedSDK] = useState(false);
   const [demoEmail, setDemoEmail] = useState("");
   const [demoMode, setDemoMode] = useState(false);
   const btnRef = useRef<HTMLDivElement>(null);
+
+  const saveClientId = (clientId: string) => {
+    if (isProduction) {
+      setAdminCfg((cfg) => ({
+        ...cfg,
+        serverAuth: { ...cfg.serverAuth, googleClientId: clientId },
+      }));
+    } else {
+      setGoogleClientId(clientId);
+    }
+  };
 
   useEffect(() => {
     if (!savedClientId) return;
@@ -49,7 +60,9 @@ export function SignIn() {
     try {
       window.google.accounts.id.initialize({
         client_id: savedClientId,
-        callback: (resp) => {
+        callback: async (resp) => {
+          // In production mode we still decode locally for the email check,
+          // then ALSO hand the raw token to the server for verification.
           const id = decodeIdToken(resp.credential);
           if (!id?.email) {
             setErr("Could not read your Google identity.");
@@ -60,7 +73,28 @@ export function SignIn() {
             return;
           }
           setErr(null);
-          signIn(id);
+          if (!isProduction) {
+            signIn(id);
+            return;
+          }
+          // Production path: exchange Google ID token for a server session JWT.
+          if (!adminCfg.serverAuth.mem0Url) {
+            setErr("Production mode is on but the mem0 URL isn't configured.");
+            return;
+          }
+          setSigningIn(true);
+          try {
+            const session = await serverSignIn(adminCfg.serverAuth.mem0Url, resp.credential);
+            signInWithSession(session);
+          } catch (e) {
+            const msg =
+              e instanceof ServerAuthError
+                ? `Server rejected sign-in: ${e.message}`
+                : `Couldn't reach the server: ${(e as Error).message}`;
+            setErr(msg);
+          } finally {
+            setSigningIn(false);
+          }
         },
       });
       window.google.accounts.id.renderButton(btnRef.current, {
@@ -73,7 +107,7 @@ export function SignIn() {
     } catch (e) {
       setErr(String(e));
     }
-  }, [loadedSDK, savedClientId, signIn]);
+  }, [loadedSDK, savedClientId, signIn, signInWithSession, isProduction, adminCfg.serverAuth.mem0Url]);
 
   const onDemoEnter = () => {
     setErr(null);
@@ -89,9 +123,9 @@ export function SignIn() {
       <div className="max-w-2xl w-full grid sm:grid-cols-2 gap-6 items-center">
         <div className="flex flex-col items-center sm:items-start gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold shadow-glow">BQ</div>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold shadow-glow">{adminCfg.branding.logoEmoji}</div>
             <div>
-              <h1 className="h1">BuilderQuest</h1>
+              <h1 className="h1">{adminCfg.branding.appName}</h1>
               <p className="muted text-sm">A gamified, micro-dosed AI playbook for builders.</p>
             </div>
           </div>
@@ -105,7 +139,11 @@ export function SignIn() {
         </div>
         <div className="card p-6 sm:p-7 space-y-4">
           <h2 className="h2">Sign in to start</h2>
-          <p className="text-sm text-white/60">Gmail only. Your progress is stored locally on this device.</p>
+          <p className="text-sm text-white/60">
+            {isProduction
+              ? "Gmail only. Sessions last 7 days and sync across devices."
+              : "Gmail only. Your progress is stored locally on this device."}
+          </p>
 
           {showForm && (
             <div className="space-y-2">
@@ -120,7 +158,7 @@ export function SignIn() {
                 className="btn-primary w-full"
                 disabled={!draft.endsWith(".apps.googleusercontent.com")}
                 onClick={() => {
-                  setGoogleClientId(draft);
+                  saveClientId(draft);
                   setDraft("");
                   setDraftMode(false);
                 }}
@@ -154,6 +192,7 @@ export function SignIn() {
             <div className="space-y-3">
               <div ref={btnRef} className="flex justify-center min-h-[44px]" />
               {!loadedSDK && <div className="text-xs text-white/50">Loading Google sign-in…</div>}
+              {signingIn && <div className="text-xs text-white/60">Verifying with the server…</div>}
               <button
                 className="btn-ghost w-full text-xs"
                 onClick={() => {
@@ -168,30 +207,32 @@ export function SignIn() {
 
           {err && <div className="text-xs text-bad bg-bad/10 border border-bad/30 rounded-lg p-2">{err}</div>}
 
-          <div className="border-t border-white/5 pt-3">
-            <button
-              className="text-xs text-white/40 hover:text-white/70"
-              onClick={() => setDemoMode((d) => !d)}
-            >
-              {demoMode ? "Hide demo mode" : "Skip OAuth setup (demo mode, Gmail only)"}
-            </button>
-            {demoMode && (
-              <div className="mt-2 space-y-2">
-                <input
-                  className="input"
-                  placeholder="you@gmail.com"
-                  value={demoEmail}
-                  onChange={(e) => setDemoEmail(e.target.value)}
-                />
-                <button className="btn-primary w-full" onClick={onDemoEnter}>
-                  Continue (demo)
-                </button>
-                <p className="text-[10px] text-white/40">
-                  Demo mode skips real Google auth — just for trying the app locally. Identity is not verified.
-                </p>
-              </div>
-            )}
-          </div>
+          {!isProduction && (
+            <div className="border-t border-white/5 pt-3">
+              <button
+                className="text-xs text-white/40 hover:text-white/70"
+                onClick={() => setDemoMode((d) => !d)}
+              >
+                {demoMode ? "Hide demo mode" : "Skip OAuth setup (demo mode, Gmail only)"}
+              </button>
+              {demoMode && (
+                <div className="mt-2 space-y-2">
+                  <input
+                    className="input"
+                    placeholder="you@gmail.com"
+                    value={demoEmail}
+                    onChange={(e) => setDemoEmail(e.target.value)}
+                  />
+                  <button className="btn-primary w-full" onClick={onDemoEnter}>
+                    Continue (demo)
+                  </button>
+                  <p className="text-[10px] text-white/40">
+                    Demo mode skips real Google auth — just for trying the app locally. Identity is not verified.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="absolute bottom-4 right-6 hidden md:block w-32 h-20 opacity-50">

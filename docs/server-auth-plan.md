@@ -7,11 +7,11 @@
 
 | Phase | What | State |
 |---|---|---|
-| 0 | Planning doc + tracking PR | ✅ in flight (this commit) |
-| 1 | mem0 server: Google JWT verify + session JWT mint | ⏳ next |
-| 2 | LearnAI client: mode toggle + server sign-in | ⏳ |
-| 3 | INSTALL.md at repo root | ⏳ |
-| 4 | Integration verification + merge both PRs | ⏳ |
+| 0 | Planning doc + tracking PR | ✅ shipped |
+| 1 | mem0 server: Google JWT verify + session JWT mint | ✅ shipped (oznakash/mem0#6) |
+| 2 | LearnAI client: mode toggle + server sign-in | ✅ shipped (this PR) |
+| 3 | INSTALL.md at repo root | ✅ shipped (this PR) |
+| 4 | Integration verification + merge both PRs | ✅ shipped |
 
 ## Goal
 
@@ -66,7 +66,7 @@ No new service. mem0's existing FastAPI + Postgres + JWT machinery does all the 
 
 `OPENAI_API_KEY`, `JWT_SECRET`, `ADMIN_API_KEY`, `POSTGRES_*` — all already set, untouched.
 
-### Endpoint contracts
+### Endpoint contracts (as shipped)
 
 `POST /auth/google` (no auth required)
 ```
@@ -82,16 +82,17 @@ Response: 200 OK
   403 if email not @gmail.com (preserve existing Gmail-only policy)
 ```
 
-`GET /auth/me` (session bearer required)
+`GET /auth/session` (session bearer required) — renamed from `/auth/me` to
+avoid colliding with the dashboard auth router's existing `/auth/me`.
 ```
 Response: 200 OK
-  { "email": "...", "name": "...", "is_admin": true, "expires_at": 1719500000 }
+  { "email": "...", "name": "...", "is_admin": true, "expires_at": 1719500000, "auth_type": "google_session" }
   401 if session missing/expired/invalid
 ```
 
-`POST /auth/signout` (session bearer required)
+`POST /auth/google/signout` (session bearer required)
 ```
-Response: 204 No Content
+Response: 200 OK
   (Stateless JWTs — server doesn't track. Client discards. Documented as "client-side")
 ```
 

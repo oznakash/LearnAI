@@ -7,12 +7,26 @@ export type { MemoryService, MemoryItem, MemoryStatus, MemoryAddInput, MemoryCat
 export { OfflineMemoryService } from "./offline";
 export { Mem0MemoryService } from "./mem0";
 
+export interface SelectMemoryOverrides {
+  /** Production server-auth: the player's session JWT, sourced from React state. */
+  bearerToken?: string;
+}
+
 /**
  * Resolve the active MemoryService for the given user. The choice is made
  * fresh on every call so the offline-flag toggle takes effect immediately
  * without a reload.
+ *
+ * `overrides.bearerToken` (when provided) wins over the admin-config
+ * `apiKey`. Callers in production server-auth mode pass the player's
+ * session JWT here instead of reading it from localStorage, so the service
+ * is constructed with the correct bearer in the same React render that
+ * produced the new session.
  */
-export function selectMemoryService(userId: string | undefined | null): MemoryService {
+export function selectMemoryService(
+  userId: string | undefined | null,
+  overrides: SelectMemoryOverrides = {}
+): MemoryService {
   const id = (userId ?? "").trim();
   if (!id) return new OfflineMemoryService("anon");
   if (isOfflineMode()) return new OfflineMemoryService(id);
@@ -23,7 +37,7 @@ export function selectMemoryService(userId: string | undefined | null): MemorySe
   }
   return new Mem0MemoryService({
     serverUrl: cfg.serverUrl,
-    apiKey: cfg.apiKey,
+    apiKey: overrides.bearerToken || cfg.apiKey,
     userId: id,
   });
 }
