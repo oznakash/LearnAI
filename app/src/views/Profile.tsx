@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePlayer } from "../store/PlayerContext";
 import { useSocial } from "../social/SocialContext";
 import { useAdmin } from "../admin/AdminContext";
@@ -6,7 +6,7 @@ import { getTopic } from "../content";
 import { tierForXP } from "../store/game";
 import { Mascot } from "../visuals/Mascot";
 import { Sparkline } from "../visuals/Charts";
-import type { PublicProfile } from "../social/types";
+import type { PublicProfile, ReportReason } from "../social/types";
 import type { TopicId } from "../types";
 import type { View } from "../App";
 
@@ -78,12 +78,14 @@ export function Profile({ handle, onNav }: Props) {
   }
 
   // A Closed profile shows only the gate card to non-followers.
-  // (PR 4 will replace the placeholder button with the real follow flow.)
   if (!isOwner && profile.profileMode === "closed") {
     return (
       <ClosedProfileGate
         profile={profile}
         onNav={onNav}
+        onRequestFollow={async () => {
+          await social.follow(profile.handle);
+        }}
       />
     );
   }
@@ -133,6 +135,8 @@ export function Profile({ handle, onNav }: Props) {
       )}
 
       <ProfileHeader profile={profile} />
+
+      {!isOwner && <FollowActionCluster handle={profile.handle} />}
 
       {profile.signals.length > 0 && (
         <SignalsSection signals={profile.signals} />
@@ -314,22 +318,40 @@ function ProfileFooter({ profile }: { profile: PublicProfile }) {
   return (
     <section className="text-xs text-white/40 flex items-center justify-between">
       <div>@{profile.handle} · Joined {month}</div>
-      <button className="text-white/40 hover:text-white" disabled title="Report — coming in PR 4">
-        ⋯
-      </button>
     </section>
   );
 }
 
 // -- Closed gate ---------------------------------------------------------
 
-function ClosedProfileGate({ profile, onNav }: { profile: PublicProfile; onNav: (v: View) => void }) {
+function ClosedProfileGate({
+  profile,
+  onNav,
+  onRequestFollow,
+}: {
+  profile: PublicProfile;
+  onNav: (v: View) => void;
+  onRequestFollow: () => Promise<void>;
+}) {
   const initials = profile.displayName
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase())
     .join("");
+  const [requested, setRequested] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const onClick = async () => {
+    if (busy || requested) return;
+    setBusy(true);
+    try {
+      await onRequestFollow();
+      setRequested(true);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -352,10 +374,284 @@ function ClosedProfileGate({ profile, onNav }: { profile: PublicProfile; onNav: 
         <p className="text-sm text-white/70 mt-4">
           🔒 This profile is closed. Send a follow request to see their progress.
         </p>
-        <button className="btn-primary mt-4 text-sm" disabled title="Follow flow lands in PR 4">
-          Send follow request (PR 4)
+        <button
+          className="btn-primary mt-4 text-sm"
+          onClick={onClick}
+          disabled={busy || requested}
+        >
+          {requested ? "✓ Follow request sent" : busy ? "Sending…" : "Send follow request"}
         </button>
       </section>
+    </div>
+  );
+}
+
+// -- Follow / Mute / Block / Report cluster ------------------------------
+
+const REPORT_REASONS: { value: ReportReason; label: string }[] = [
+  { value: "spam", label: "Spam" },
+  { value: "harassment", label: "Harassment" },
+  { value: "off-topic", label: "Off-topic" },
+  { value: "impersonation", label: "Impersonation" },
+  { value: "other", label: "Other" },
+];
+
+function FollowActionCluster({ handle }: { handle: string }) {
+  const social = useSocial();
+  const [following, setFollowing] = useState<boolean>(false);
+  const [muted, setMuted] = useState<boolean>(false);
+  const [blocked, setBlocked] = useState<boolean>(false);
+  const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // Close the kebab menu on outside-click.
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  // Refresh follow/mute/block state on mount and when the handle changes.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [follow, blocks] = await Promise.all([
+        social.listFollowing(),
+        social.listBlocked(),
+      ]);
+      if (cancelled) return;
+      const edge = follow.find((e) => e.target.toLowerCase() === handle.toLowerCase());
+      setFollowing(!!edge);
+      setMuted(!!edge?.muted);
+      setBlocked(blocks.some((b) => b.toLowerCase() === handle.toLowerCase()));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [handle, social]);
+
+  const onFollow = async () => {
+    if (busy || blocked) return;
+    setBusy(true);
+    try {
+      if (following) {
+        await social.unfollow(handle);
+        setFollowing(false);
+        setMuted(false);
+      } else {
+        const edge = await social.follow(handle);
+        setFollowing(!!edge);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onToggleMute = async () => {
+    if (!following) return;
+    const next = !muted;
+    setMuted(next);
+    setMenuOpen(false);
+    await social.setMuted(handle, next);
+  };
+
+  const onBlock = async () => {
+    if (!confirm(`Block @${handle}? They won't be able to find you, and you won't see their activity.`)) return;
+    setBusy(true);
+    setMenuOpen(false);
+    try {
+      await social.block(handle);
+      setBlocked(true);
+      setFollowing(false);
+      setMuted(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onUnblock = async () => {
+    setBusy(true);
+    try {
+      await social.unblock(handle);
+      setBlocked(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card p-3 sm:p-4 flex flex-wrap items-center gap-2">
+      {blocked ? (
+        <>
+          <span className="pill bg-bad/10 text-bad border border-bad/30">🚫 Blocked</span>
+          <button className="btn-ghost text-xs" onClick={onUnblock} disabled={busy}>
+            Unblock
+          </button>
+        </>
+      ) : (
+        <button
+          className={`btn ${following ? "btn-ghost" : "btn-primary"} text-sm`}
+          onClick={onFollow}
+          disabled={busy}
+        >
+          {following ? "✓ Following" : "+ Follow"}
+        </button>
+      )}
+      <div className="relative" ref={menuRef}>
+        <button
+          className="btn-ghost text-sm"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+        >
+          ⋯
+        </button>
+        {menuOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 mt-1 w-44 rounded-xl bg-ink2 border border-white/10 shadow-card p-1 z-20"
+          >
+            {following && (
+              <MenuItem onClick={onToggleMute}>
+                {muted ? "🔊 Unmute" : "🔇 Mute"}
+              </MenuItem>
+            )}
+            {!blocked && (
+              <MenuItem onClick={onBlock} variant="bad">
+                🚫 Block
+              </MenuItem>
+            )}
+            <MenuItem
+              onClick={() => {
+                setMenuOpen(false);
+                setReportOpen(true);
+              }}
+              variant="bad"
+            >
+              ⚠ Report
+            </MenuItem>
+          </div>
+        )}
+      </div>
+      {reportOpen && (
+        <ReportDialog
+          handle={handle}
+          onClose={() => setReportOpen(false)}
+          onSubmit={async (reason, note) => {
+            await social.report(handle, reason, note, { kind: "profile" });
+            setReportOpen(false);
+            // Reports auto-mute; refresh local state.
+            const follow = await social.listFollowing();
+            const edge = follow.find((e) => e.target.toLowerCase() === handle.toLowerCase());
+            setMuted(!!edge?.muted);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+function MenuItem({
+  onClick,
+  children,
+  variant,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+  variant?: "bad";
+}) {
+  const cls =
+    variant === "bad"
+      ? "text-bad hover:bg-bad/10"
+      : "text-white/80 hover:bg-white/5";
+  return (
+    <button
+      onClick={onClick}
+      role="menuitem"
+      className={`w-full text-left px-3 py-2 text-sm rounded-md ${cls}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ReportDialog({
+  handle,
+  onClose,
+  onSubmit,
+}: {
+  handle: string;
+  onClose: () => void;
+  onSubmit: (reason: ReportReason, note?: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState<ReportReason>("spam");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onSubmit(reason, note.trim() || undefined);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-label={`Report @${handle}`}
+      className="fixed inset-0 z-40 grid place-items-center bg-black/60 backdrop-blur-sm p-4"
+    >
+      <div className="card p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+        <h2 className="h2">Report @{handle}</h2>
+        <p className="muted text-xs">
+          Reports go to a moderation queue. We auto-mute the reported account from your feed.
+        </p>
+        <div>
+          <div className="label">Reason</div>
+          <div className="grid grid-cols-2 gap-1.5 mt-1">
+            {REPORT_REASONS.map((r) => (
+              <button
+                key={r.value}
+                onClick={() => setReason(r.value)}
+                className={`p-2 rounded-lg border text-sm text-left ${
+                  reason === r.value
+                    ? "bg-accent/15 border-accent text-white"
+                    : "bg-white/5 border-white/10 text-white/70 hover:border-white/30"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="label">Note (optional, ≤280)</div>
+          <textarea
+            className="input"
+            rows={3}
+            maxLength={280}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button className="btn-ghost text-sm" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button className="btn-bad text-sm" onClick={submit} disabled={busy}>
+            {busy ? "Sending…" : "Submit report"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
