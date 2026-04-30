@@ -33,6 +33,8 @@ After step 5, the product is "real": users sign in with their Gmail, memories pe
 | **Identity** | Gmail-only sign-in via Google Identity Services (browser flow). Demo mode for trials without OAuth. | ✅ (needs Client ID) |
 | **Cognition layer** | `MemoryService` interface, `OfflineMemoryService` (localStorage) + `Mem0MemoryService` (HTTP). Event hooks for goals, calibration, strengths, gaps, history. | ✅ (needs mem0 server) |
 | **"Your Memory" tab** | List / filter / edit / forget / wipe / export. Read-write parity. | ✅ |
+| **Cross-device PlayerState sync** | `GET / PUT /v1/state` on mem0; SPA loads on sign-in / hydrate, debounced PUT on every mutation. Per-device fields (session, local API key, demo Client ID) stripped before send. 256 KB cap. | ✅ |
+| **History-DB persistence** | `HISTORY_DB_PATH` defaults to `/app/data/history.db`. Mount a persistent volume at `/app/data` to survive rebuilds. | ✅ (volume mount is operator-side) |
 | **Tasks tab** | YouTube/article/Build-Card capture; statuses, filters, 1-tap "Copy prompt" for Claude Code. | ✅ |
 | **Dashboards** | Per-topic ring/bars/sparkline + global radar/heatmap/badges grid + 12-week heatmap. | ✅ |
 | **Admin Console** | 7 tabs: Users · Analytics · Memory · Emails · Tuning · Content · Prompt Studio · Config. Tuning is live-applied. | ✅ |

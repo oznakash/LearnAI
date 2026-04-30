@@ -54,11 +54,11 @@ Theory without doing rots. Doing without theory misleads. Every level pairs both
 
 > _How:_ every Constellation has Build Cards from level 1. Build Cards reference real models (Claude, GPT, Gemini, Llama), real tools (Cursor, Claude Code, pgvector), real patterns. No vendor euphemisms.
 
-### 4. Your data is your data
+### 4. Your data is your data — and follows you across devices
 
-Your progress, your memory, your identity, your contributions — all yours. Self-hostable. Exportable. Wipeable. The cognition layer is opt-in. The mem0 server is open source. Your session JWT lives only on your device. We never sell anything to anyone.
+Your progress, your memory, your identity, your contributions — all yours. Self-hostable. Exportable. Wipeable. The cognition layer is opt-in. The mem0 server is open source. Sign in on a phone, then on a laptop, and your XP, streak, profile, badges, history, and tasks are right where you left them. Per-device-only things (API keys you stored locally, the session token itself) never leave the device.
 
-> _How:_ mem0 self-hosted by default. SPA stays static. Sessions are stateless 7-day JWTs. Memory is editable from the in-app Memory page (`/memory`). Wipe is one click; export is one click.
+> _How:_ mem0 self-hosted by default. SPA stays static. Sessions are stateless 7-day JWTs. PlayerState syncs through `GET / PUT /v1/state` on mem0 (per-user JSON blob, capped at 256 KB, last-writer-wins). Memory is editable from the in-app Memory page (`/memory`). Wipe is one click; export is one click.
 
 ### 5. Free, forever, open source
 
