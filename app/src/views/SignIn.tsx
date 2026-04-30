@@ -15,9 +15,30 @@ export function SignIn() {
   // admin config (so every browser visiting the deployment uses it).
   // In demo mode it's per-browser and lives on PlayerState — matches the
   // existing offline-first sign-in flow that forks rely on.
+  //
+  // Migration nicety: if production is on and admin doesn't have a Client ID
+  // yet, fall back to the per-browser one from a prior demo-mode session.
+  // This avoids forcing the operator to re-paste it after the
+  // production-mode rollout.
   const savedClientId = isProduction
-    ? adminCfg.serverAuth.googleClientId
+    ? adminCfg.serverAuth.googleClientId || state.googleClientId || ""
     : state.googleClientId ?? "";
+
+  // Auto-promote a per-browser Client ID into admin config the first time we
+  // see one in production mode. One-shot, runs after admin hydration.
+  useEffect(() => {
+    if (
+      isProduction &&
+      !adminCfg.serverAuth.googleClientId &&
+      state.googleClientId &&
+      state.googleClientId.endsWith(".apps.googleusercontent.com")
+    ) {
+      setAdminCfg((cfg) => ({
+        ...cfg,
+        serverAuth: { ...cfg.serverAuth, googleClientId: state.googleClientId ?? "" },
+      }));
+    }
+  }, [isProduction, adminCfg.serverAuth.googleClientId, state.googleClientId, setAdminCfg]);
 
   const [draft, setDraft] = useState("");
   const [draftMode, setDraftMode] = useState(false);
