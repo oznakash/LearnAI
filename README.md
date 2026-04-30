@@ -10,7 +10,7 @@ LearnAI turns the AI firehose into personalized 5-minute Sparks, practical chall
 
 **Learn what matters. Build what sticks. Share what helps others.**
 
-[![Tests](https://img.shields.io/badge/tests-100%2F100-success)](./app/src/__tests__) [![Build](https://img.shields.io/badge/build-passing-success)](./.github/workflows/build-and-publish-dist.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](#license) [![Stack](https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20mem0-7c5cff)](#-tech) [![Vibe](https://img.shields.io/badge/vibe-shipping-ff5d8f)](./docs/vision.md)
+[![Tests](https://img.shields.io/badge/tests-122%2F122-success)](./app/src/__tests__) [![Build](https://img.shields.io/badge/build-passing-success)](./.github/workflows/build-and-publish-dist.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](#license) [![Stack](https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20mem0-7c5cff)](#-tech) [![Vibe](https://img.shields.io/badge/vibe-shipping-ff5d8f)](./docs/vision.md)
 
 **Live demo →** [`learnai-b94d78.cloud-claude.com`](https://learnai-b94d78.cloud-claude.com) · **Wiki →** [`docs/INDEX.md`](./docs/INDEX.md) · **Pitch →** [`docs/pitch-deck.md`](./docs/pitch-deck.md)
 
@@ -194,7 +194,7 @@ You can see, edit, forget, wipe, and export what the system remembers. Privacy p
 - 📊 **Per-topic + global dashboards** — sparkline, radar, ring, bars, 12-week heatmap.
 - ✅ **Tasks tab** — capture YouTube watches, articles, Build Cards.
 - 🛠 **Admin Console (7 tabs)** — Users · Analytics · Memory · Emails · Tuning · Content · Prompt Studio · Config.
-- 🔐 **Gmail-only sign-in** via Google Identity Services.
+- 🔐 **Gmail-only sign-in** via Google Identity Services. Demo mode runs locally; production mode verifies the Google ID token on the mem0 server and returns a 7-day session JWT that works across devices.
 - 📦 **Static SPA** that auto-rebuilds on every push to `main`. Deploys anywhere with zero config.
 
 > The in-app experience is called **BuilderQuest** — the gamified, mascot-led learning shell that runs on top of the LearnAI network.
@@ -252,36 +252,42 @@ LearnAI is where people learn, build, teach, and get discovered.
 
 ### In a browser, right now
 
-[`https://learnai-b94d78.cloud-claude.com`](https://learnai-b94d78.cloud-claude.com)
+[`https://learnai.cloud-claude.com`](https://learnai.cloud-claude.com) — production deployment with server-verified Google sign-in (7-day sessions, cross-device).
 
-(Demo mode is on by default — type any `@gmail.com` address to enter. Real Google sign-in needs an OAuth Client ID; setup in 2 minutes via [`docs/mem0.md`](./docs/mem0.md).)
+[`https://learnai-b94d78.cloud-claude.com`](https://learnai-b94d78.cloud-claude.com) — public sandbox.
 
-### Locally
+### Locally (demo mode, no backend)
 
 ```bash
 git clone https://github.com/oznakash/learnai
 cd learnai
 npm install     # delegates to ./app
 npm run dev     # local dev at http://localhost:5173
-npm test        # vitest, 100 / 100
+npm test        # vitest, 122 / 122
 npm run build   # static SPA → ./dist
 ```
 
+Demo mode lets you try LearnAI with no server: paste any Google OAuth Client ID (or use the Skip-OAuth shortcut with a `@gmail.com` address). Progress lives in localStorage.
+
 > The project lives in `./app`. The root `package.json` proxies every script there. The built output lands in `/dist/` at the repo root and is **auto-committed by GitHub Actions** so static-mirror deployers serve a working SPA immediately.
 
-### Self-host the cognition layer
+### Production install (server-verified Google sign-in)
+
+Five steps end-to-end: provision Postgres+pgvector, deploy the [mem0 fork](https://github.com/oznakash/mem0), provision a Google OAuth client, set repo variables, redeploy.
+
+**→ Full walkthrough in [`INSTALL.md`](./INSTALL.md).** Also see [`docs/server-auth-plan.md`](./docs/server-auth-plan.md) for the architecture rationale and [`docs/mem0.md`](./docs/mem0.md) for cognition-layer specifics.
+
+The production path runs entirely on the existing mem0 server — no extra service. mem0 verifies Google ID tokens against Google's JWKS, mints a 7-day session JWT signed with `JWT_SECRET`, and gates admin-only UI through an `ADMIN_EMAILS` env-var allowlist.
 
 ```bash
-# Local (Docker):
-cp .env.example .env             # set MEM0_API_KEY + OPENAI_API_KEY
+# Local (Docker) self-host of the cognition layer:
+cp .env.example .env             # set OPENAI_API_KEY etc.
 docker compose -f docker-compose.mem0.yml up -d
 
 # Or one-command Fly deploy:
 OPENAI_API_KEY=sk-... npm run deploy:mem0
 npm run smoke:memory -- https://learnai-mem0.fly.dev <bearerKey>
 ```
-
-Full guide: [`docs/mem0.md`](./docs/mem0.md).
 
 ---
 
@@ -306,11 +312,11 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 ## 🏗 Tech
 
 **React 19 · Vite 8 · TypeScript · Tailwind 3 · Vitest** for the SPA.
-**mem0 · Postgres + pgvector · Fly.io** for the (optional) cognition layer.
-**Google Identity Services** for Gmail-only auth.
-No backend at the SPA tier — state persists to `localStorage` until you opt into mem0.
+**mem0 · Postgres + pgvector · Fly.io / Cloud-Claude** for the cognition + auth layer.
+**Google Identity Services + server-verified ID-token exchange** for Gmail-only auth — sessions are 7-day JWTs signed by mem0.
+The SPA stays static; everything stateful is on the existing mem0 server.
 
-478 KB JS / 29 KB CSS gzipped, 75 modules. 100 / 100 tests across 13 files.
+488 KB JS / 29 KB CSS gzipped, 77 modules. 122 / 122 tests across 14 files.
 
 ---
 
