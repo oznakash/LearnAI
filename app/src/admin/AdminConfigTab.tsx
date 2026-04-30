@@ -75,6 +75,39 @@ export function AdminConfigTab() {
       </section>
 
       <section className="card p-4 space-y-3">
+        <h3 className="h2">Authentication</h3>
+        <p className="muted text-xs">
+          Google OAuth Client ID for the sign-in screen. Required for users to sign in with their real Gmail.
+          Without it, only demo mode is available.
+        </p>
+        <div>
+          <div className="label">Google OAuth Client ID</div>
+          <input
+            className="input"
+            placeholder="123-xxxxxx.apps.googleusercontent.com"
+            value={config.googleClientId ?? ""}
+            onChange={(e) =>
+              setConfig((cfg) => ({ ...cfg, googleClientId: e.target.value.trim() }))
+            }
+          />
+          {config.googleClientId && !config.googleClientId.endsWith(".apps.googleusercontent.com") && (
+            <div className="text-xs text-bad mt-1">
+              Doesn't look like a Google Client ID — should end with <span className="font-mono">.apps.googleusercontent.com</span>.
+            </div>
+          )}
+          <details className="text-xs text-white/50 mt-2">
+            <summary className="cursor-pointer hover:text-white/70">How do I get one?</summary>
+            <ol className="list-decimal list-inside space-y-1 mt-2">
+              <li>Open <span className="font-mono">console.cloud.google.com</span></li>
+              <li>Create a project → APIs &amp; Services → Credentials</li>
+              <li>Create OAuth client ID (Web). Add this site's URL to Authorized JavaScript origins.</li>
+              <li>Paste the client ID above.</li>
+            </ol>
+          </details>
+        </div>
+      </section>
+
+      <section className="card p-4 space-y-3">
         <h3 className="h2">Feature flags</h3>
         <div className="grid sm:grid-cols-2 gap-2">
           <Toggle
