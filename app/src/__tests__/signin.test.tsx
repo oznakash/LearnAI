@@ -39,7 +39,6 @@ describe("SignIn — production mode (server auth) reads Client ID from admin co
   });
 
   it("hides the Client ID input when admin.serverAuth.googleClientId is set", async () => {
-    // Production is the baked-in default — only need to set the Client ID.
     localStorage.setItem(
       ADMIN_STORAGE_KEY,
       JSON.stringify({ serverAuth: { mode: "production", googleClientId: VALID_CLIENT_ID, mem0Url: "https://mem0.example.com" } })
@@ -47,7 +46,26 @@ describe("SignIn — production mode (server auth) reads Client ID from admin co
     mount();
     await settle();
     expect(screen.queryByPlaceholderText(/apps\.googleusercontent\.com/)).toBeNull();
-    expect(screen.getByRole("button", { name: /Use a different Client ID/i })).toBeTruthy();
+  });
+
+  it("renders our design-system Continue-with-Google button (not Google's white card)", async () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ serverAuth: { mode: "production", googleClientId: VALID_CLIENT_ID, mem0Url: "https://mem0.example.com" } })
+    );
+    mount();
+    await settle();
+    expect(screen.getByText("Continue with Google")).toBeTruthy();
+  });
+
+  it("does NOT show a 'Use a different Client ID' link to end users (admin-only concern)", async () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ serverAuth: { mode: "production", googleClientId: VALID_CLIENT_ID, mem0Url: "https://mem0.example.com" } })
+    );
+    mount();
+    await settle();
+    expect(screen.queryByText(/Use a different Client ID/i)).toBeNull();
   });
 
   it("asks for a Client ID when admin config is empty (production default, fresh install)", async () => {
@@ -81,7 +99,7 @@ describe("SignIn — demo mode preserves the per-browser Client ID flow", () => 
     mount();
     await settle();
     expect(screen.queryByPlaceholderText(/apps\.googleusercontent\.com/)).toBeNull();
-    expect(screen.getByRole("button", { name: /Use a different Client ID/i })).toBeTruthy();
+    expect(screen.getByText("Continue with Google")).toBeTruthy();
   });
 
   it("asks the user when no Client ID was previously saved", async () => {
