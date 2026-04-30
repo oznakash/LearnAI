@@ -134,15 +134,26 @@ Replace the env var on mem0, redeploy. Every active session is invalidated; user
 
 ### Persistence checklist (what survives a rebuild)
 
+**Default model:** every stateful thing is in Postgres. Container rebuilds lose nothing.
+
 | Data | Where it lives | Survives mem0 rebuild |
 |---|---|---|
 | Memories (vector + payload) | Postgres + pgvector | ✅ Yes — separate service |
-| User accounts, API keys, sessions table, request logs | Postgres | ✅ Yes |
-| Cross-device PlayerState (XP, streak, history, profile, …) | Postgres `user_states` | ✅ Yes |
+| Memory edit history / audit trail | Postgres `mem0_history` (`PostgresHistoryManager` swap at boot — no SQLite-on-disk) | ✅ Yes |
+| Cross-device PlayerState (XP, streak, history, profile, badges, prefs) | Postgres `user_states` | ✅ Yes |
+| User accounts, sessions table, request logs | Postgres | ✅ Yes |
 | `JWT_SECRET` (active session validity) | Env var on the mem0 service | ✅ Yes |
 | `GOOGLE_OAUTH_CLIENT_ID`, `ADMIN_EMAILS`, `CORS_ORIGINS` | Env vars | ✅ Yes |
-| mem0 history audit trail (`HISTORY_DB_PATH`) | Wherever you point it | ⚠️ **Only if you mount a persistent volume**. The default is `/app/data/history.db`; mount a volume at `/app/data` (or override `HISTORY_DB_PATH` to a known persistent path). |
-| Per-browser AdminConfig (branding, flags, tuning) | Browser localStorage | Per-device today; sync follows in a later sprint. |
+| Per-browser AdminConfig (branding, flags, tuning) | Browser localStorage | Per-device today; admin-config sync follows in a later sprint. |
+| `HISTORY_DB_PATH` env var | n/a — value is irrelevant | n/a (the in-code Postgres adapter replaces SQLite at boot regardless) |
+
+### Persistence: two paths (default + alternate)
+
+**Path A — Postgres for everything (current default, recommended).** mem0's stock SQLite history-DB is replaced at container boot by `PostgresHistoryManager`, which writes the same audit-trail rows to the existing Postgres. **No volume mount required.** The `HISTORY_DB_PATH` env var becomes a dead letter — nothing reads from the SQLite file. This is what we ship and what runs in production.
+
+**Path B — Persistent volume (alternate, available via Cloud-Claude).** If you ever want to revert to the upstream mem0 SQLite history-DB and persist it on disk, Cloud-Claude now exposes a `set_volume_path` primitive (and a Dashboard → Actions → Persistent storage section). Mount a volume at `/app/data`, leave `HISTORY_DB_PATH` at the in-code default `/app/data/history.db`, and remove the Postgres adapter swap (`_attach_postgres_history_safely()` in `server/main.py`). Useful for forks that don't want to depend on the Postgres adapter.
+
+For most operators, Path A is simpler and Postgres is already the source of truth — there's nothing to gain by moving the audit trail off it.
 
 ### Troubleshoot
 

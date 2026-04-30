@@ -291,6 +291,44 @@ npm run smoke:memory -- https://learnai-mem0.fly.dev <bearerKey>
 
 ---
 
+## 🏗️ Architecture at a glance
+
+Two services, one database. The SPA is static and stateless; everything stateful lives in Postgres so a container rebuild loses nothing.
+
+```mermaid
+flowchart LR
+    subgraph Browser["🌐 Browser (one per device)"]
+        SPA["LearnAI SPA<br/>React + Vite + TypeScript"]
+        LS[("localStorage<br/>session JWT,<br/>per-device prefs")]
+        SPA <--> LS
+    end
+
+    subgraph Cloud["☁️ Cloud-Claude (or any host)"]
+        MEM0["mem0 server<br/>FastAPI + Python<br/>oznakash/mem0 fork"]
+        PG[("Postgres + pgvector<br/>memories · user_states ·<br/>history · sessions")]
+        MEM0 <--> PG
+    end
+
+    Google["🔐 Google Identity Services"]
+
+    SPA -->|"1. ID token"| Google
+    Google -.->|"2. JWT"| SPA
+    SPA -->|"3. POST /auth/google"| MEM0
+    MEM0 -->|"4. session JWT (7-day)"| SPA
+    SPA <-->|"5. /v1/state, /v1/memories<br/>(bearer = session JWT)"| MEM0
+    MEM0 -->|"fact extraction"| OpenAI["OpenAI / Anthropic API"]
+```
+
+**What flows where:**
+
+- **Identity** — sign-in is server-verified. The SPA hands a Google ID token to mem0; mem0 verifies it against Google's JWKS, mints a 7-day session JWT signed with `JWT_SECRET`, and tags `is_admin` from the operator's `ADMIN_EMAILS` allowlist. Every subsequent call uses that session JWT as the bearer.
+- **Cross-device state** — every Spark write debounce-PUTs the player's progress (XP, streak, profile, history, badges, prefs) to `/v1/state`. Sign in on a phone, then on a laptop — same account, same XP, same memory. Per-device fields (the JWT itself, demo-mode keys) never leave the device.
+- **Cognition** — every Spark completion fires a `remember()` call to `/v1/memories`. mem0 extracts facts via OpenAI, stores them in pgvector, and writes the audit trail to `mem0_history` (a Postgres table — no SQLite-on-disk, no persistent volume needed).
+
+→ Full deep-dive (sequence diagrams, failure modes, data classification): [`docs/architecture.md`](./docs/architecture.md).
+
+---
+
 ## 📚 Documentation library — the wiki
 
 Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Nothing's hidden in a Notion.
@@ -313,11 +351,12 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 ## 🏗 Tech
 
 **React 19 · Vite 8 · TypeScript · Tailwind 3 · Vitest** for the SPA.
-**mem0 · Postgres + pgvector · Fly.io / Cloud-Claude** for the cognition + auth layer.
-**Google Identity Services + server-verified ID-token exchange** for Gmail-only auth — sessions are 7-day JWTs signed by mem0.
-The SPA stays static; everything stateful is on the existing mem0 server.
+**FastAPI · Python · Postgres + pgvector · Cloud-Claude** for the mem0 server (auth, cognition, cross-device state).
+**Google Identity Services** for sign-in — ID tokens are server-verified by mem0, which mints 7-day session JWTs signed with `JWT_SECRET`.
 
-488 KB JS / 29 KB CSS gzipped, 77 modules. 122 / 122 tests across 14 files.
+The SPA stays static; everything stateful lives in Postgres (memories · user_states · audit history · sessions). Container rebuilds lose nothing.
+
+~488 KB JS / ~29 KB CSS gzipped, ~78 modules. **165 / 165 vitest** + **4 mem0 build tests** + **5 deploy smoke checks**, all sub-second.
 
 ---
 

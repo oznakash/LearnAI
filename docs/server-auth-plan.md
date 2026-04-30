@@ -1,17 +1,24 @@
 # Production Auth — Implementation Plan & Status
 
-> **Shipped.** This doc is the post-mortem and architecture record. The original plan, the as-built deltas, and the decisions log are all here.
-> If you're picking up future work, the things to know are in **Status** + **As-built deltas from the original plan** + **Decisions log**.
+> **Shipped + verified end-to-end in production.** This doc is the post-mortem and architecture record. The original plan, the as-built deltas, and the decisions log are all here. For the live system, see [`architecture.md`](./architecture.md).
 
 ## Status
 
-| Phase | What | State |
-|---|---|---|
-| 0 | Planning doc + tracking PR | ✅ shipped |
-| 1 | mem0 server: Google JWT verify + session JWT mint | ✅ shipped (oznakash/mem0#6) |
-| 2 | LearnAI client: mode toggle + server sign-in | ✅ shipped (this PR) |
-| 3 | INSTALL.md at repo root | ✅ shipped (this PR) |
-| 4 | Integration verification + merge both PRs | ✅ shipped |
+| Phase | What | State | Shipped via |
+|---|---|---|---|
+| 0 | Planning doc + tracking PR | ✅ closed | LearnAI #21 |
+| 1 | mem0 server: Google JWT verify + session JWT mint | ✅ closed | mem0 #6 |
+| 2 | LearnAI client: mode toggle + server sign-in | ✅ closed | LearnAI #21 + #29 |
+| 3 | INSTALL.md at repo root | ✅ closed | LearnAI #21 + #29 |
+| 4 | Integration verification + merge both PRs | ✅ closed | (live in production) |
+| 5 | Fresh-browser auto-bootstrap (`/auth/config`) | ✅ closed | mem0 #7 + LearnAI #29 |
+| 6 | Cross-device PlayerState sync (`/v1/state` + `user_states` table) | ✅ closed | mem0 #8 + LearnAI #30 |
+| 7 | Admin-only env-config snapshot (`/auth/admin/status`) + Admin → Memory live panel | ✅ closed | mem0 #9 + LearnAI #31 |
+| 8 | Postgres-backed history adapter (kills the persistent-volume requirement) | ✅ closed | mem0 #10 |
+| 9 | Cognition on by default + per-user opt-out + race fix | ✅ closed | LearnAI #35 |
+| 10 | Build tests + post-deploy smoke | ✅ closed | mem0 #11 + LearnAI #34 |
+
+The whole auth + state + persistence story is closed. Nothing left from the original plan.
 
 ## Goal
 
