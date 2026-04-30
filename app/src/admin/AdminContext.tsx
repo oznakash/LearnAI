@@ -62,14 +62,21 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const { state: player } = usePlayer();
   const [config, dispatch] = useReducer(reducer, defaultAdminConfig());
   const [mockUsers, setMockUsers] = useState<MockUser[]>([]);
+  // Mirror of PlayerContext's hydration flag. Without this, the first
+  // mount runs the persist effect with the still-default config and
+  // clobbers the saved admin config (mem0 server URL, API keys,
+  // branding, allowlist, …) before the hydrate dispatch is processed.
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     dispatch({ type: "init", cfg: loadAdminConfig() });
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveAdminConfig(config);
-  }, [config]);
+  }, [config, hydrated]);
 
   // Build the deterministic mock cohort once, then merge the current local user.
   useEffect(() => {
