@@ -1,7 +1,7 @@
 # Production Auth — Implementation Plan & Status
 
-> **Living document.** Updated as work progresses. The current status badge below is authoritative.
-> If you're a Claude Code session resuming this work after the previous one stopped: read this top-to-bottom, check the **Status** table for what's done and what's next, and continue from the first un-checked phase.
+> **Shipped.** This doc is the post-mortem and architecture record. The original plan, the as-built deltas, and the decisions log are all here.
+> If you're picking up future work, the things to know are in **Status** + **As-built deltas from the original plan** + **Decisions log**.
 
 ## Status
 
@@ -44,7 +44,16 @@ Move LearnAI from per-browser localStorage auth to **server-verified Google sign
 
 No new service. mem0's existing FastAPI + Postgres + JWT machinery does all the work.
 
-## Phase 1 — mem0 server (`oznakash/mem0`, branch `claude/server-auth`)
+## As-built deltas from the original plan
+
+The implementation matched the plan with three small adjustments worth recording:
+
+1. **Session probe path renamed `GET /auth/me` → `GET /auth/session`.** The dashboard auth router (`server/routers/auth.py`) already owns `/auth/me`. Rather than reorder routers, the new endpoint takes a non-colliding path and the SPA points at it. Same applies to `POST /auth/signout` → `POST /auth/google/signout`.
+2. **`AdminConfig.serverConfig` was named `AdminConfig.serverAuth`** with `{ mode, googleClientId, mem0Url }` — same shape, more consistent name.
+3. **Hardcoded fallbacks for source-rebuilt deploys.** Cloud-Claude rebuilds the SPA on its own infra and ignores both the committed `/dist/` directory and the GitHub Actions repository variables. So `defaults.ts` carries `FALLBACK_SERVER_AUTH_MODE = "production"` and `FALLBACK_MEM0_URL = "https://mem0-09b7ea.cloud-claude.com"` as a second layer below the `VITE_*` env-var defaults. Forks override either layer to opt into demo. (See `app/src/admin/defaults.ts` for the precedence order.)
+4. **Per-browser → admin-config Client ID migration.** The pre-existing `PlayerState.googleClientId` from demo-era sessions auto-promotes into `AdminConfig.serverAuth.googleClientId` on first production-mode load, so an operator who already had a working Client ID on the device doesn't have to paste it again.
+
+## Phase 1 — mem0 server (`oznakash/mem0`, branch `claude/server-auth` — merged as #6)
 
 ### Files to change
 
@@ -172,9 +181,12 @@ New top-level file. Sections:
 - **Session as JWT, not server-tracked session table.** Stateless, fewer DB reads, simpler. Trade-off: revoking a session before it expires requires keeping a denylist (we won't bother for v1).
 - **7-day expiry, no sliding refresh.** User said "1 week"; reauth at 7 days is simple and explicit. Sliding refresh adds complexity for marginal UX win.
 - **Admin allowlist via env var, not DB.** ADMIN_EMAILS is comma-separated. Trade-off: changing admins requires a redeploy. For a single-operator tool that's fine; later we move to a DB-backed list.
-- **Demo mode kept on by default for forks.** `VITE_SERVER_AUTH_DEFAULT=production` is set on operator's deployment; forks without that env var get `"demo"` and a working app immediately.
+- **Production is the baked default for source-built deploys.** Cloud-Claude rebuilds from source without picking up GitHub repository variables, so a "demo by default + production via env var" setup left the production deploy in demo mode after PR #21. The fix flipped the source-level fallback to production with the operator's mem0 URL hardcoded. Forks set `VITE_SERVER_AUTH_DEFAULT=demo` at build time, or flip the toggle in the Admin UI.
 - **No bake-in of OPENAI_API_KEY or ADMIN_API_KEY.** Public repo + bundled JS = leak. These stay as mem0-service env vars only.
 - **`VITE_MEM0_URL` + `VITE_GOOGLE_CLIENT_ID` baked is safe.** URLs and Client IDs are public by design.
+- **mem0 calls in production use the session JWT as bearer.** `selectMemoryService` accepts a `bearerToken` override that the SPA passes from React state directly, instead of having `getRuntimeMemoryConfig` chase localStorage. This eliminates a render-vs-write race that would have given the rebuilt service a stale token for one render after sign-in. `ADMIN_API_KEY` never reaches the browser.
+- **`is_admin` is server-signed.** AdminContext derives admin status from the session JWT's `is_admin` claim in production mode (sourced from mem0's `ADMIN_EMAILS`), and from the local allowlist in demo mode. The local allowlist is now demo-only.
+- **Session expiry validated on hydrate.** `PlayerContext` drops an expired `serverSession` (and the identity that came with it) before any UI renders, so a returning user with a stale token sees the sign-in card instead of a broken signed-in app.
 
 ## Open risks
 
@@ -183,16 +195,21 @@ New top-level file. Sections:
 - **JWT_SECRET rotation.** When rotated, all existing sessions invalidate. That's the correct behavior — users re-sign-in. Not a bug.
 - **mem0's existing `/auth` router (dashboard login).** We're adding `/auth/google` alongside it. Different code path, no conflict expected. Will verify.
 
-## How to resume if this session dies
+## How to resume future work
 
-1. Read this doc top-to-bottom.
-2. Check git log on both branches:
-   - `oznakash/mem0` branch `claude/server-auth`
-   - `oznakash/learnai` branch `claude/server-auth`
-3. Match commits to the **Status** table at the top.
-4. Pick up at the first phase that's not ✅. Update the status table on a fresh commit before doing the work, then commit the work, then update the status when done.
-5. Each phase commit ends with the status table updated to reflect actual state.
-6. Keep PR descriptions on both repos in sync — mention the linked PR in the other repo so the cross-reference is obvious.
+The original plan is complete. For follow-on work:
+
+- **Adding admins** — `ADMIN_EMAILS` env var on mem0, redeploy. No code change. Existing sessions keep their old `is_admin` claim until they re-sign-in.
+- **Rotating `JWT_SECRET`** — replace on mem0, redeploy. All active sessions invalidate; users re-sign-in. Use as nuclear option.
+- **Adding a second deployment / origin** — append to `CORS_ORIGINS` on mem0, redeploy. SPA-side: set `VITE_GOOGLE_CLIENT_ID` and `VITE_MEM0_URL` at build time, or override in Admin → Authentication.
+- **Per-session revocation** — would require a denylist table; out of scope for v1, deliberately deferred. Sessions are stateless 7-day JWTs.
+- **Multi-tenant** — would benefit from a Cloudflare Worker proxy (the alternative architecture in `docs/server-auth-handoff.md`). Additive — fits in front of mem0 without changing this work.
+
+If you're a Claude Code session resuming any of this:
+
+1. Confirm git state on both repos: `oznakash/learnai` and `oznakash/mem0`. The shipped version is everything ≤ #6 on mem0 / ≤ #23 on LearnAI.
+2. Read this doc + `INSTALL.md` to understand the full picture.
+3. Update this doc on every architecture change so the next session has a current map.
 
 ## Cross-references
 
