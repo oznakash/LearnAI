@@ -301,6 +301,7 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 | [`problem.md`](./docs/problem.md) — what we're solving | [`technical.md`](./docs/technical.md) — services + types | [`fork-recipe.md`](./docs/fork-recipe.md) — fork for your domain |
 | [`use-cases.md`](./docs/use-cases.md) — personas | [`mem0.md`](./docs/mem0.md) — cognition layer | |
 | [`competitors.md`](./docs/competitors.md) — landscape | [`ux.md`](./docs/ux.md) — UX of memory | |
+| | [`design-language.md`](./docs/design-language.md) — colour, type, primitives, voice | |
 | [`pitch-deck.md`](./docs/pitch-deck.md) — 12 slides | | |
 | [`mvp.md`](./docs/mvp.md) — what's shipped | | |
 | [`roadmap.md`](./docs/roadmap.md) — what's next | | |

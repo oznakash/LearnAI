@@ -75,6 +75,7 @@ If your PR changes user-visible behavior, update **at least one** of:
 - `docs/technical.md` — if a service contract or wiring changes.
 - `docs/architecture.md` — if a box on the diagram changes.
 - `docs/roadmap.md` — if a sprint item moves status.
+- `docs/design-language.md` — if a colour, shadow, primitive, motion, or third-party-widget pattern changes.
 
 If you add a Spark or a Constellation, you don't need a doc change — the seed file is the doc.
 
@@ -85,6 +86,16 @@ If you add a Spark or a Constellation, you don't need a doc change — the seed 
 - Short > long. *60 words is a luxury.*
 - Use real model names / tools where the level supports it (Claude, GPT, Gemini, Llama, pgvector, Cursor, Claude Code, etc.).
 - No academic register. No emojis in code or commits. Emojis are fine in UI strings and Spark titles where they earn their place.
+
+## Default visual language
+
+The visual contract lives in [`docs/design-language.md`](./docs/design-language.md). Read it before adding a colour, a shadow, a new component primitive, a new motion, or hosting a third-party UI widget. Concrete rules to keep top of mind:
+
+- Use the existing primitives (`.card`, `.btn-primary`, `.btn-ghost`, `.input`, `.label`, `.h1`, `.h2`, `.muted`, `.progress`, `.chip`, `.pill`, `.node`, `.dot`) instead of re-rolling Tailwind chains. If the same chain shows up more than twice, promote it to a primitive in `app/src/index.css` and document it in `design-language.md`.
+- Hierarchy on dark surfaces is `text-white` plus an opacity ladder (`/70`, `/60`, `/50`, `/40`). Don't introduce a separate gray scale.
+- Border radius scale is `rounded-xl` (controls) and `rounded-2xl` (containers). Shadow vocabulary is `shadow-card` and `shadow-glow`. Don't add to either set without a reason.
+- For third-party widgets that ship their own theme (Google Identity, Stripe, etc.), prefer the "invisible overlay + our own button" pattern from `app/src/views/SignIn.tsx` over re-skinning the vendor element.
+- Update `design-language.md` in the same PR that ships any surface-level change. Tokens in `tailwind.config.js` and primitives in `index.css` are the runtime; the doc is the contract.
 
 ## Common tasks recipe
 
