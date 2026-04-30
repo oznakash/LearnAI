@@ -244,7 +244,7 @@ export function Onboarding() {
               {step === "interests" && (
                 <>
                   <h2 className="h2">What lights you up?</h2>
-                  <p className="muted">Pick at least one Constellation. We'll start there and suggest more later.</p>
+                  <p className="muted">Pick at least one Topic. We'll start there and suggest more later.</p>
                   <div className="grid sm:grid-cols-2 gap-2">
                     {TOPICS.map((t) => {
                       const on = interests.includes(t.id);

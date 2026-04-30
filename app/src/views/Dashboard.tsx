@@ -77,7 +77,7 @@ export function Dashboard({ onNav }: { onNav: (v: View) => void }) {
 
       <section className="grid lg:grid-cols-3 gap-4">
         <div className="card p-4 lg:col-span-2">
-          <div className="label mb-2">Sparks per Constellation</div>
+          <div className="label mb-2">Sparks per Topic</div>
           <Bars data={sparksPerTopic} width={520} height={140} color="#28e0b3" />
         </div>
         <div className="card p-4">
@@ -87,7 +87,7 @@ export function Dashboard({ onNav }: { onNav: (v: View) => void }) {
       </section>
 
       <section>
-        <h2 className="h2 mb-3">Per-Constellation</h2>
+        <h2 className="h2 mb-3">Per-Topic</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {TOPICS.map((t) => {
             const c = topicCompletion(state, t.id);

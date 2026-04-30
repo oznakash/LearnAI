@@ -16,7 +16,7 @@
 | [`pitch-deck.md`](./pitch-deck.md) | 12 text-only slides — the partner / investor pitch | Strategic conversations. |
 | [`roadmap.md`](./roadmap.md) | 5 sprints in detail · what we will *not* do · how sprints get committed | Planning the next PR. |
 | [`mvp.md`](./mvp.md) | What's shipped today · what's half-shipped · what's not yet shipped (auditable) | Anyone asking "does it actually work?" |
-| [`social-mvp-product.md`](./social-mvp-product.md) | Sprint-2 social MVP from a product-exec lens · Tune-in / Spark Stream / Constellation Boards / Signals · privacy posture · UI surface map · success metrics | Reviewing or building the social network layer. |
+| [`social-mvp-product.md`](./social-mvp-product.md) | Sprint-2 social MVP from a product-exec lens · Tune-in / Spark Stream / Topic Boards / Signals · privacy posture · UI surface map · success metrics | Reviewing or building the social network layer. |
 | [`social-mvp-engineering.md`](./social-mvp-engineering.md) | Sister doc to the social PRD · Postgres-2 schema · `SocialService` contract · auth-verifying proxy · tests · rollout · risk register | Implementing the social MVP in a single PR. |
 
 ## Technical & operator

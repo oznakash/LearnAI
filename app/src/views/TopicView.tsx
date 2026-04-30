@@ -85,7 +85,7 @@ export function TopicView({ topicId, onNav }: { topicId: TopicId; onNav: (v: Vie
         <div className="card p-4">
           <div className="label">Accuracy</div>
           <div className="text-3xl font-display font-bold text-white">{acc !== null ? `${acc}%` : "—"}</div>
-          <div className="text-xs text-white/50 mt-1">across this Constellation</div>
+          <div className="text-xs text-white/50 mt-1">across this Topic</div>
         </div>
         <div className="card p-4">
           <div className="label">Time invested</div>

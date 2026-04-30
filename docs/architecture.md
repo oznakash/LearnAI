@@ -70,7 +70,7 @@ That's it. Two boxes, one optional. **The whole product runs without the cogniti
 
 ### 3. The seed curriculum
 
-- **Where it lives:** TypeScript in `app/src/content/topics/*.ts`. 12 Constellations × 10 Levels × 4–6 Sparks each, hand-authored.
+- **Where it lives:** TypeScript in `app/src/content/topics/*.ts`. 12 Topics × 10 Levels × 4–6 Sparks each, hand-authored.
 - **Why TypeScript and not a CMS:** version control, code review, rich-typed exercises, zero infra. Forks copy the same shape.
 - **Admin overrides:** `AdminConfig.contentOverrides` lets an admin replace any topic by id at runtime. Lives in admin localStorage (single-admin) or, in production, in mem0 as system-scoped memories.
 

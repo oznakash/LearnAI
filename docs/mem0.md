@@ -30,7 +30,7 @@ isolation. It runs as a Python service with a JSON HTTP API. Self-hostable.
 | **mem0** ✅ | Smallest API surface. Memories are inspectable JSON (huge for our "Your Memory" tab). Pluggable LLM provider — uses our existing Anthropic / OpenAI key. Active project, MIT license, exactly the right level of opinion. |
 
 There's a teaching bonus: mem0 itself is a *named, trendy open-source AI
-project* that maps cleanly onto our **🌐 Open Source AI** Constellation.
+project* that maps cleanly onto our **🌐 Open Source AI** Topic.
 We can write a Spark that explains mem0 — so the player learning about
 memory layers is *literally* using one. That's hard to beat for a learning
 product.
