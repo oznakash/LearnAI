@@ -8,7 +8,8 @@
 
 | Document | What's in it | When you'd read it |
 |---|---|---|
-| [`vision.md`](./vision.md) | Mission · vision · end game · five-year arc · what we will not do | Onboarding new contributors. Pitch prep. Anytime you're losing sight of why. |
+| [`manifesto.md`](./manifesto.md) | Who we are · mission · vision · 8 values for users worldwide · 11 operating principles · what we won't do | Anyone asking "what is LearnAI, in one read?" Pitch prep, hiring, contributor onboarding. |
+| [`vision.md`](./vision.md) | Mission · vision · end game · five-year arc · what we will not do | The longer-form companion to the manifesto, with the strategic-pillars + 5-year arc. |
 | [`problem.md`](./problem.md) | The four-axis trap · who feels it · why existing options fail · our hypothesis | Convincing a skeptic. Recruiting. Investor first call. |
 | [`use-cases.md`](./use-cases.md) | Seven personas walking through real journeys (PM, kid, retiree, researcher, hiring manager, educator-fork-er) | Designing a feature. Writing a Spark. Empathy check. |
 | [`competitors.md`](./competitors.md) | Quadrant chart · why no one's done it · what gives us defensibility · what we should be paranoid about | Strategy reviews. Investor deep-dive. |

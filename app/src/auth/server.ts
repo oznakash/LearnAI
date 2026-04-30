@@ -153,3 +153,38 @@ export function isSessionExpired(session: ServerSession | undefined | null): boo
   if (!session) return true;
   return session.expiresAt * 1000 - 60_000 <= Date.now();
 }
+
+export interface PublicAuthConfig {
+  googleClientId: string;
+  sessionTtlDays: number;
+}
+
+interface RawPublicConfig {
+  google_client_id?: string | null;
+  session_ttl_days?: number | null;
+}
+
+/**
+ * Fetch the public auth config from the mem0 server. Used to seed a fresh-
+ * localStorage SPA with the operator's Google Client ID instead of forcing
+ * the user to paste it. Returns null on any failure — the caller falls
+ * back to the manual input form.
+ */
+export async function fetchPublicAuthConfig(
+  mem0Url: string
+): Promise<PublicAuthConfig | null> {
+  const base = trimTrailing(mem0Url);
+  if (!base) return null;
+  try {
+    const res = await fetchWithTimeout(`${base}/auth/config`, { method: "GET" }, 5_000);
+    if (!res.ok) return null;
+    const raw = (await res.json()) as RawPublicConfig;
+    if (!raw.google_client_id) return null;
+    return {
+      googleClientId: raw.google_client_id,
+      sessionTtlDays: raw.session_ttl_days ?? 7,
+    };
+  } catch {
+    return null;
+  }
+}

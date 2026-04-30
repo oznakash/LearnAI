@@ -3,6 +3,37 @@ import { defaultAdminConfig } from "./defaults";
 
 export const ADMIN_STORAGE_KEY = "builderquest:admin:v1";
 
+/**
+ * One-shot legacy-string migrations for cached admin configs that were
+ * saved before the LearnAI rebrand landed. We forward-merge fresh fields,
+ * but for a small handful of values we also overwrite the cached default
+ * if it matches the historical default verbatim — that way returning users
+ * see "LearnAI / AI" instead of "BuilderQuest / BQ" on their next refresh
+ * without having to reset their config.
+ *
+ * Keep this list tight. It must only ever migrate values that match the
+ * historical default exactly — anything customised by the operator is left
+ * untouched.
+ */
+function migrateLegacyBranding(
+  saved: Partial<AdminConfig["branding"]> | undefined,
+  fresh: AdminConfig["branding"]
+): AdminConfig["branding"] {
+  const merged = { ...fresh, ...(saved ?? {}) };
+  if (merged.appName === "BuilderQuest") merged.appName = fresh.appName;
+  if (merged.logoEmoji === "BQ") merged.logoEmoji = fresh.logoEmoji;
+  return merged;
+}
+
+function migrateLegacyEmail(
+  saved: Partial<AdminConfig["emailConfig"]> | undefined,
+  fresh: AdminConfig["emailConfig"]
+): AdminConfig["emailConfig"] {
+  const merged = { ...fresh, ...(saved ?? {}) };
+  if (merged.fromName === "BuilderQuest") merged.fromName = fresh.fromName;
+  return merged;
+}
+
 export function loadAdminConfig(): AdminConfig {
   if (typeof window === "undefined") return defaultAdminConfig();
   try {
@@ -13,9 +44,9 @@ export function loadAdminConfig(): AdminConfig {
     return {
       ...base,
       ...parsed,
-      branding: { ...base.branding, ...(parsed.branding ?? {}) },
+      branding: migrateLegacyBranding(parsed.branding, base.branding),
       flags: { ...base.flags, ...(parsed.flags ?? {}) },
-      emailConfig: { ...base.emailConfig, ...(parsed.emailConfig ?? {}) },
+      emailConfig: migrateLegacyEmail(parsed.emailConfig, base.emailConfig),
       emailTemplates: { ...base.emailTemplates, ...(parsed.emailTemplates ?? {}) },
       admins: parsed.admins ?? [],
       emailQueue: parsed.emailQueue ?? [],

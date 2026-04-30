@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { decodeIdToken, isGmail, loadGoogleScript } from "../auth/google";
-import { serverSignIn, ServerAuthError } from "../auth/server";
+import { fetchPublicAuthConfig, serverSignIn, ServerAuthError } from "../auth/server";
 import { usePlayer } from "../store/PlayerContext";
 import { useAdmin } from "../admin/AdminContext";
 import { Mascot } from "../visuals/Mascot";
@@ -69,6 +69,34 @@ export function SignIn() {
       }));
     }
   }, [isProduction, adminCfg.serverAuth.googleClientId, state.googleClientId, setAdminCfg]);
+
+  // Fresh-browser bootstrap. In production mode, if neither admin nor
+  // player has a Client ID stored yet, ask mem0 for the operator's public
+  // config (mem0 already runs with GOOGLE_OAUTH_CLIENT_ID set). Self-heals
+  // a cleared-localStorage / new-device visit without the manual paste.
+  // Falls back silently on any failure (network, older mem0 build) — the
+  // user can still paste the Client ID by hand.
+  useEffect(() => {
+    if (
+      !isProduction ||
+      adminCfg.serverAuth.googleClientId ||
+      state.googleClientId ||
+      !adminCfg.serverAuth.mem0Url
+    ) {
+      return;
+    }
+    let cancelled = false;
+    fetchPublicAuthConfig(adminCfg.serverAuth.mem0Url).then((cfg) => {
+      if (cancelled || !cfg?.googleClientId) return;
+      setAdminCfg((prev) => ({
+        ...prev,
+        serverAuth: { ...prev.serverAuth, googleClientId: cfg.googleClientId },
+      }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isProduction, adminCfg.serverAuth.googleClientId, adminCfg.serverAuth.mem0Url, state.googleClientId, setAdminCfg]);
 
   const [draft, setDraft] = useState("");
   // The Client ID is *only* editable from this screen during first-time
