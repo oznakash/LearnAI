@@ -1,28 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { decodeIdToken, isGmail, loadGoogleScript } from "../auth/google";
 import { usePlayer } from "../store/PlayerContext";
+import { useAdmin } from "../admin/AdminContext";
 import { Mascot } from "../visuals/Mascot";
 import { Illustration } from "../visuals/Illustrations";
 
 export function SignIn() {
-  const { state, signIn, setGoogleClientId } = usePlayer();
-  const savedClientId = state.googleClientId ?? "";
+  const { state: player, signIn } = usePlayer();
+  const { config: adminCfg } = useAdmin();
 
-  // Three concerns, kept separate:
-  //   savedClientId — the persisted value (single source of truth for what
-  //                   to send to Google).
-  //   draft         — what's currently in the input box (transient).
-  //   draftMode     — user has clicked "Use a different Client ID" and
-  //                   wants to enter a new one even though one is saved.
-  //
-  // Form is visible iff there's no saved value OR the user is explicitly
-  // changing it. Crucially, the form's visibility does NOT depend on draft,
-  // so typing into the input doesn't make the form disappear before Save
-  // is clicked. (That was the prior bug: the form vanished after one
-  // keystroke, taking the Save button with it.)
-  const [draft, setDraft] = useState("");
-  const [draftMode, setDraftMode] = useState(false);
-  const showForm = !savedClientId || draftMode;
+  // The Google OAuth Client ID is a deployment-level value set once by the
+  // operator via Admin -> Config. Read it from admin config first; fall
+  // back to the legacy per-player localStorage value for installs that
+  // configured it through the old SignIn-side input form (pre-PR #20).
+  // Players never enter or change this from the SignIn screen anymore.
+  const savedClientId = (adminCfg.googleClientId ?? "").trim() || (player.googleClientId ?? "").trim();
 
   const [err, setErr] = useState<string | null>(null);
   const [loadedSDK, setLoadedSDK] = useState(false);
@@ -107,62 +99,18 @@ export function SignIn() {
           <h2 className="h2">Sign in to start</h2>
           <p className="text-sm text-white/60">Gmail only. Your progress is stored locally on this device.</p>
 
-          {showForm && (
-            <div className="space-y-2">
-              <div className="label">Google OAuth Client ID</div>
-              <input
-                className="input"
-                placeholder="123-xxxxxx.apps.googleusercontent.com"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value.trim())}
-              />
-              <button
-                className="btn-primary w-full"
-                disabled={!draft.endsWith(".apps.googleusercontent.com")}
-                onClick={() => {
-                  setGoogleClientId(draft);
-                  setDraft("");
-                  setDraftMode(false);
-                }}
-              >
-                Save Client ID
-              </button>
-              {savedClientId && draftMode && (
-                <button
-                  className="btn-ghost w-full text-xs"
-                  onClick={() => {
-                    setDraft("");
-                    setDraftMode(false);
-                  }}
-                >
-                  Cancel — keep the existing Client ID
-                </button>
-              )}
-              <details className="text-xs text-white/50 mt-1">
-                <summary className="cursor-pointer hover:text-white/70">How do I get one?</summary>
-                <ol className="list-decimal list-inside space-y-1 mt-2">
-                  <li>Open <span className="font-mono">console.cloud.google.com</span></li>
-                  <li>Create a project → APIs &amp; Services → Credentials</li>
-                  <li>Create OAuth client ID (Web). Add this site's URL to Authorized JavaScript origins.</li>
-                  <li>Paste the client ID above.</li>
-                </ol>
-              </details>
-            </div>
-          )}
-
-          {!showForm && (
+          {savedClientId ? (
             <div className="space-y-3">
               <div ref={btnRef} className="flex justify-center min-h-[44px]" />
               {!loadedSDK && <div className="text-xs text-white/50">Loading Google sign-in…</div>}
-              <button
-                className="btn-ghost w-full text-xs"
-                onClick={() => {
-                  setDraft("");
-                  setDraftMode(true);
-                }}
-              >
-                Use a different Client ID
-              </button>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/70 space-y-1">
+              <div className="font-medium text-white">Google sign-in not configured.</div>
+              <div>
+                A site admin needs to set the Google OAuth Client ID in
+                Admin → Config. Until then, use Demo Mode below.
+              </div>
             </div>
           )}
 
