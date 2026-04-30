@@ -7,15 +7,23 @@ import { Illustration } from "../visuals/Illustrations";
 export function SignIn() {
   const { state, signIn, setGoogleClientId } = usePlayer();
   const savedClientId = state.googleClientId ?? "";
-  // The persisted clientId arrives async (PlayerContext hydrates from
-  // localStorage in a useEffect after first paint). If we only read it
-  // in `useState`, the input stays empty after hydration and we ask the
-  // user for the Client ID over and over even though it's already saved.
-  // Track an `editing` flag instead: while editing, use the local draft;
-  // otherwise always show the saved value.
+
+  // Three concerns, kept separate:
+  //   savedClientId — the persisted value (single source of truth for what
+  //                   to send to Google).
+  //   draft         — what's currently in the input box (transient).
+  //   draftMode     — user has clicked "Use a different Client ID" and
+  //                   wants to enter a new one even though one is saved.
+  //
+  // Form is visible iff there's no saved value OR the user is explicitly
+  // changing it. Crucially, the form's visibility does NOT depend on draft,
+  // so typing into the input doesn't make the form disappear before Save
+  // is clicked. (That was the prior bug: the form vanished after one
+  // keystroke, taking the Save button with it.)
   const [draft, setDraft] = useState("");
-  const [editing, setEditing] = useState(false);
-  const clientId = editing ? draft : savedClientId;
+  const [draftMode, setDraftMode] = useState(false);
+  const showForm = !savedClientId || draftMode;
+
   const [err, setErr] = useState<string | null>(null);
   const [loadedSDK, setLoadedSDK] = useState(false);
   const [demoEmail, setDemoEmail] = useState("");
@@ -23,7 +31,7 @@ export function SignIn() {
   const btnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!clientId) return;
+    if (!savedClientId) return;
     let cancelled = false;
     loadGoogleScript()
       .then(() => {
@@ -34,13 +42,13 @@ export function SignIn() {
     return () => {
       cancelled = true;
     };
-  }, [clientId]);
+  }, [savedClientId]);
 
   useEffect(() => {
-    if (!loadedSDK || !window.google || !btnRef.current || !clientId) return;
+    if (!loadedSDK || !window.google || !btnRef.current || !savedClientId) return;
     try {
       window.google.accounts.id.initialize({
-        client_id: clientId,
+        client_id: savedClientId,
         callback: (resp) => {
           const id = decodeIdToken(resp.credential);
           if (!id?.email) {
@@ -65,7 +73,7 @@ export function SignIn() {
     } catch (e) {
       setErr(String(e));
     }
-  }, [loadedSDK, clientId, signIn]);
+  }, [loadedSDK, savedClientId, signIn]);
 
   const onDemoEnter = () => {
     setErr(null);
@@ -99,28 +107,37 @@ export function SignIn() {
           <h2 className="h2">Sign in to start</h2>
           <p className="text-sm text-white/60">Gmail only. Your progress is stored locally on this device.</p>
 
-          {!clientId && (
+          {showForm && (
             <div className="space-y-2">
               <div className="label">Google OAuth Client ID</div>
               <input
                 className="input"
                 placeholder="123-xxxxxx.apps.googleusercontent.com"
                 value={draft}
-                onChange={(e) => {
-                  setEditing(true);
-                  setDraft(e.target.value.trim());
-                }}
+                onChange={(e) => setDraft(e.target.value.trim())}
               />
               <button
                 className="btn-primary w-full"
                 disabled={!draft.endsWith(".apps.googleusercontent.com")}
                 onClick={() => {
                   setGoogleClientId(draft);
-                  setEditing(false);
+                  setDraft("");
+                  setDraftMode(false);
                 }}
               >
                 Save Client ID
               </button>
+              {savedClientId && draftMode && (
+                <button
+                  className="btn-ghost w-full text-xs"
+                  onClick={() => {
+                    setDraft("");
+                    setDraftMode(false);
+                  }}
+                >
+                  Cancel — keep the existing Client ID
+                </button>
+              )}
               <details className="text-xs text-white/50 mt-1">
                 <summary className="cursor-pointer hover:text-white/70">How do I get one?</summary>
                 <ol className="list-decimal list-inside space-y-1 mt-2">
@@ -133,16 +150,15 @@ export function SignIn() {
             </div>
           )}
 
-          {clientId && (
+          {!showForm && (
             <div className="space-y-3">
               <div ref={btnRef} className="flex justify-center min-h-[44px]" />
               {!loadedSDK && <div className="text-xs text-white/50">Loading Google sign-in…</div>}
               <button
                 className="btn-ghost w-full text-xs"
                 onClick={() => {
-                  setGoogleClientId("");
                   setDraft("");
-                  setEditing(true);
+                  setDraftMode(true);
                 }}
               >
                 Use a different Client ID
