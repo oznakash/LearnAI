@@ -90,13 +90,6 @@ export function Memory({ onExit }: { onExit: () => void }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className={`pill text-xs ${
-            backend === "mem0" && status?.ok ? "bg-good/10 text-good border-good/30" :
-            backend === "mem0" ? "bg-warn/10 text-warn border-warn/30" :
-            "bg-white/5 text-white/70 border-white/10"
-          } border`}>
-            {backend === "mem0" && status?.ok ? "🧠 mem0 connected" : backend === "mem0" ? "🟡 mem0 paused" : "📴 Offline mode"}
-          </span>
           <button className="btn-ghost text-sm" onClick={exportJson}>⬇ Export</button>
           <button className="btn-bad text-sm" onClick={onWipe} disabled={items.length === 0}>🗑 Wipe everything</button>
         </div>
@@ -104,13 +97,12 @@ export function Memory({ onExit }: { onExit: () => void }) {
 
       {backend === "offline" && (
         <div className="card p-4 border border-white/5 text-sm text-white/70">
-          <strong className="text-white">Offline mode is on.</strong> Memories live in this browser only. The full
-          cognition layer (mem0) is disabled by your admin — heuristic recommendations remain.
+          <strong className="text-white">This browser is in offline mode.</strong> Anything {adminCfg.branding.appName} learns about you stays on this device — it won't sync to your other devices until you turn the memory layer back on.
         </div>
       )}
       {backend === "mem0" && status && !status.ok && (
         <div className="card p-4 border border-warn/30 text-sm text-warn">
-          <strong>Memory paused.</strong> Couldn't reach mem0 — {status.reason ?? "no details"}. Retrying.
+          <strong>Memory paused.</strong> We can't reach the memory layer right now. Retrying.
         </div>
       )}
 
