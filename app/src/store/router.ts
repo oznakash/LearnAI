@@ -27,6 +27,7 @@ export function viewFromPath(pathname: string): View {
     case "calibration":
     case "memory":
     case "admin":
+    case "network":
       return { name: head };
     case "topic": {
       const topicId = parts[1];
@@ -68,6 +69,7 @@ export function pathForView(v: View): string {
     case "calibration":
     case "memory":
     case "admin":
+    case "network":
       return `/${v.name}`;
     case "profile":
       return `/u/${encodeURIComponent(v.handle)}`;

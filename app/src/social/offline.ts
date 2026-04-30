@@ -141,8 +141,16 @@ export class OfflineSocialService implements SocialService {
       const parsed = JSON.parse(raw) as Partial<OfflineState>;
       // Forward-merge so older saved states inherit new defaults.
       const base = defaultState(this.email, this.ageBandIsKid);
+      const profile = { ...base.profile, ...(parsed.profile ?? {}) };
+      // ageBandIsKid is a *derived* property — always source it from the
+      // constructor arg (which the SocialProvider keeps in sync with the
+      // player's current profile), never from cached localStorage state.
+      // This also enforces the kid → closed safety rule even if a stale
+      // saved state has profileMode=open.
+      profile.ageBandIsKid = this.ageBandIsKid;
+      if (this.ageBandIsKid) profile.profileMode = "closed";
       return {
-        profile: { ...base.profile, ...(parsed.profile ?? {}) },
+        profile,
         aggregate: { ...base.aggregate, ...(parsed.aggregate ?? {}) },
         signals: parsed.signals ?? base.signals,
         followingOut: parsed.followingOut ?? base.followingOut,
@@ -200,6 +208,18 @@ export class OfflineSocialService implements SocialService {
           : undefined,
       activity14d:
         viewerIsOwner || state.profile.showActivity ? state.aggregate.activity14d : undefined,
+      ownerPrefs: viewerIsOwner
+        ? {
+            fullName: state.profile.fullName,
+            showFullName: state.profile.showFullName,
+            showCurrent: state.profile.showCurrent,
+            showMap: state.profile.showMap,
+            showActivity: state.profile.showActivity,
+            showBadges: state.profile.showBadges,
+            showSignup: state.profile.showSignup,
+            signalsGlobal: state.profile.signalsGlobal,
+          }
+        : undefined,
     };
   }
 

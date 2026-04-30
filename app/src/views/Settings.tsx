@@ -143,6 +143,34 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
         </section>
       )}
 
+      {adminCfg.flags.socialEnabled && (
+        <section className="card p-5 space-y-3">
+          <h2 className="h2">Network</h2>
+          <p className="muted text-xs">
+            Manage your public profile, privacy mode, who you follow, and the Topics you want to be discoverable for.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn-primary text-sm"
+              onClick={() => onNav?.({ name: "network" })}
+            >
+              👥 Open Network settings
+            </button>
+            {state.identity?.email && (
+              <button
+                className="btn-ghost text-sm"
+                onClick={() => {
+                  const handle = state.identity!.email.split("@")[0]?.toLowerCase() ?? "";
+                  onNav?.({ name: "profile", handle });
+                }}
+              >
+                👁 View my public profile
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="card p-5 space-y-3">
         <h2 className="h2">Your memory</h2>
         <p className="muted text-xs">
