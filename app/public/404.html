@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1020" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>404 — Synapse can't find that page · BuilderQuest</title>
+    <meta
+      name="description"
+      content="That page wandered off the constellation map. Head back to BuilderQuest."
+    />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #e6e8f2;
+        background:
+          radial-gradient(900px 600px at 12% -10%, rgba(124,92,255,0.18), transparent 60%),
+          radial-gradient(700px 500px at 95% 8%, rgba(40,224,179,0.12), transparent 60%),
+          linear-gradient(180deg, #0b1020 0%, #0a0e1d 100%);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .wrap {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+        gap: 24px;
+        text-align: center;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: #fff;
+        text-decoration: none;
+        font-size: 16px;
+      }
+      .brand-mark {
+        width: 32px; height: 32px;
+        border-radius: 10px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, #7c5cff 0%, #28e0b3 100%);
+        color: #fff; font-size: 12px; font-weight: 800;
+        box-shadow: 0 0 0 4px rgba(124,92,255,0.18);
+      }
+      .float { animation: float 4s ease-in-out infinite; }
+      @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+      .glitch { font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 700; }
+      .code {
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        font-size: clamp(72px, 16vw, 132px);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+        font-weight: 700;
+        background: linear-gradient(135deg, #7c5cff 0%, #28e0b3 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin: 0;
+      }
+      h1 {
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        font-size: clamp(22px, 4vw, 30px);
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.01em;
+        color: #fff;
+      }
+      p.lede { color: rgba(255,255,255,0.65); margin: 0; max-width: 30rem; line-height: 1.55; }
+      .card {
+        background: rgba(18, 24, 51, 0.7);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 18px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        padding: 22px 22px 20px;
+        max-width: 26rem;
+        width: 100%;
+        box-shadow: 0 10px 30px -10px rgba(15,23,42,0.5);
+        text-align: left;
+      }
+      .card .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(255,255,255,0.5);
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .card h2 {
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 4px;
+        color: #fff;
+      }
+      .card p { margin: 0 0 14px; color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.5; }
+      .row { display: flex; flex-wrap: wrap; gap: 10px; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 18px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        border: 1px solid transparent;
+        transition: filter 160ms ease, transform 120ms ease, background 160ms ease;
+        cursor: pointer;
+      }
+      .btn:active { transform: scale(0.98); }
+      .btn-primary {
+        background: #7c5cff;
+        color: #fff;
+        box-shadow: 0 0 0 4px rgba(124,92,255,0.18);
+      }
+      .btn-primary:hover { filter: brightness(1.1); }
+      .btn-ghost {
+        background: rgba(255,255,255,0.05);
+        color: #fff;
+        border-color: rgba(255,255,255,0.1);
+      }
+      .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+      .btn-google {
+        width: 100%;
+        background: #fff;
+        color: #0b1020;
+        border: 1px solid rgba(255,255,255,0.1);
+        gap: 10px;
+      }
+      .btn-google:hover { filter: brightness(0.96); }
+      .footer {
+        font-size: 12px;
+        color: rgba(255,255,255,0.4);
+        margin-top: 4px;
+      }
+      .footer a { color: rgba(255,255,255,0.7); text-decoration: none; }
+      .footer a:hover { color: #fff; }
+      .stack { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+      .speech {
+        background: rgba(18, 24, 51, 0.7);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 14px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.85);
+        position: relative;
+      }
+      .speech::before {
+        content: "";
+        position: absolute;
+        left: -6px; top: 12px;
+        width: 10px; height: 10px;
+        background: rgba(18, 24, 51, 0.7);
+        border-left: 1px solid rgba(255,255,255,0.06);
+        border-top: 1px solid rgba(255,255,255,0.06);
+        transform: rotate(-45deg);
+      }
+      .mascot-row { display: flex; align-items: flex-start; gap: 10px; }
+      .divider {
+        display: flex; align-items: center; gap: 10px;
+        color: rgba(255,255,255,0.35); font-size: 11px; text-transform: uppercase;
+        letter-spacing: 0.08em; margin: 14px 0 12px;
+      }
+      .divider::before, .divider::after {
+        content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.06);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .float, .pulse { animation: none; }
+      }
+      .pulse { animation: pulse 1.4s ease-in-out infinite; transform-origin: center; }
+      @keyframes pulse { 0%,100% { r: 3; } 50% { r: 5; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <a class="brand" href="/">
+        <span class="brand-mark">BQ</span>
+        <span>BuilderQuest</span>
+      </a>
+
+      <p class="code" aria-hidden="true">404</p>
+
+      <div class="mascot-row">
+        <svg class="float" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Synapse looking confused">
+          <defs>
+            <linearGradient id="mbody" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#7c5cff" />
+              <stop offset="1" stop-color="#28e0b3" />
+            </linearGradient>
+            <radialGradient id="mglow" cx="0.5" cy="0.45" r="0.6">
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.35" />
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+          <line x1="60" y1="14" x2="60" y2="26" stroke="#28e0b3" stroke-width="3" stroke-linecap="round" />
+          <circle class="pulse" cx="60" cy="12" r="4" fill="#ffb547" />
+          <rect x="20" y="28" width="80" height="70" rx="22" fill="url(#mbody)" stroke="#0b1020" stroke-width="2" />
+          <rect x="20" y="28" width="80" height="70" rx="22" fill="url(#mglow)" />
+          <rect x="32" y="48" width="56" height="40" rx="14" fill="#fefae6" />
+          <!-- thinking eyes -->
+          <circle cx="42" cy="60" r="5" fill="#0b1020" />
+          <circle cx="78" cy="58" r="4" fill="#0b1020" />
+          <circle cx="78" cy="58" r="1.5" fill="#fff" />
+          <!-- small mouth -->
+          <path d="M55 82 L65 82" stroke="#0b1020" stroke-width="3" stroke-linecap="round" />
+          <circle cx="34" cy="78" r="3" fill="#ff8fb1" opacity="0.6" />
+          <circle cx="86" cy="78" r="3" fill="#ff8fb1" opacity="0.6" />
+          <circle cx="14" cy="70" r="6" fill="#7c5cff" stroke="#0b1020" stroke-width="2" />
+          <circle cx="106" cy="70" r="6" fill="#7c5cff" stroke="#0b1020" stroke-width="2" />
+        </svg>
+        <div class="speech" style="margin-top: 18px;">
+          Hmm — that page isn't on my map.
+        </div>
+      </div>
+
+      <div class="stack">
+        <h1>You found a blank spot in the constellation.</h1>
+        <p class="lede">
+          The page you're looking for moved, was renamed, or never existed. Let's get you back to the build.
+        </p>
+        <div class="row" style="justify-content: center;">
+          <a class="btn btn-primary" href="/">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12l9-9 9 9" />
+              <path d="M5 10v10h14V10" />
+            </svg>
+            Take me home
+          </a>
+          <a class="btn btn-ghost" href="javascript:history.back()">Go back</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Sign in</div>
+        <h2>Already a builder?</h2>
+        <p>Pick up your streak, Sparks, and badges where you left off. Gmail only — progress lives on your device.</p>
+        <a class="btn btn-google" href="/">
+          <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
+            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+            <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+            <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C41.2 36 44 30.5 44 24c0-1.2-.1-2.3-.4-3.5z"/>
+          </svg>
+          Continue with Google
+        </a>
+        <div class="divider">or</div>
+        <a class="btn btn-ghost" href="/" style="width: 100%;">New here? Start a Constellation</a>
+      </div>
+
+      <p class="footer">
+        Lost on purpose? Try the <a href="/">home page</a> or peek at
+        <a href="https://github.com/oznakash/learnai" target="_blank" rel="noopener">the source</a>.
+      </p>
+    </div>
+  </body>
+</html>
