@@ -59,6 +59,10 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const [completedThisSession, setCompletedThisSession] = useState<string[]>([]);
   const [done, setDone] = useState(false);
   const sessionStart = useRef<number>(Date.now());
+  // Stable ref to onContinue so the passive-Spark auto-advance in onAnswer
+  // doesn't depend on a closure over the latest definition (onContinue is
+  // declared further down). Set in the useEffect below `onContinue`.
+  const onContinueRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setActiveLevelId(initialLevel?.id ?? null);
@@ -144,6 +148,21 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         metadata: { badgeId: newBadges[0].id },
       });
     }
+    // Passive content (MicroRead, Tip) has no right/wrong answer — there's
+    // nothing meaningful to surface in a feedback card and showing one
+    // forced the user to find a "Next →" button below the fold. Skip the
+    // feedback dance and advance to the next Spark immediately. The XP
+    // bump is still visible in the TopBar pill, and the badge celebration
+    // (if any) still fires via newBadges → confetti.
+    const isPassive = spark.exercise.type === "microread" || spark.exercise.type === "tip";
+    if (isPassive) {
+      // Defer the actual advance to a microtask so React commits the
+      // setState batch (taken=true on the child, completedThisSession on
+      // the parent) before the next render swaps the Spark in.
+      queueMicrotask(() => onContinueRef.current?.());
+      return;
+    }
+
     const moodPick: MascotMood = correct ? (Math.random() > 0.5 ? "happy" : "wow") : "thinking";
     const msg = correct
       ? newBadges.length > 0
@@ -194,6 +213,10 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
     }
     setDone(true);
   };
+
+  // Keep the ref in sync so onAnswer's passive-Spark fast-path can call
+  // the latest onContinue without taking a closure over the function.
+  onContinueRef.current = onContinue;
 
   const switchSuggestion = suggestSwitchTopic(state, topicId);
   const switchTopic = switchSuggestion ? TOPICS.find((t) => t.id === switchSuggestion) : null;
