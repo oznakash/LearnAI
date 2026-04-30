@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMemory } from "../memory/MemoryContext";
+import { useAdmin } from "../admin/AdminContext";
 import type { MemoryCategory, MemoryItem } from "../memory/types";
 import { Mascot } from "../visuals/Mascot";
 
@@ -16,6 +17,7 @@ const CATS: { id: MemoryCategory | "all"; label: string; emoji: string }[] = [
 
 export function Memory({ onExit }: { onExit: () => void }) {
   const { backend, status, list, update, forget, wipe, refreshHealth } = useMemory();
+  const { config: adminCfg } = useAdmin();
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [filter, setFilter] = useState<MemoryCategory | "all">("all");
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export function Memory({ onExit }: { onExit: () => void }) {
   }
 
   const onWipe = async () => {
-    if (!confirm(`Forget everything BuilderQuest knows about you? (${items.length} memories)`)) return;
+    if (!confirm(`Forget everything ${adminCfg.branding.appName} knows about you? (${items.length} memories)`)) return;
     await wipe();
     setItems([]);
   };
@@ -72,7 +74,7 @@ export function Memory({ onExit }: { onExit: () => void }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "builderquest-my-memory.json";
+    a.download = `${adminCfg.branding.appName.toLowerCase().replace(/\s+/g, "-")}-my-memory.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -84,7 +86,7 @@ export function Memory({ onExit }: { onExit: () => void }) {
           <button onClick={onExit} className="text-xs text-white/50 hover:text-white">← Back</button>
           <h1 className="h1 mt-1">Your Memory</h1>
           <p className="muted text-sm">
-            What BuilderQuest remembers about you. You can edit, forget, export, or wipe everything.
+            What {adminCfg.branding.appName} remembers about you. You can edit, forget, export, or wipe everything.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

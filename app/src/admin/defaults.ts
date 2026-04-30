@@ -208,11 +208,11 @@ export function defaultAdminConfig(): AdminConfig {
     bootstrapped: false,
     admins: [],
     branding: {
-      appName: "BuilderQuest",
+      appName: "LearnAI",
       tagline: "Level up. Build more.",
       accentColor: "#7c5cff",
       accent2Color: "#28e0b3",
-      logoEmoji: "BQ",
+      logoEmoji: "AI",
     },
     flags: {
       allowDemoMode: true,
@@ -221,7 +221,7 @@ export function defaultAdminConfig(): AdminConfig {
       liveModeForApiKeyHolders: true,
       voiceMode: false,
       buildCardVerification: false,
-      // Offline by default — BuilderQuest works without a remote brain.
+      // Offline by default — LearnAI works without a remote brain.
       // The admin opts in to the cognition layer by configuring mem0 below
       // and flipping this to false.
       offlineMode: true,
@@ -231,7 +231,7 @@ export function defaultAdminConfig(): AdminConfig {
     perUserDailyTokenCap: 0,
     emailConfig: {
       provider: "none",
-      fromName: "BuilderQuest",
+      fromName: "LearnAI",
       fromEmail: "no-reply@example.com",
     },
     emailTemplates: { ...DEFAULT_TEMPLATES },

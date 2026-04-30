@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
 ];
 
 export function AdminConsole({ onExit }: { onExit: () => void }) {
-  const { isAdmin } = useAdmin();
+  const { isAdmin, config: adminCfg } = useAdmin();
   const { state: player } = usePlayer();
   const [tab, setTab] = useState<Tab>("users");
 
@@ -47,7 +47,7 @@ export function AdminConsole({ onExit }: { onExit: () => void }) {
           <button onClick={onExit} className="text-xs text-white/50 hover:text-white">← Back to app</button>
           <h1 className="h1 mt-1">Admin Console</h1>
           <p className="muted text-sm">
-            Run BuilderQuest like a product. Every variable is editable, content is hot-reloadable, emails actually send.
+            Run {adminCfg.branding.appName} like a product. Every variable is editable, content is hot-reloadable, emails actually send.
           </p>
         </div>
       </header>

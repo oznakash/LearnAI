@@ -90,7 +90,7 @@ export const aiNews: Topic = {
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
-        body: "Use BuilderQuest's Tasks tab to capture interesting articles or talks during the week. Friday: review tasks, write 5 bullets, archive.",
+        body: "Use LearnAI's Tasks tab to capture interesting articles or talks during the week. Friday: review tasks, write 5 bullets, archive.",
       }),
     ]),
     level(T, 10, "Boss: news check", "Final gate.", 6, [

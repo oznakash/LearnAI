@@ -101,7 +101,7 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
       <section className="card p-5 space-y-3">
         <h2 className="h2">API key (for dynamic content)</h2>
         <p className="muted text-xs">
-          Optional. With an Anthropic or OpenAI key, BuilderQuest can generate fresh Sparks + tips on demand.
+          Optional. With an Anthropic or OpenAI key, {adminCfg.branding.appName} can generate fresh Sparks + tips on demand.
           Your key is stored in this browser only and used to call the provider directly.
         </p>
         <div className="grid sm:grid-cols-3 gap-2">
@@ -125,26 +125,28 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
         )}
       </section>
 
-      <section className="card p-5 space-y-3">
-        <h2 className="h2">Google OAuth Client ID</h2>
-        <p className="muted text-xs">
-          Used for Gmail-only sign-in. You can replace it any time. Get one at console.cloud.google.com → APIs &amp; Services → Credentials.
-        </p>
-        <input
-          className="input"
-          placeholder="123-xxxxxx.apps.googleusercontent.com"
-          value={clientIdDraft}
-          onChange={(e) => setClientIdDraft(e.target.value.trim())}
-        />
-        <button className="btn-primary" onClick={() => setGoogleClientId(clientIdDraft)}>
-          Save Client ID
-        </button>
-      </section>
+      {adminCfg.serverAuth.mode === "demo" && (
+        <section className="card p-5 space-y-3">
+          <h2 className="h2">Google OAuth Client ID</h2>
+          <p className="muted text-xs">
+            Used for Gmail-only sign-in. You can replace it any time. Get one at console.cloud.google.com → APIs &amp; Services → Credentials.
+          </p>
+          <input
+            className="input"
+            placeholder="123-xxxxxx.apps.googleusercontent.com"
+            value={clientIdDraft}
+            onChange={(e) => setClientIdDraft(e.target.value.trim())}
+          />
+          <button className="btn-primary" onClick={() => setGoogleClientId(clientIdDraft)}>
+            Save Client ID
+          </button>
+        </section>
+      )}
 
       <section className="card p-5 space-y-3">
         <h2 className="h2">Your memory</h2>
         <p className="muted text-xs">
-          See, edit, and forget anything BuilderQuest remembers about you.
+          See, edit, and forget anything {adminCfg.branding.appName} remembers about you.
         </p>
         <button
           className="btn-primary"

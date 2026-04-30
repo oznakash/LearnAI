@@ -11,7 +11,7 @@ export interface PromptOpts {
 }
 
 /**
- * The single source of truth for the BuilderQuest content-generation
+ * The single source of truth for the LearnAI content-generation
  * prompt.  Used both by `generateSparks` (when an API key is set) and by
  * the Admin Prompt Studio (so admins can paste it into Claude/ChatGPT
  * manually and copy the JSON back in).
@@ -35,10 +35,10 @@ export function buildGenerationPrompt(opts: PromptOpts): string {
     ? JSON.stringify({ type: "microread", ...(sample.exercise as object) }, null, 2)
     : "";
 
-  return `# BuilderQuest content generator
+  return `# LearnAI content generator
 
 You are an expert AI educator + game designer producing micro-lessons for
-**BuilderQuest**, a Duolingo-inspired learning app for active AI builders
+**LearnAI**, a Duolingo-inspired learning app for active AI builders
 and curious starters. Your output is consumed by code, not humans, so it
 must be valid JSON exactly matching the schema below — no prose, no
 markdown, no commentary.

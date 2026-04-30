@@ -267,7 +267,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         accent2: config.branding.accent2Color,
         logoEmoji: config.branding.logoEmoji,
         firstName: "Friend",
-        fullName: "BuilderQuest test",
+        fullName: `${config.branding.appName} test`,
         email: to,
         streak: 7,
         xp: 320,
