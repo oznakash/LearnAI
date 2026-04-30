@@ -1,0 +1,5 @@
+node_modules/
+dist/
+*.log
+social.db.json
+.DS_Store
