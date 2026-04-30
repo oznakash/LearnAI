@@ -148,6 +148,23 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         metadata: { badgeId: newBadges[0].id },
       });
     }
+    // Always log a small history memory on every Spark completion. Without
+    // this the cognition layer felt empty until the user crossed a
+    // milestone (3-streak, level clear, badge), which made the Memory tab
+    // look broken on a fresh account. Tight one-liner format keeps mem0
+    // happy when it dedupes / extracts.
+    void remember({
+      text: `Completed Spark: ${spark.title} (${topic?.name ?? topicId} L${activeLevel.index})${correct ? "" : " — got it wrong on first try"}.`,
+      category: "history",
+      metadata: {
+        topicId,
+        levelId: activeLevel.id,
+        levelIndex: activeLevel.index,
+        sparkId: spark.id,
+        sparkType: spark.exercise.type,
+        correct,
+      },
+    });
     // Passive content (MicroRead, Tip) has no right/wrong answer — there's
     // nothing meaningful to surface in a feedback card and showing one
     // forced the user to find a "Next →" button below the fold. Skip the
