@@ -178,10 +178,15 @@ export function SignIn() {
       <div className="max-w-2xl w-full grid sm:grid-cols-2 gap-6 items-center">
         <div className="flex flex-col items-center sm:items-start gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold shadow-glow">{adminCfg.branding.logoEmoji}</div>
+            <div
+              className="w-12 h-12 rounded-2xl grid place-items-center text-white font-bold shadow-glow"
+              style={{ background: `linear-gradient(135deg, ${adminCfg.branding.accentColor}, ${adminCfg.branding.accent2Color})` }}
+            >
+              {adminCfg.branding.logoEmoji}
+            </div>
             <div>
               <h1 className="h1">{adminCfg.branding.appName}</h1>
-              <p className="muted text-sm">A gamified, micro-dosed AI playbook for builders.</p>
+              <p className="muted text-sm">{adminCfg.branding.tagline}</p>
             </div>
           </div>
           <Mascot mood="happy" size={120} message="Hi! I'm Synapse — your build buddy." />
@@ -194,11 +199,7 @@ export function SignIn() {
         </div>
         <div className="card p-6 sm:p-7 space-y-4">
           <h2 className="h2">Sign in to start</h2>
-          <p className="text-sm text-white/60">
-            {isProduction
-              ? "Gmail only. Sessions last 7 days and sync across devices."
-              : "Gmail only. Your progress is stored locally on this device."}
-          </p>
+          <p className="text-sm text-white/60">Learning starts now!</p>
 
           {showForm ? (
             <div className="space-y-2">
