@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
 import { useMemory } from "../memory/MemoryContext";
+import { useAdmin } from "../admin/AdminContext";
 import type { AgeBand, PlayerProfile, SkillLevel, TopicId } from "../types";
 import { Mascot } from "../visuals/Mascot";
 import { Illustration } from "../visuals/Illustrations";
@@ -43,6 +44,7 @@ const GOAL_PRESETS = [
 export function Onboarding() {
   const { state, setProfile } = usePlayer();
   const { remember } = useMemory();
+  const { config: adminCfg } = useAdmin();
   const [stepIdx, setStepIdx] = useState(0);
   const step: StepId = STEPS[stepIdx].id;
 
@@ -141,8 +143,13 @@ export function Onboarding() {
       <div className="max-w-3xl w-full">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold">BQ</div>
-            <div className="font-display font-semibold text-white">BuilderQuest</div>
+            <div
+              className="w-9 h-9 rounded-xl grid place-items-center text-white font-bold"
+              style={{ background: `linear-gradient(135deg, ${adminCfg.branding.accentColor}, ${adminCfg.branding.accent2Color})` }}
+            >
+              {adminCfg.branding.logoEmoji}
+            </div>
+            <div className="font-display font-semibold text-white">{adminCfg.branding.appName}</div>
           </div>
           <div className="text-xs text-white/50">
             Step {stepIdx + 1}/{STEPS.length} · {stepLabel}

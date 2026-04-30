@@ -1,11 +1,13 @@
 import { usePlayer } from "../store/PlayerContext";
 import { useMemory } from "../memory/MemoryContext";
+import { useAdmin } from "../admin/AdminContext";
 import { tierForXP } from "../store/game";
 import type { View } from "../App";
 
 export function TopBar({ onNav }: { onNav: (v: View) => void }) {
   const { state } = usePlayer();
   const { backend, status } = useMemory();
+  const { config: adminCfg } = useAdmin();
   const tier = tierForXP(state.xp);
   const memoryBadge =
     backend === "offline"
@@ -27,13 +29,16 @@ export function TopBar({ onNav }: { onNav: (v: View) => void }) {
           onClick={() => onNav({ name: "home" })}
           className="flex items-center gap-2 hover:opacity-90"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold shadow-glow">
-            BQ
+          <div
+            className="w-9 h-9 rounded-xl grid place-items-center text-white font-bold shadow-glow"
+            style={{ background: `linear-gradient(135deg, ${adminCfg.branding.accentColor}, ${adminCfg.branding.accent2Color})` }}
+          >
+            {adminCfg.branding.logoEmoji}
           </div>
           <div className="hidden sm:block">
-            <div className="font-display font-bold text-white leading-none">BuilderQuest</div>
+            <div className="font-display font-bold text-white leading-none">{adminCfg.branding.appName}</div>
             <div className="text-[11px] uppercase tracking-wider text-white/40 leading-none mt-0.5">
-              Level up. Build more.
+              {adminCfg.branding.tagline}
             </div>
           </div>
         </button>

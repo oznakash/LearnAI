@@ -16,7 +16,7 @@ export interface SendResult {
  * 2. **smtp-relay** — POST to a URL of your choice (your own backend,
  *    a Cloudflare Worker, n8n, Make, Zapier, etc.) which then speaks
  *    raw SMTP using the credentials you configured server-side.
- *    BuilderQuest sends the SMTP details in the request body so the
+ *    LearnAI sends the SMTP details in the request body so the
  *    relay can use them, BUT for production you should keep the
  *    password server-side and ignore it here.
  * 3. **EmailJS** — purpose-built for browser → SMTP delivery using

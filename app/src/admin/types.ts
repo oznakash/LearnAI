@@ -62,7 +62,7 @@ export interface FeatureFlags {
   voiceMode: boolean;
   buildCardVerification: boolean;
   /**
-   * Master switch for the cognition / memory layer. When true, BuilderQuest
+   * Master switch for the cognition / memory layer. When true, LearnAI
    * runs entirely on the device with no remote brain (the v1 behaviour). When
    * false, MemoryService talks to the configured mem0 server.
    */
