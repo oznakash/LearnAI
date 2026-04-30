@@ -1,3 +1,4 @@
+import { useAdmin } from "../admin/AdminContext";
 import type { View } from "../App";
 
 interface Tab {
@@ -7,18 +8,34 @@ interface Tab {
   view: View;
 }
 
-const TABS: Tab[] = [
+const BASE_TABS: Tab[] = [
   { id: "home", label: "Home", icon: "🏠", view: { name: "home" } },
   { id: "tasks", label: "Tasks", icon: "✅", view: { name: "tasks" } },
   { id: "dashboard", label: "Progress", icon: "📊", view: { name: "dashboard" } },
-  { id: "leaderboard", label: "Guild", icon: "🏆", view: { name: "leaderboard" } },
+  { id: "leaderboard", label: "Boards", icon: "🏆", view: { name: "leaderboard" } },
 ];
 
 export function TabBar({ view, onNav }: { view: View; onNav: (v: View) => void }) {
+  const { config } = useAdmin();
+
+  // The Spark Stream tab only appears when both flags allow it. Forks
+  // that pull main with social off see a 4-tab nav (no behavior change).
+  const tabs: Tab[] =
+    config.flags.socialEnabled && config.flags.streamEnabled
+      ? [
+          BASE_TABS[0],
+          { id: "stream", label: "Stream", icon: "🌊", view: { name: "stream" } },
+          ...BASE_TABS.slice(1),
+        ]
+      : BASE_TABS;
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-30 backdrop-blur-md bg-ink/85 border-t border-white/5">
-      <div className="max-w-5xl mx-auto px-2 grid grid-cols-4">
-        {TABS.map((t) => {
+      <div
+        className="max-w-5xl mx-auto px-2 grid"
+        style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+      >
+        {tabs.map((t) => {
           const active = view.name === t.id;
           return (
             <button
