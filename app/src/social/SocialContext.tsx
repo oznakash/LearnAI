@@ -99,11 +99,14 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     [email, ageBandIsKid, config.flags.socialEnabled, serverUrl, bearerToken],
   );
 
-  // Keep a ref so callbacks don't capture a stale service after a flag flip.
+  // Keep a ref so callbacks don't capture a stale service after a flag
+  // flip. Update the ref *synchronously* during render — not in a
+  // useEffect — because child useEffects fire before parent useEffects
+  // in React updates, and a stale ref at that moment causes children
+  // (e.g. the Network view's refresh) to call the previous service and
+  // get pre-flip data.
   const serviceRef = useRef(service);
-  useEffect(() => {
-    serviceRef.current = service;
-  }, [service]);
+  serviceRef.current = service;
 
   const [status, setStatus] = useState<SocialStatus | null>(null);
 

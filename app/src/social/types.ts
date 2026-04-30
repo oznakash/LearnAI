@@ -51,6 +51,21 @@ export interface PublicProfile {
   topicMap?: { topicId: TopicId; xp: number }[];
   /** Last 14 daily-Spark counts, oldest first. */
   activity14d?: number[];
+  /**
+   * Owner-side preference snapshot. Present only when the viewer is the
+   * profile owner (server-side guarantee). Used by Settings → Network to
+   * render the field-level visibility checkboxes against real state.
+   */
+  ownerPrefs?: {
+    fullName?: string;
+    showFullName: boolean;
+    showCurrent: boolean;
+    showMap: boolean;
+    showActivity: boolean;
+    showBadges: boolean;
+    showSignup: boolean;
+    signalsGlobal: boolean;
+  };
 }
 
 export type FollowStatus = "approved" | "pending";
