@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
+  fetchAdminServerStatus,
   fetchPublicAuthConfig,
   isSessionExpired,
   serverSignIn,
@@ -177,6 +178,42 @@ describe("fetchPublicAuthConfig", () => {
   it("returns null when mem0 URL is empty (no fetch attempted)", async () => {
     expect(await fetchPublicAuthConfig("")).toBeNull();
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchAdminServerStatus", () => {
+  it("returns the parsed status on 200", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        google_oauth_client_id: "abc.apps.googleusercontent.com",
+        admin_emails: ["op@gmail.com"],
+        cors_origins: ["https://learnai.example.com"],
+        session_ttl_days: 7,
+        history_db_path: "/app/data/history.db",
+        openai_api_key_set: true,
+        jwt_secret_set: true,
+        admin_api_key_set: false,
+      }),
+    });
+    const s = await fetchAdminServerStatus(MEM0, "session-jwt");
+    expect(s).not.toBeNull();
+    expect(s!.googleOauthClientId).toBe("abc.apps.googleusercontent.com");
+    expect(s!.adminEmails).toEqual(["op@gmail.com"]);
+    expect(s!.openaiApiKeySet).toBe(true);
+    expect(s!.adminApiKeySet).toBe(false);
+  });
+
+  it("returns null on 403 (non-admin) / network error / missing inputs", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: false, status: 403 });
+    expect(await fetchAdminServerStatus(MEM0, "tkn")).toBeNull();
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("offline"));
+    expect(await fetchAdminServerStatus(MEM0, "tkn")).toBeNull();
+
+    expect(await fetchAdminServerStatus("", "tkn")).toBeNull();
+    expect(await fetchAdminServerStatus(MEM0, "")).toBeNull();
   });
 });
 

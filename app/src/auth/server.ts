@@ -164,6 +164,65 @@ interface RawPublicConfig {
   session_ttl_days?: number | null;
 }
 
+export interface AdminServerStatus {
+  googleOauthClientId: string;
+  adminEmails: string[];
+  corsOrigins: string[];
+  sessionTtlDays: number;
+  historyDbPath: string;
+  openaiApiKeySet: boolean;
+  jwtSecretSet: boolean;
+  adminApiKeySet: boolean;
+}
+
+interface RawAdminStatus {
+  google_oauth_client_id?: string;
+  admin_emails?: string[];
+  cors_origins?: string[];
+  session_ttl_days?: number;
+  history_db_path?: string;
+  openai_api_key_set?: boolean;
+  jwt_secret_set?: boolean;
+  admin_api_key_set?: boolean;
+}
+
+/**
+ * Fetch the admin-only server config snapshot. Requires a session JWT
+ * with is_admin=true (or admin_api_key, but the SPA never holds that).
+ * Returns null on any failure — caller falls back to "unknown" state.
+ */
+export async function fetchAdminServerStatus(
+  mem0Url: string,
+  sessionToken: string
+): Promise<AdminServerStatus | null> {
+  const base = trimTrailing(mem0Url);
+  if (!base || !sessionToken) return null;
+  try {
+    const res = await fetchWithTimeout(
+      `${base}/auth/admin/status`,
+      {
+        method: "GET",
+        headers: { authorization: `Bearer ${sessionToken}` },
+      },
+      6_000
+    );
+    if (!res.ok) return null;
+    const raw = (await res.json()) as RawAdminStatus;
+    return {
+      googleOauthClientId: raw.google_oauth_client_id ?? "",
+      adminEmails: raw.admin_emails ?? [],
+      corsOrigins: raw.cors_origins ?? [],
+      sessionTtlDays: raw.session_ttl_days ?? 7,
+      historyDbPath: raw.history_db_path ?? "",
+      openaiApiKeySet: !!raw.openai_api_key_set,
+      jwtSecretSet: !!raw.jwt_secret_set,
+      adminApiKeySet: !!raw.admin_api_key_set,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Fetch the public auth config from the mem0 server. Used to seed a fresh-
  * localStorage SPA with the operator's Google Client ID instead of forcing
