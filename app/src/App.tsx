@@ -15,6 +15,7 @@ import { Settings } from "./views/Settings";
 import { Leaderboard } from "./views/Leaderboard";
 import { Calibration } from "./views/Calibration";
 import { Memory } from "./views/Memory";
+import { Profile } from "./views/Profile";
 import { AdminConsole } from "./admin/AdminConsole";
 import type { TopicId } from "./types";
 import { TopBar } from "./components/TopBar";
@@ -30,7 +31,8 @@ export type View =
   | { name: "leaderboard" }
   | { name: "calibration" }
   | { name: "memory" }
-  | { name: "admin" };
+  | { name: "admin" }
+  | { name: "profile"; handle: string };
 
 function Shell() {
   const { state } = usePlayer();
@@ -76,6 +78,7 @@ function Shell() {
         {view.name === "leaderboard" && <Leaderboard />}
         {view.name === "calibration" && <Calibration onDone={() => go({ name: "home" })} />}
         {view.name === "memory" && <Memory onExit={() => go({ name: "home" })} />}
+        {view.name === "profile" && <Profile handle={view.handle} onNav={go} />}
         {view.name === "admin" && <AdminConsole onExit={() => go({ name: "home" })} />}
       </main>
       <TabBar view={view} onNav={go} />
