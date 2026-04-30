@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useState,
   type ReactNode,
 } from "react";
 import type {
@@ -71,14 +72,24 @@ const PlayerCtx = createContext<Ctx | null>(null);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, defaultState());
+  // Tracks whether the hydrate-from-localStorage effect has run.
+  // The save effect MUST be gated on this — otherwise on first mount it
+  // fires once with the (still default) state and clobbers whatever's in
+  // localStorage before the hydrate dispatch is processed. Concretely:
+  // saved googleClientId / apiKey / profile gets wiped on every refresh
+  // until the next state change writes them back. Under StrictMode the
+  // second invocation re-reads the now-wiped storage and the wipe sticks.
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     dispatch({ type: "init", state: loadState() });
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveState(state);
-  }, [state]);
+  }, [state, hydrated]);
 
   // periodic focus regen
   useEffect(() => {
@@ -208,4 +219,3 @@ export function usePlayer() {
   if (!ctx) throw new Error("usePlayer must be used inside PlayerProvider");
   return ctx;
 }
-
