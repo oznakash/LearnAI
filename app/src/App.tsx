@@ -3,6 +3,7 @@ import { PlayerProvider, usePlayer } from "./store/PlayerContext";
 import { pathForView, sameView, viewFromPath } from "./store/router";
 import { AdminProvider } from "./admin/AdminContext";
 import { MemoryProvider } from "./memory/MemoryContext";
+import { SocialProvider } from "./social/SocialContext";
 import { SignIn } from "./views/SignIn";
 import { Onboarding } from "./views/Onboarding";
 import { Home } from "./views/Home";
@@ -87,7 +88,9 @@ export default function App() {
     <PlayerProvider>
       <AdminProvider>
         <MemoryProvider>
-          <Shell />
+          <SocialProvider>
+            <Shell />
+          </SocialProvider>
         </MemoryProvider>
       </AdminProvider>
     </PlayerProvider>

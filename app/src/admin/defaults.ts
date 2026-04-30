@@ -234,6 +234,13 @@ export function defaultAdminConfig(): AdminConfig {
       // Demo cohort is off by default. Operators turn it on when they
       // want a populated UI for screenshots / demos / glitch hunting.
       showDemoData: false,
+      // Social layer ships behind a flag. Defaults OFF so a fresh clone
+      // works without standing up `social-svc`. The live deploy flips
+      // these on once the backend is provisioned (engineering plan §11).
+      socialEnabled: false,
+      streamEnabled: false,
+      boardsEnabled: false,
+      defaultProfileMode: "open",
     },
     defaultDailyMinutes: 10,
     perUserDailyTokenCap: 0,
@@ -258,6 +265,19 @@ export function defaultAdminConfig(): AdminConfig {
       serverUrl: "",
       apiKey: "",
       perUserDailyCap: 200,
+    },
+    socialConfig: {
+      serverUrl: "",
+      apiKey: "",
+      signalsMaxPerUser: 5,
+      followsMaxOutbound: 500,
+      reportsPerEmailPerDay: 20,
+      streamWeights: {
+        recencyHalfLifeHours: 18,
+        follow: 1.0,
+        signalOverlap: 0.3,
+        qualityTier: 0.2,
+      },
     },
     serverAuth: defaultServerAuth(),
   };

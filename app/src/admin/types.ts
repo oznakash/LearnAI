@@ -86,6 +86,23 @@ export interface FeatureFlags {
    * default so a clean production deployment doesn't surface fake users.
    */
   showDemoData: boolean;
+  /**
+   * Master switch for the social layer (Profile, Followers/Following,
+   * Topic Leaderboards, Spark Stream, Network settings). When false
+   * (default), the social UI is hidden and `SocialService` is the offline
+   * impl. When true, the SPA expects a configured `socialConfig.serverUrl`
+   * pointing at `social-svc` (via the auth-verifying proxy).
+   *
+   * Sub-flags below let an admin enable the layer but disable specific
+   * surfaces (e.g. ship Profile + Boards, hide Stream while it bakes).
+   */
+  socialEnabled: boolean;
+  /** Show the Spark Stream tab + on-Home rail when true. Requires socialEnabled. */
+  streamEnabled: boolean;
+  /** Show the Topic Leaderboards (Boards) view when true. Requires socialEnabled. */
+  boardsEnabled: boolean;
+  /** Default privacy mode for newly-onboarded profiles. */
+  defaultProfileMode: "open" | "closed";
 }
 
 /**
@@ -107,6 +124,26 @@ export interface ServerAuthConfig {
   mode: "demo" | "production";
   googleClientId: string;
   mem0Url: string;
+}
+
+export interface SocialConfig {
+  /** Base URL of the self-hosted `social-svc` (or the auth-proxy in production). */
+  serverUrl: string;
+  /** Bearer for the social server. In production we use the player's session JWT. */
+  apiKey?: string;
+  /** Cap on per-player Signals (Topic discoverability tags). */
+  signalsMaxPerUser: number;
+  /** Cap on outbound follow links per player (anti-spam). */
+  followsMaxOutbound: number;
+  /** Per-email per-day max reports. Above this, requests 429. */
+  reportsPerEmailPerDay: number;
+  /** Spark Stream ranking weights — admin-tunable, no engagement signal. */
+  streamWeights: {
+    recencyHalfLifeHours: number;
+    follow: number;
+    signalOverlap: number;
+    qualityTier: number;
+  };
 }
 
 export interface MemoryConfig {
@@ -195,6 +232,7 @@ export interface AdminConfig {
   contentOverrides: ContentOverrides;
   promptStudio: PromptStudioState;
   memoryConfig: MemoryConfig;
+  socialConfig: SocialConfig;
   serverAuth: ServerAuthConfig;
 }
 

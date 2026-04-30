@@ -93,6 +93,14 @@ export function loadAdminConfig(): AdminConfig {
       },
       promptStudio: { ...base.promptStudio, ...(parsed.promptStudio ?? {}) },
       memoryConfig: { ...base.memoryConfig, ...(parsed.memoryConfig ?? {}) },
+      socialConfig: {
+        ...base.socialConfig,
+        ...(parsed.socialConfig ?? {}),
+        streamWeights: {
+          ...base.socialConfig.streamWeights,
+          ...(parsed.socialConfig?.streamWeights ?? {}),
+        },
+      },
       serverAuth: { ...base.serverAuth, ...(parsed.serverAuth ?? {}) },
     };
   } catch {
