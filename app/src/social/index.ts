@@ -1,4 +1,5 @@
 import { OfflineSocialService } from "./offline";
+import { OnlineSocialService } from "./online";
 import type { SocialService } from "./types";
 
 export type {
@@ -17,6 +18,7 @@ export type {
   StreamCardKind,
 } from "./types";
 export { OfflineSocialService, firstName, readOfflineSocialState } from "./offline";
+export { OnlineSocialService } from "./online";
 export {
   baseHandleFromEmail,
   disambiguateHandle,
@@ -50,9 +52,11 @@ export function selectSocialService(opts: SelectSocialOpts): SocialService {
   if (!email || !opts.socialEnabled || !opts.serverUrl) {
     return new OfflineSocialService({ email, ageBandIsKid: opts.ageBandIsKid });
   }
-  // OnlineSocialService lands in PR 7. Until then, online-mode silently
-  // degrades to offline. The flag still controls the eventual switch.
-  return new OfflineSocialService({ email, ageBandIsKid: opts.ageBandIsKid });
+  return new OnlineSocialService({
+    serverUrl: opts.serverUrl,
+    apiKey: opts.bearerToken,
+    userEmail: email,
+  });
 }
 
 /** Fail-soft wrapper. Same shape as `withMemoryGuard`. */
