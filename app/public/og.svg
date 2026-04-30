@@ -116,7 +116,7 @@
     <text x="0" y="22" fill="#9ba3c7">Free · open source · 5 mins/day · 12 Constellations × 10 Levels</text>
   </g>
 
-  <!-- Mascot Synapse — bigger, with speech bubble -->
+  <!-- Mascot EmDash — bigger, with speech bubble -->
   <g transform="translate(810, 200) scale(2.95)" filter="url(#soft-shadow)">
     <line x1="60" y1="14" x2="60" y2="26" stroke="#28e0b3" stroke-width="3" stroke-linecap="round"/>
     <circle cx="60" cy="12" r="5" fill="#ffb547"/>

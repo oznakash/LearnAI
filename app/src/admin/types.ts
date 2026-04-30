@@ -115,7 +115,11 @@ export interface Branding {
   tagline: string;
   accentColor: string;     // hex
   accent2Color: string;    // hex
-  logoEmoji: string;       // for the BQ tile
+  logoEmoji: string;       // 1–4 chars for the brand tile
+  /** The buddy / mascot's name. Shown in greetings, error pages, leaderboard mocks. */
+  mascotName: string;
+  /** The XP unit's display name. Shown wherever XP appears in the UI. */
+  xpUnit: string;
 }
 
 export interface GameTuning {

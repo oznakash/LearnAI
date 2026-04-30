@@ -217,7 +217,7 @@ export function SignIn() {
               <p className="muted text-sm">{adminCfg.branding.tagline}</p>
             </div>
           </div>
-          <Mascot mood="happy" size={120} message="Hi! I'm Synapse — your build buddy." />
+          <Mascot mood="happy" size={120} message={`Hi! I'm ${adminCfg.branding.mascotName} — your build buddy.`} />
           <ul className="text-sm text-white/70 space-y-1.5 mt-2">
             <li>⚡ 5-minute Sparks. Real depth.</li>
             <li>🔥 Daily streaks for compounding growth.</li>

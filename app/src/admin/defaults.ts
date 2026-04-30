@@ -99,7 +99,7 @@ export const DEFAULT_TEMPLATES: Record<EmailTemplateId, EmailTemplate> = {
 <table width="560" style="background:#121833; border-radius:18px; padding:28px;">
 <tr><td>
 <h1 style="margin:0 0 6px;">First Spark — locked in.</h1>
-<p style="color:#bcc1d6;">+{{xp}} ⚡ Synapses earned. Keep going tomorrow to start a streak.</p>
+<p style="color:#bcc1d6;">+{{xp}} ⚡ XP earned. Keep going tomorrow to start a streak.</p>
 <a href="{{appUrl}}" style="display:inline-block; padding:12px 18px; background:{{accent}}; color:#fff; border-radius:10px; text-decoration:none; font-weight:600; margin-top:16px;">Continue the path</a>
 </td></tr></table>
 </td></tr></table>`,
@@ -180,7 +180,7 @@ export const DEFAULT_TEMPLATES: Record<EmailTemplateId, EmailTemplate> = {
 <table width="560" style="background:#121833; border-radius:18px; padding:28px;">
 <tr><td>
 <h1 style="margin:0 0 6px;">{{firstName}} → {{tier}} 🏅</h1>
-<p style="color:#bcc1d6;">{{xp}} ⚡ Synapses and counting. Next tier: {{nextTier}} at {{nextTierThreshold}} ⚡.</p>
+<p style="color:#bcc1d6;">{{xp}} ⚡ XP and counting. Next tier: {{nextTier}} at {{nextTierThreshold}} ⚡.</p>
 <a href="{{appUrl}}" style="display:inline-block; padding:12px 18px; background:{{accent}}; color:#fff; border-radius:10px; text-decoration:none; font-weight:600; margin-top:16px;">Show off your badge</a>
 </td></tr></table>
 </td></tr></table>`,
@@ -213,6 +213,8 @@ export function defaultAdminConfig(): AdminConfig {
       accentColor: "#7c5cff",
       accent2Color: "#28e0b3",
       logoEmoji: "AI",
+      mascotName: "EmDash",
+      xpUnit: "XP",
     },
     flags: {
       allowDemoMode: true,

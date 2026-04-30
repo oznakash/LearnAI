@@ -22,6 +22,17 @@ function migrateLegacyBranding(
   const merged = { ...fresh, ...(saved ?? {}) };
   if (merged.appName === "BuilderQuest") merged.appName = fresh.appName;
   if (merged.logoEmoji === "BQ") merged.logoEmoji = fresh.logoEmoji;
+  // Mascot name: legacy default was "Synapse"; migrate to fresh default
+  // ("EmDash") so returning users see the new buddy. Custom names (e.g.,
+  // a Spanish-LearnAI fork called their mascot "Hola") are left alone.
+  if (!merged.mascotName || merged.mascotName === "Synapse") {
+    merged.mascotName = fresh.mascotName;
+  }
+  // XP unit: legacy was the implicit "Synapses" — surface it explicitly
+  // and migrate to the fresh default. Custom values are preserved.
+  if (!merged.xpUnit || merged.xpUnit === "Synapses") {
+    merged.xpUnit = fresh.xpUnit;
+  }
   return merged;
 }
 

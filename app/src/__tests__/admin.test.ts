@@ -101,6 +101,33 @@ describe("loadAdminConfig — legacy-string migration", () => {
     const cfg = loadAdminConfig();
     expect(cfg.emailConfig.fromName).toBe("LearnAI");
   });
+
+  it("rewrites stale mascotName='Synapse' and xpUnit='Synapses' to the fresh defaults", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ branding: { mascotName: "Synapse", xpUnit: "Synapses" } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.mascotName).toBe("EmDash");
+    expect(cfg.branding.xpUnit).toBe("XP");
+  });
+
+  it("preserves a custom mascotName the operator chose", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ branding: { mascotName: "Buddy" } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.mascotName).toBe("Buddy");
+  });
+
+  it("seeds defaults when no branding stored at all", () => {
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.appName).toBe("LearnAI");
+    expect(cfg.branding.mascotName).toBe("EmDash");
+    expect(cfg.branding.xpUnit).toBe("XP");
+    expect(cfg.branding.logoEmoji).toBe("AI");
+  });
 });
 
 describe("mock users + analytics", () => {

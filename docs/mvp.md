@@ -14,7 +14,7 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 - 12 Constellations × 10 Levels × 4–6 Sparks per level = **~480 hand-authored micro-lessons**.
 - 8 Spark formats: 📖 MicroRead, 💡 Tip & Trick, 🎯 Quick Pick, 🧩 Fill the Stack, 🔗 Pattern Match, 🧪 Field Scenario, 🛠️ Build Card, 👾 Boss Cell.
-- Game mechanics: Synapses (XP), Focus (lives that regen every 18 min), Build Streak (daily), Guild Tiers (Builder → Architect → Visionary → Founder → Singularity), 14 Badges.
+- Game mechanics: XP (display name configurable in admin → Branding; default just "XP"), Focus (lives that regen every 18 min), Build Streak (daily), Guild Tiers (Builder → Architect → Visionary → Founder → Singularity), 14 Badges.
 - Anti-spam lock: each Spark can only award XP once (regression-tested).
 
 ### Onboarding & personalization
@@ -39,7 +39,7 @@ Source: **`https://github.com/oznakash/learnai`**.
 ### Progress dashboards
 
 - **Per-topic page** — completion ring, levels done, accuracy, time invested, sparks-per-level bars, 14-day activity sparkline, the Path (vertical timeline of all 10 levels).
-- **Global dashboard** — Synapses / Streak / Sparks / Accuracy stat tiles, 14-day sparkline, radar across 8 Constellations, Sparks-per-Constellation bars, 12-week heatmap, badges grid.
+- **Global dashboard** — XP / Streak / Sparks / Accuracy stat tiles, 14-day sparkline, radar across 8 Constellations, Sparks-per-Constellation bars, 12-week heatmap, badges grid.
 
 ### Cognition layer (opt-in)
 

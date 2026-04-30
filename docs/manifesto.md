@@ -10,7 +10,7 @@ LearnAI is a tiny, opinionated team building the **AI-native learning network** 
 
 We're not a course. We're not a video site. We're not a Q&A board. We're a daily place — five minutes, sometimes ten, sometimes thirty — where the AI firehose becomes a personalized path, and where what you learn turns into something you can actually ship.
 
-The product is **LearnAI**. The in-app experience is **BuilderQuest** — Synapse the mascot, Sparks, streaks, Constellations, build cards. The engine is open source. The cognition layer (mem0) is self-hosted. The whole thing is yours to fork, run, and remix for any domain a community cares about.
+The product is **LearnAI**. The in-app experience is **BuilderQuest** — EmDash the mascot, Sparks, streaks, Constellations, build cards. The engine is open source. The cognition layer (mem0) is self-hosted. The whole thing is yours to fork, run, and remix for any domain a community cares about.
 
 ## Mission
 

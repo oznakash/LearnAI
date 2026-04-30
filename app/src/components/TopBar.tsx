@@ -46,7 +46,7 @@ export function TopBar({ onNav }: { onNav: (v: View) => void }) {
           <div className="pill bg-warn/10 text-warn border border-warn/30" title="Build Streak">
             🔥 <span className="tabular-nums">{state.streak}</span>
           </div>
-          <div className="pill bg-accent/10 text-accent border border-accent/30" title="Synapses (XP)">
+          <div className="pill bg-accent/10 text-accent border border-accent/30" title={`${adminCfg.branding.xpUnit} (XP)`}>
             ⚡ <span className="tabular-nums">{state.xp}</span>
           </div>
           <div className="pill bg-bad/10 text-bad border border-bad/30" title="Focus">

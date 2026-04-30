@@ -46,10 +46,10 @@ You now have your own gamified, micro-dosed, optionally-cognitive learning app.
 
 | Layer | Where | What |
 |---|---|---|
-| Brand | Admin → Config → Branding | App name, accent + accent2, logo emoji, tagline. |
+| Brand | Admin → Config → Branding | App name, accent + accent2, logo emoji, tagline, mascot name, XP unit. |
 | Topics | `app/src/content/topics/*.ts` | Replace AI Foundations / LLMs / etc. with your domain. Keep the `Topic` shape. |
 | Visuals | `app/src/visuals/Illustrations.tsx` | The 20 SVGs are AI-shaped (neural, embed, tokens, …). Swap for your domain (e.g. *piano*, *board*, *grammar*). |
-| Mascot | `app/src/visuals/Mascot.tsx` | Synapse the robot is editable. |
+| Mascot | `app/src/visuals/Mascot.tsx` | EmDash the robot is editable — geometry in Mascot.tsx, name in Admin → Branding. |
 | Sparks | Admin → Content + Prompt Studio | Generate fresh content with the Prompt Studio's long prompt; paste back. |
 | Cognition | `docs/mem0.md` | Run your own mem0 instance per [`mem0.md`](./mem0.md). |
 
