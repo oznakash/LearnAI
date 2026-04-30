@@ -47,11 +47,20 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
   // signed-in user changes. We re-create on every meaningful change so the
   // toggle is instant.
   const userId = player.identity?.email ?? "";
+  const sessionToken = player.serverSession?.token;
   const service = useMemo(
-    () => selectMemoryService(userId),
+    () => selectMemoryService(userId, { bearerToken: sessionToken }),
     // We deliberately depend on the runtime-relevant inputs:
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userId, adminCfg.flags.offlineMode, adminCfg.memoryConfig.serverUrl, adminCfg.memoryConfig.apiKey]
+    [
+      userId,
+      sessionToken,
+      adminCfg.flags.offlineMode,
+      adminCfg.memoryConfig.serverUrl,
+      adminCfg.memoryConfig.apiKey,
+      adminCfg.serverAuth.mode,
+      adminCfg.serverAuth.mem0Url,
+    ]
   );
   const serviceRef = useRef(service);
   useEffect(() => {

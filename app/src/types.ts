@@ -199,6 +199,17 @@ export interface Task {
   dueAt?: number;
 }
 
+export interface ServerSessionState {
+  /** JWT signed by mem0 with JWT_SECRET. Sent as Bearer for all mem0 calls. */
+  token: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  isAdmin: boolean;
+  /** Unix seconds. */
+  expiresAt: number;
+}
+
 export interface PlayerState {
   profile: PlayerProfile | null;
   identity?: {
@@ -208,6 +219,12 @@ export interface PlayerState {
     sub?: string;
     provider: "google";
   };
+  /**
+   * Present iff the SPA is in production server-auth mode and the user has
+   * a current (non-expired) session JWT from mem0. Cleared on signout, on
+   * hydrate when expired, or when mode flips back to demo.
+   */
+  serverSession?: ServerSessionState;
   xp: number;
   focus: number;       // 0..5 hearts
   focusUpdatedAt: number;

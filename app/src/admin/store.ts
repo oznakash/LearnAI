@@ -32,6 +32,7 @@ export function loadAdminConfig(): AdminConfig {
       },
       promptStudio: { ...base.promptStudio, ...(parsed.promptStudio ?? {}) },
       memoryConfig: { ...base.memoryConfig, ...(parsed.memoryConfig ?? {}) },
+      serverAuth: { ...base.serverAuth, ...(parsed.serverAuth ?? {}) },
     };
   } catch {
     return defaultAdminConfig();
