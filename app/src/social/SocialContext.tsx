@@ -58,8 +58,8 @@ interface Ctx {
   // Read helpers that fall back to safe sentinels.
   getMyProfile(): Promise<PublicProfile | null>;
   getProfile(handle: string): Promise<PublicProfile | null>;
-  listFollowing(): Promise<FollowEdge[]>;
-  listFollowers(): Promise<FollowEdge[]>;
+  listFollowing(opts?: { status?: import("./types").FollowStatus }): Promise<FollowEdge[]>;
+  listFollowers(opts?: { status?: import("./types").FollowStatus }): Promise<FollowEdge[]>;
   listPendingIncoming(): Promise<FollowEdge[]>;
   listPendingOutgoing(): Promise<FollowEdge[]>;
   listBlocked(): Promise<string[]>;
@@ -181,11 +181,13 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     [],
   );
   const listFollowing = useCallback(
-    () => withSocialGuard(() => serviceRef.current.listFollowing(), [] as FollowEdge[]),
+    (opts?: { status?: import("./types").FollowStatus }) =>
+      withSocialGuard(() => serviceRef.current.listFollowing(opts), [] as FollowEdge[]),
     [],
   );
   const listFollowers = useCallback(
-    () => withSocialGuard(() => serviceRef.current.listFollowers(), [] as FollowEdge[]),
+    (opts?: { status?: import("./types").FollowStatus }) =>
+      withSocialGuard(() => serviceRef.current.listFollowers(opts), [] as FollowEdge[]),
     [],
   );
   const listPendingIncoming = useCallback(

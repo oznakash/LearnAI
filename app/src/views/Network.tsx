@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useSocial } from "../social/SocialContext";
 import { useAdmin } from "../admin/AdminContext";
 import { TOPICS } from "../content";
-import type { PublicProfile, ProfileMode } from "../social/types";
+import type { FollowEdge, PublicProfile, ProfileMode } from "../social/types";
 import type { TopicId } from "../types";
 import type { View } from "../App";
+
+type PeopleTab = "summary" | "following" | "followers" | "pending" | "blocked";
 
 /**
  * Settings → Network — the privacy + discoverability cockpit.
@@ -274,13 +276,84 @@ export function Network({ onNav }: Props) {
         </button>
       </section>
 
-      {/* 4. People summary */}
-      <section className="card p-5 space-y-3">
-        <h2 className="h2">People</h2>
-        <p className="muted text-xs">
-          Manage who you follow, who follows you, pending follow requests, and blocks.
-          (Detailed list management lands in PR 4.)
-        </p>
+      {/* 4. People — tabbed list management */}
+      <PeopleSection counts={counts} onChanged={refresh} onNav={onNav} />
+    </div>
+  );
+}
+
+// -- People (tabbed lists) -----------------------------------------------
+
+function PeopleSection({
+  counts,
+  onChanged,
+  onNav,
+}: {
+  counts: {
+    following: number;
+    followers: number;
+    pendingIn: number;
+    pendingOut: number;
+    blocked: number;
+  };
+  onChanged: () => Promise<void>;
+  onNav: (v: View) => void;
+}) {
+  const social = useSocial();
+  const [tab, setTab] = useState<PeopleTab>("summary");
+  const [following, setFollowing] = useState<FollowEdge[]>([]);
+  const [followers, setFollowers] = useState<FollowEdge[]>([]);
+  const [pendingIn, setPendingIn] = useState<FollowEdge[]>([]);
+  const [pendingOut, setPendingOut] = useState<FollowEdge[]>([]);
+  const [blocked, setBlocked] = useState<string[]>([]);
+
+  const reload = async () => {
+    const [fEdges, fEdges2, pIn, pOut, blocks] = await Promise.all([
+      social.listFollowing({ status: "approved" }),
+      social.listFollowers({ status: "approved" }),
+      social.listPendingIncoming(),
+      social.listPendingOutgoing(),
+      social.listBlocked(),
+    ]);
+    setFollowing(fEdges);
+    setFollowers(fEdges2);
+    setPendingIn(pIn);
+    setPendingOut(pOut);
+    setBlocked(blocks);
+  };
+
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [social.service]);
+
+  const after = async () => {
+    await reload();
+    await onChanged();
+  };
+
+  return (
+    <section className="card p-5 space-y-3">
+      <h2 className="h2">People</h2>
+      <div className="flex flex-wrap gap-1.5">
+        <TabButton active={tab === "summary"} onClick={() => setTab("summary")}>
+          Summary
+        </TabButton>
+        <TabButton active={tab === "following"} onClick={() => setTab("following")}>
+          Following ({counts.following})
+        </TabButton>
+        <TabButton active={tab === "followers"} onClick={() => setTab("followers")}>
+          Followers ({counts.followers})
+        </TabButton>
+        <TabButton active={tab === "pending"} onClick={() => setTab("pending")}>
+          Pending ({counts.pendingIn + counts.pendingOut})
+        </TabButton>
+        <TabButton active={tab === "blocked"} onClick={() => setTab("blocked")}>
+          Blocked ({counts.blocked})
+        </TabButton>
+      </div>
+
+      {tab === "summary" && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <Stat label="Following" value={counts.following} />
           <Stat label="Followers" value={counts.followers} />
@@ -288,8 +361,201 @@ export function Network({ onNav }: Props) {
           <Stat label="Pending out" value={counts.pendingOut} />
           <Stat label="Blocked" value={counts.blocked} />
         </div>
-      </section>
-    </div>
+      )}
+
+      {tab === "following" && (
+        <PeopleList
+          empty="You're not following anyone yet. Tap a profile to follow."
+          rows={following.map((e) => ({
+            label: `@${e.target}`,
+            sublabel: e.muted ? "Muted" : undefined,
+            actions: [
+              {
+                label: e.muted ? "Unmute" : "Mute",
+                onClick: async () => {
+                  await social.setMuted(e.target, !e.muted);
+                  await after();
+                },
+              },
+              {
+                label: "Unfollow",
+                variant: "ghost" as const,
+                onClick: async () => {
+                  await social.unfollow(e.target);
+                  await after();
+                },
+              },
+              {
+                label: "Profile",
+                onClick: () => onNav({ name: "profile", handle: e.target }),
+              },
+            ],
+          }))}
+        />
+      )}
+
+      {tab === "followers" && (
+        <PeopleList
+          empty="No one's following you yet. Share your profile link."
+          rows={followers.map((e) => ({
+            label: `@${e.follower.split("@")[0]}`,
+            sublabel: undefined,
+            actions: [
+              {
+                label: "Profile",
+                onClick: () =>
+                  onNav({ name: "profile", handle: e.follower.split("@")[0] }),
+              },
+            ],
+          }))}
+        />
+      )}
+
+      {tab === "pending" && (
+        <div className="space-y-3">
+          <div>
+            <div className="label">Incoming follow requests</div>
+            <PeopleList
+              empty="No incoming requests."
+              rows={pendingIn.map((e) => ({
+                label: `@${e.follower.split("@")[0]}`,
+                actions: [
+                  {
+                    label: "Approve",
+                    variant: "good" as const,
+                    onClick: async () => {
+                      await social.approveFollowRequest(e.follower);
+                      await after();
+                    },
+                  },
+                  {
+                    label: "Decline",
+                    variant: "bad" as const,
+                    onClick: async () => {
+                      await social.declineFollowRequest(e.follower);
+                      await after();
+                    },
+                  },
+                ],
+              }))}
+            />
+          </div>
+          <div>
+            <div className="label">Outgoing follow requests</div>
+            <PeopleList
+              empty="No outgoing requests."
+              rows={pendingOut.map((e) => ({
+                label: `@${e.target}`,
+                actions: [
+                  {
+                    label: "Cancel",
+                    variant: "ghost" as const,
+                    onClick: async () => {
+                      await social.cancelMyPendingRequest(e.target);
+                      await after();
+                    },
+                  },
+                ],
+              }))}
+            />
+          </div>
+        </div>
+      )}
+
+      {tab === "blocked" && (
+        <PeopleList
+          empty="Nobody's blocked. (Block from a profile's ⋯ menu.)"
+          rows={blocked.map((b) => ({
+            label: b.startsWith("@") ? b : `@${b}`,
+            actions: [
+              {
+                label: "Unblock",
+                variant: "ghost" as const,
+                onClick: async () => {
+                  await social.unblock(b);
+                  await after();
+                },
+              },
+            ],
+          }))}
+        />
+      )}
+    </section>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+        active
+          ? "bg-accent text-white"
+          : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+interface PeopleRow {
+  label: string;
+  sublabel?: string;
+  actions: {
+    label: string;
+    onClick: () => void | Promise<void>;
+    variant?: "ghost" | "good" | "bad";
+  }[];
+}
+
+function PeopleList({ rows, empty }: { rows: PeopleRow[]; empty: string }) {
+  if (rows.length === 0) {
+    return <p className="text-xs text-white/40 italic">{empty}</p>;
+  }
+  return (
+    <ul className="space-y-1.5">
+      {rows.map((r, i) => (
+        <li
+          key={`${r.label}-${i}`}
+          className="flex items-center justify-between gap-3 bg-white/5 border border-white/10 rounded-xl px-3 py-2"
+        >
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-white truncate">{r.label}</div>
+            {r.sublabel && (
+              <div className="text-[11px] text-white/50">{r.sublabel}</div>
+            )}
+          </div>
+          <div className="flex gap-1.5">
+            {r.actions.map((a) => (
+              <button
+                key={a.label}
+                onClick={() => void a.onClick()}
+                className={`text-xs px-2.5 py-1 rounded-md font-semibold ${
+                  a.variant === "good"
+                    ? "bg-good/15 text-good hover:bg-good/25"
+                    : a.variant === "bad"
+                      ? "bg-bad/15 text-bad hover:bg-bad/25"
+                      : a.variant === "ghost"
+                        ? "bg-white/5 text-white/70 hover:bg-white/10"
+                        : "bg-accent/15 text-accent hover:bg-accent/25"
+                }`}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
