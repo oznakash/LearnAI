@@ -1,8 +1,31 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePlayer } from "../store/PlayerContext";
 import { useAdmin } from "../admin/AdminContext";
+import { useSocial } from "../social/SocialContext";
 import { tierForXP } from "../store/game";
+import { TOPICS } from "../content";
 import { Mascot } from "../visuals/Mascot";
+import type { BoardPeriod, BoardScope, PublicProfile } from "../social/types";
+import type { TopicId } from "../types";
+import type { View } from "../App";
+
+type ScopeKey = "global" | "following" | TopicId;
+
+/**
+ * Leaderboards view — three modes per the engineering plan:
+ *  - Global Leaderboard (all-Topics, real Open profiles + a labelled mock filler).
+ *  - Per-Topic boards: one tab per Signal the player is opted into,
+ *    plus a `+` to add ad-hoc Topic tabs.
+ *  - Following: same as Global but filtered to people I follow.
+ *
+ * Backed by `social.getBoard(scope, period)`. Offline mode returns [];
+ * we fold in the mock cohort below 10 real rows so the screen is alive
+ * even on a brand-new install.
+ */
+
+interface Props {
+  onNav?: (v: View) => void;
+}
 
 const FAKE_GUILD: { nameKey: "mascotBot" | "ada" | "marcus" | "priya" | "diego" | "yuki" | "sam" | "rae"; xp: number; emoji: string }[] = [
   { nameKey: "mascotBot", xp: 1240, emoji: "🤖" },
@@ -26,76 +49,278 @@ const FAKE_NAMES: Record<typeof FAKE_GUILD[number]["nameKey"], string> = {
   rae: "Rae",
 };
 
-export function Leaderboard() {
+const PERIODS: { id: BoardPeriod; label: string }[] = [
+  { id: "week", label: "This week" },
+  { id: "month", label: "This month" },
+  { id: "all", label: "All time" },
+];
+
+export function Leaderboard({ onNav }: Props = {}) {
   const { state } = usePlayer();
-  const { config: adminCfg } = useAdmin();
+  const { config } = useAdmin();
+  const social = useSocial();
+  const [scope, setScope] = useState<ScopeKey>("global");
+  const [period, setPeriod] = useState<BoardPeriod>("week");
+  const [rows, setRows] = useState<PublicProfile[]>([]);
+  const [mySignals, setMySignals] = useState<TopicId[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showTopicPicker, setShowTopicPicker] = useState(false);
+
+  // Load my signals once.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const me = await social.getMyProfile();
+      if (!cancelled && me) setMySignals(me.signals);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [social.service]);
+
+  // Load the active board.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const apiScope: BoardScope =
+        scope === "global" || scope === "following"
+          ? scope
+          : { topicId: scope as TopicId };
+      const got = await social.getBoard(apiScope, period);
+      if (!cancelled) {
+        setRows(got);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scope, period, social.service]);
+
   const me = useMemo(
     () => ({
+      handle: state.identity?.email?.split("@")[0]?.toLowerCase() ?? "you",
       name: state.identity?.name ?? state.identity?.email?.split("@")[0] ?? "You",
       xp: state.xp,
-      emoji: "🌟",
-      isMe: true,
     }),
-    [state]
+    [state],
   );
-  const players = useMemo(() => {
-    const all = [
-      ...FAKE_GUILD.map((p) => ({
-        name:
-          p.nameKey === "mascotBot"
-            ? `${adminCfg.branding.mascotName} Bot`
-            : FAKE_NAMES[p.nameKey],
-        xp: p.xp,
-        emoji: p.emoji,
-        isMe: false,
-      })),
-      me,
-    ];
-    return all.sort((a, b) => b.xp - a.xp);
-  }, [me, adminCfg.branding.mascotName]);
 
   const tier = tierForXP(state.xp);
+
+  // Build the rendered roster: real rows first, then mock filler if sparse,
+  // then `me` mixed in by xp.
+  const players = useMemo(() => {
+    const real = rows.map((p, i) => ({
+      key: `r-${p.handle}-${i}`,
+      handle: p.handle,
+      name: p.displayName,
+      xp: p.xpTotal,
+      emoji: "👤",
+      isMe: p.handle.toLowerCase() === me.handle.toLowerCase(),
+      isMock: false,
+      tier: p.guildTier,
+    }));
+    // Mock filler is only used for Global / Topic scopes — never Following
+    // (where empty-state copy is the desired UX, per PRD §4.5 spotlight rules).
+    const filler =
+      scope !== "following" && real.length < 10
+        ? FAKE_GUILD.map((p, i) => ({
+            key: `m-${p.nameKey}-${i}`,
+            handle: p.nameKey,
+            name:
+              p.nameKey === "mascotBot"
+                ? `${config.branding.mascotName} Bot`
+                : FAKE_NAMES[p.nameKey],
+            xp: p.xp,
+            emoji: p.emoji,
+            isMe: false,
+            isMock: true,
+            tier: tierForXP(p.xp),
+          }))
+        : [];
+    const meRow = scope === "following"
+      ? null
+      : {
+          key: "me",
+          handle: me.handle,
+          name: me.name,
+          xp: me.xp,
+          emoji: "🌟",
+          isMe: true,
+          isMock: false,
+          tier,
+        };
+    const all = [...real, ...filler, ...(meRow ? [meRow] : [])];
+    return all
+      .sort((a, b) => b.xp - a.xp)
+      .filter((row, idx, arr) => {
+        // Dedupe consecutive rows representing the same handle (e.g. real
+        // me + tile me when the offline service returns my own row).
+        if (idx === 0) return true;
+        return row.handle.toLowerCase() !== arr[idx - 1].handle.toLowerCase();
+      });
+  }, [rows, me.handle, me.name, me.xp, tier, scope, config.branding.mascotName]);
+
+  const scopeIsTopic = scope !== "global" && scope !== "following";
+  const scopeTopic = scopeIsTopic ? TOPICS.find((t) => t.id === scope) : null;
+  const visibleTopicTabs = useMemo(() => {
+    const ids = new Set<TopicId>(mySignals);
+    if (scopeIsTopic) ids.add(scope as TopicId);
+    return TOPICS.filter((t) => ids.has(t.id));
+  }, [mySignals, scope, scopeIsTopic]);
 
   return (
     <div className="space-y-5">
       <header className="flex items-end justify-between">
         <div>
-          <h1 className="h1">Guild leaderboard</h1>
-          <p className="muted text-sm">Local + bots for now. Cohort sync on the roadmap.</p>
+          <h1 className="h1">Leaderboards</h1>
+          <p className="muted text-sm">
+            Where you stand. Pick a Topic above to see that Topic's board.
+          </p>
         </div>
         <div className="hidden sm:block">
           <div className="pill bg-good/10 text-good border border-good/30">🏅 You: {tier}</div>
         </div>
       </header>
 
+      {/* Scope tabs */}
+      <div className="flex flex-wrap gap-1.5 items-center">
+        <ScopeTab active={scope === "global"} onClick={() => setScope("global")}>
+          🌐 Global
+        </ScopeTab>
+        {visibleTopicTabs.map((t) => (
+          <ScopeTab
+            key={t.id}
+            active={scope === t.id}
+            onClick={() => setScope(t.id)}
+          >
+            {t.emoji} {t.name}
+          </ScopeTab>
+        ))}
+        <ScopeTab active={scope === "following"} onClick={() => setScope("following")}>
+          ✓ Following
+        </ScopeTab>
+        <button
+          onClick={() => setShowTopicPicker((v) => !v)}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 text-white/60 hover:bg-white/10"
+        >
+          + Topic
+        </button>
+      </div>
+
+      {showTopicPicker && (
+        <div className="card p-3 grid sm:grid-cols-3 gap-2">
+          {TOPICS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setScope(t.id);
+                setShowTopicPicker(false);
+              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-white/80 hover:bg-white/10 text-sm"
+            >
+              <span>{t.emoji}</span>
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Period pills */}
+      <div className="flex gap-1.5">
+        {PERIODS.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setPeriod(p.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+              period === p.id
+                ? "bg-accent text-white"
+                : "bg-white/5 text-white/60 hover:bg-white/10"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       <div className="card p-4 sm:p-5">
         <div className="flex items-center gap-3 mb-3">
           <Mascot mood="wow" size={64} />
           <div>
-            <div className="font-display font-semibold text-white">This week's standings</div>
-            <div className="text-xs text-white/50">Climb tiers by earning {adminCfg.branding.xpUnit} (⚡) and beating Boss Cells.</div>
+            <div className="font-display font-semibold text-white">
+              {scope === "global"
+                ? "Global Leaderboard"
+                : scope === "following"
+                  ? "Following"
+                  : `${scopeTopic?.emoji ?? ""} ${scopeTopic?.name ?? ""} Leaderboard`}
+            </div>
+            <div className="text-xs text-white/50">
+              {scope === "following" && rows.length === 0 && players.length === 0
+                ? "Follow some builders to see them here."
+                : `Climb tiers by earning ${config.branding.xpUnit} (⚡) and beating Boss Cells.`}
+            </div>
           </div>
         </div>
-        <ol className="space-y-2">
-          {players.map((p, i) => (
-            <li
-              key={p.name + i}
-              className={`flex items-center gap-3 p-3 rounded-xl border ${
-                p.isMe ? "bg-accent/15 border-accent shadow-glow" : "bg-white/5 border-white/10"
-              }`}
-            >
-              <div className={`w-8 h-8 grid place-items-center rounded-full text-sm font-bold ${
-                i === 0 ? "bg-warn text-ink2" : i === 1 ? "bg-white/20 text-white" : i === 2 ? "bg-accent2/40 text-ink2" : "bg-white/10 text-white/60"
-              }`}>{i + 1}</div>
-              <div className="text-2xl">{p.emoji}</div>
-              <div className="flex-1">
-                <div className="font-semibold text-white">{p.name} {p.isMe && <span className="chip ml-2">you</span>}</div>
-                <div className="text-xs text-white/50">{tierForXP(p.xp)}</div>
-              </div>
-              <div className="font-display tabular-nums text-white">⚡ {p.xp}</div>
-            </li>
-          ))}
-        </ol>
+
+        {loading ? (
+          <p className="text-xs text-white/50">Loading…</p>
+        ) : players.length === 0 ? (
+          <p className="text-xs text-white/50">No one's on this board yet.</p>
+        ) : (
+          <ol className="space-y-2">
+            {players.slice(0, 100).map((p, i) => (
+              <li
+                key={p.key}
+                className={`flex items-center gap-3 p-3 rounded-xl border ${
+                  p.isMe
+                    ? "bg-accent/15 border-accent shadow-glow"
+                    : p.isMock
+                      ? "bg-white/3 border-white/5"
+                      : "bg-white/5 border-white/10"
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 grid place-items-center rounded-full text-sm font-bold ${
+                    i === 0
+                      ? "bg-warn text-ink2"
+                      : i === 1
+                        ? "bg-white/20 text-white"
+                        : i === 2
+                          ? "bg-accent2/40 text-ink2"
+                          : "bg-white/10 text-white/60"
+                  }`}
+                >
+                  {i + 1}
+                </div>
+                <div className="text-2xl">{p.emoji}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white truncate">
+                    {p.name}
+                    {p.isMe && <span className="chip ml-2">you</span>}
+                    {p.isMock && (
+                      <span className="text-[10px] text-white/40 ml-2 uppercase tracking-wider">
+                        sample
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-white/50">{p.tier}</div>
+                </div>
+                {!p.isMe && !p.isMock && onNav && (
+                  <button
+                    className="text-xs text-white/50 hover:text-white px-2"
+                    onClick={() => onNav({ name: "profile", handle: p.handle })}
+                    title="View profile"
+                  >
+                    profile
+                  </button>
+                )}
+                <div className="font-display tabular-nums text-white">⚡ {p.xp}</div>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       <div className="card p-4 sm:p-5">
@@ -109,5 +334,28 @@ export function Leaderboard() {
         </ul>
       </div>
     </div>
+  );
+}
+
+function ScopeTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+        active
+          ? "bg-accent text-white"
+          : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

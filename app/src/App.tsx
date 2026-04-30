@@ -77,7 +77,7 @@ function Shell() {
         {view.name === "tasks" && <Tasks />}
         {view.name === "dashboard" && <Dashboard onNav={go} />}
         {view.name === "settings" && <Settings onNav={go} />}
-        {view.name === "leaderboard" && <Leaderboard />}
+        {view.name === "leaderboard" && <Leaderboard onNav={go} />}
         {view.name === "calibration" && <Calibration onDone={() => go({ name: "home" })} />}
         {view.name === "memory" && <Memory onExit={() => go({ name: "home" })} />}
         {view.name === "profile" && <Profile handle={view.handle} onNav={go} />}
