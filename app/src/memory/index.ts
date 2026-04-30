@@ -1,43 +1,48 @@
 import { OfflineMemoryService } from "./offline";
 import { Mem0MemoryService } from "./mem0";
 import type { MemoryService } from "./types";
-import { getRuntimeMemoryConfig, isOfflineMode } from "../admin/runtime";
 
 export type { MemoryService, MemoryItem, MemoryStatus, MemoryAddInput, MemoryCategory } from "./types";
 export { OfflineMemoryService } from "./offline";
 export { Mem0MemoryService } from "./mem0";
 
-export interface SelectMemoryOverrides {
-  /** Production server-auth: the player's session JWT, sourced from React state. */
+export interface SelectMemoryOpts {
+  /** Player email; "" or missing → OfflineMemoryService("anon"). */
+  userId: string;
+  /** mem0 base URL. Empty → degrade to OfflineMemoryService. */
+  serverUrl: string;
+  /** Bearer for /v1/memories — session JWT in production, admin key in demo. */
   bearerToken?: string;
+  /**
+   * Per-call kill switch. The MemoryProvider sets this when the player
+   * has opted out of the cognition layer (and the admin has allowed
+   * per-user opt-out).
+   */
+  forceOffline?: boolean;
 }
 
 /**
- * Resolve the active MemoryService for the given user. The choice is made
- * fresh on every call so the offline-flag toggle takes effect immediately
- * without a reload.
+ * Resolve the active MemoryService for the given user.
  *
- * `overrides.bearerToken` (when provided) wins over the admin-config
- * `apiKey`. Callers in production server-auth mode pass the player's
- * session JWT here instead of reading it from localStorage, so the service
- * is constructed with the correct bearer in the same React render that
- * produced the new session.
+ * **All inputs are explicit args** — this function never reads localStorage
+ * or runtime caches. The previous "read from runtime cache" version had
+ * a race where MemoryContext's useMemo saw the new React state but the
+ * runtime cache hadn't caught up to localStorage yet, so the service
+ * silently fell back to OfflineMemoryService and stayed there. The
+ * caller (MemoryProvider) now derives every input from React state,
+ * which is the single source of truth.
  */
-export function selectMemoryService(
-  userId: string | undefined | null,
-  overrides: SelectMemoryOverrides = {}
-): MemoryService {
-  const id = (userId ?? "").trim();
+export function selectMemoryService(opts: SelectMemoryOpts): MemoryService {
+  const id = (opts.userId ?? "").trim();
   if (!id) return new OfflineMemoryService("anon");
-  if (isOfflineMode()) return new OfflineMemoryService(id);
-  const cfg = getRuntimeMemoryConfig();
-  if (!cfg.serverUrl) {
-    // Cognition is "on" but nothing is configured — degrade.
+  if (opts.forceOffline) return new OfflineMemoryService(id);
+  if (!opts.serverUrl) {
+    // Cognition is "on" but no URL is configured — degrade silently.
     return new OfflineMemoryService(id);
   }
   return new Mem0MemoryService({
-    serverUrl: cfg.serverUrl,
-    apiKey: overrides.bearerToken || cfg.apiKey,
+    serverUrl: opts.serverUrl,
+    apiKey: opts.bearerToken,
     userId: id,
   });
 }

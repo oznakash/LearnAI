@@ -175,13 +175,17 @@ export function AdminMemory() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="font-display font-semibold text-white">Currently active</h3>
           <span className={`pill text-xs border ${
-            config.flags.offlineMode
-              ? "bg-white/5 text-white border-white/10"
-              : status?.ok
-                ? "bg-good/10 text-good border-good/30"
-                : "bg-warn/10 text-warn border-warn/30"
+            backend === "mem0" && status?.ok
+              ? "bg-good/10 text-good border-good/30"
+              : backend === "mem0"
+                ? "bg-warn/10 text-warn border-warn/30"
+                : "bg-white/5 text-white border-white/10"
           }`}>
-            {config.flags.offlineMode ? "📴 Offline mode" : status?.ok ? "🧠 Online" : "🟡 Configured but unreachable"}
+            {backend === "mem0" && status?.ok
+              ? "🧠 Online"
+              : backend === "mem0"
+                ? "🟡 Configured but unreachable"
+                : "📴 Offline mode (per-user opt-out or no URL)"}
           </span>
         </div>
         <div className="grid sm:grid-cols-[140px_1fr] gap-y-1.5 gap-x-3 text-sm">
@@ -204,30 +208,25 @@ export function AdminMemory() {
         </div>
       </section>
 
-      {/* Master kill switch */}
+      {/* Player privacy — admin grants the opt-out toggle */}
       <section className="card p-5 space-y-3">
         <div>
-          <h3 className="font-display font-semibold text-white">Master switch</h3>
+          <h3 className="font-display font-semibold text-white">Player privacy</h3>
           <p className="text-xs text-white/60">
-            Turn off the cognition layer for everyone. The app still works — just without memory-derived insights.
+            The cognition layer is on by default for every signed-in user — that's the product's value. This toggle decides whether players can opt themselves out from their Settings.
           </p>
         </div>
-        <label className="flex items-center gap-3 text-sm">
-          <input
-            type="checkbox"
-            checked={!config.flags.offlineMode}
-            onChange={(e) => setFlag("offlineMode", !e.target.checked)}
-          />
-          Enable cognition layer (mem0)
-        </label>
         <label className="flex items-center gap-3 text-sm">
           <input
             type="checkbox"
             checked={config.flags.memoryPlayerOptIn}
             onChange={(e) => setFlag("memoryPlayerOptIn", e.target.checked)}
           />
-          Allow players to override the global setting (per-user opt-in/opt-out)
+          Let players opt out of the cognition layer (shows a toggle in their Settings)
         </label>
+        <p className="text-[11px] text-white/40">
+          When off (default), every signed-in user is on the cognition layer. When on, players see a "Let LearnAI remember things about me" toggle in their personal Settings.
+        </p>
       </section>
 
       {/* Editor — production OR demo, branched */}
@@ -343,7 +342,11 @@ export function AdminMemory() {
               {serverStatus.adminEmails.length === 0 ? (
                 <span className="text-bad">(unset — no one will get is_admin)</span>
               ) : (
-                serverStatus.adminEmails.map((e) => <span key={e} className="chip mr-1 text-[11px]">{e}</span>)
+                <div className="flex flex-wrap gap-1.5">
+                  {serverStatus.adminEmails.map((e) => (
+                    <span key={e} className="chip text-[11px]">{e}</span>
+                  ))}
+                </div>
               )}
             </div>
             <div className="text-white/50">CORS_ORIGINS</div>
@@ -351,9 +354,11 @@ export function AdminMemory() {
               {serverStatus.corsOrigins.length === 0 ? (
                 <span className="text-bad">(unset — only DASHBOARD_URL allowed)</span>
               ) : (
-                serverStatus.corsOrigins.map((o) => (
-                  <span key={o} className="chip mr-1 text-[11px] font-mono">{o}</span>
-                ))
+                <div className="flex flex-wrap gap-1.5">
+                  {serverStatus.corsOrigins.map((o) => (
+                    <span key={o} className="chip text-[11px] font-mono">{o}</span>
+                  ))}
+                </div>
               )}
             </div>
             <div className="text-white/50">SESSION_TTL_DAYS</div>

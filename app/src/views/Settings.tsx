@@ -154,6 +154,24 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
         >
           🧠 Open Your Memory
         </button>
+        {adminCfg.flags.memoryPlayerOptIn && (
+          <label className="flex items-start gap-3 text-sm pt-2 border-t border-white/5">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={!state.memoryOptOut}
+              onChange={(e) =>
+                setState((s) => ({ ...s, memoryOptOut: !e.target.checked }))
+              }
+            />
+            <div>
+              <div className="text-white">Let {adminCfg.branding.appName} remember things about me</div>
+              <div className="text-[11px] text-white/50 mt-0.5">
+                When off, the cognition layer is paused for your account. We won't write new memories on your behalf, and existing ones stop influencing what you see. (You can flip this back on any time.)
+              </div>
+            </div>
+          </label>
+        )}
       </section>
 
       <section className="card p-5 space-y-3">

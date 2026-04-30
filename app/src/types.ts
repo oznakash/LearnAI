@@ -244,6 +244,13 @@ export interface PlayerState {
     haptics: boolean;
     dailyReminderHour?: number;
   };
+  /**
+   * When true, this player has opted out of the cognition layer.
+   * Honoured iff the admin's `flags.memoryPlayerOptIn` is also true —
+   * otherwise the cognition layer is on regardless of this field.
+   * Synced cross-device via /v1/state.
+   */
+  memoryOptOut?: boolean;
 }
 
 export interface Badge {

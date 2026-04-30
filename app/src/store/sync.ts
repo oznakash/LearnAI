@@ -41,6 +41,9 @@ const SYNCED_FIELDS = [
   "tasks",
   "lastCalibrationAt",
   "prefs",
+  // Per-user cognition opt-out follows the user across devices: opt out
+  // on a phone, sign in on a laptop, still opted out.
+  "memoryOptOut",
 ] as const;
 
 type SyncedField = (typeof SYNCED_FIELDS)[number];

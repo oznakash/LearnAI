@@ -36,6 +36,25 @@ function migrateLegacyBranding(
   return merged;
 }
 
+/**
+ * One-shot migration for the deprecated `flags.offlineMode` master switch.
+ *
+ * Old model: offlineMode default-true → cognition was *off* for everyone
+ * unless the operator explicitly turned it on. That was the wrong default
+ * (and silently bit users when the runtime cache and React state went
+ * out of sync). New model: cognition is on for everyone by default; the
+ * admin opts in to per-user opt-out via `memoryPlayerOptIn`.
+ *
+ * Force any saved `offlineMode: true` back to `false` here so returning
+ * users land on the new behaviour without having to flip anything.
+ */
+function migrateLegacyFlags(flags: AdminConfig["flags"]): AdminConfig["flags"] {
+  if (flags.offlineMode === true) {
+    return { ...flags, offlineMode: false };
+  }
+  return flags;
+}
+
 function migrateLegacyEmail(
   saved: Partial<AdminConfig["emailConfig"]> | undefined,
   fresh: AdminConfig["emailConfig"]
@@ -56,7 +75,7 @@ export function loadAdminConfig(): AdminConfig {
       ...base,
       ...parsed,
       branding: migrateLegacyBranding(parsed.branding, base.branding),
-      flags: { ...base.flags, ...(parsed.flags ?? {}) },
+      flags: migrateLegacyFlags({ ...base.flags, ...(parsed.flags ?? {}) }),
       emailConfig: migrateLegacyEmail(parsed.emailConfig, base.emailConfig),
       emailTemplates: { ...base.emailTemplates, ...(parsed.emailTemplates ?? {}) },
       admins: parsed.admins ?? [],
