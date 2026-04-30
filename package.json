@@ -1,8 +1,8 @@
 {
-  "name": "builderquest",
+  "name": "learnai",
   "private": true,
   "version": "0.1.0",
-  "description": "BuilderQuest — gamified AI learning platform",
+  "description": "LearnAI — the AI-native learning network",
   "scripts": {
     "install:app": "npm install --prefix app",
     "build": "npm install --prefix app && npm run build --prefix app",
@@ -11,7 +11,8 @@
     "preview": "npm run preview --prefix app",
     "postinstall": "npm install --prefix app",
     "deploy:mem0": "./scripts/deploy-mem0.sh",
-    "smoke:memory": "node ./scripts/smoke-memory.mjs"
+    "smoke:memory": "node ./scripts/smoke-memory.mjs",
+    "smoke:deploy": "./scripts/smoke-deploy.sh"
   },
   "engines": {
     "node": ">=20.0.0"
