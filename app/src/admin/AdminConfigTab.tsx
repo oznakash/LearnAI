@@ -148,6 +148,20 @@ export function AdminConfigTab() {
       </section>
 
       <section className="card p-4 space-y-3">
+        <h3 className="h2">Demo data</h3>
+        <p className="muted text-xs">
+          A deterministic cohort of ~30 fake users used for screenshots, demos, and UI-glitch hunting.
+          When off, only real signed-in users appear in Users / Analytics / Memory / everywhere.
+          You can flip this on anytime to see how a populated dashboard looks, then off again.
+        </p>
+        <Toggle
+          label={`Show demo cohort in Users + Analytics ${config.flags.showDemoData ? "(currently visible)" : "(hidden — production-clean)"}`}
+          value={config.flags.showDemoData}
+          onChange={(v) => setConfig((cfg) => ({ ...cfg, flags: { ...cfg.flags, showDemoData: v } }))}
+        />
+      </section>
+
+      <section className="card p-4 space-y-3">
         <h3 className="h2">Defaults & limits</h3>
         <div className="grid sm:grid-cols-2 gap-2">
           <Field

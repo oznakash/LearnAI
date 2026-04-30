@@ -94,6 +94,24 @@ export function AdminUsers() {
               </tr>
             </thead>
             <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-sm text-white/50">
+                    {mockUsers.length === 0 ? (
+                      <>
+                        Nothing to show yet — once people sign in, they appear here.
+                        <div className="text-xs text-white/40 mt-1">
+                          Need a populated dashboard for screenshots? Flip on
+                          <span className="font-mono"> Demo data </span>
+                          in <span className="font-mono">Config → Demo data</span>.
+                        </div>
+                      </>
+                    ) : (
+                      <>No users match the current filters.</>
+                    )}
+                  </td>
+                </tr>
+              )}
               {filtered.map((u) => (
                 <tr key={u.id} className={`border-b border-white/5 ${u.isCurrentUser ? "bg-accent/5" : ""}`}>
                   <td className="p-3">

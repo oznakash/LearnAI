@@ -166,13 +166,21 @@ Don't write release-note prose in commits. Save that for PR descriptions.
 
 When you open a PR, you'll get a webhook subscription to that PR's activity. Read CI failures + review comments and either fix or ask. Don't merge over an unresolved review.
 
-## Standing autonomous-merge directive
+## Standing autonomous-delivery directive
 
-For this project, the user has authorized:
+For this project, the user has authorized full autonomous delivery:
 
-> *"Don't ask permissions, create a PR and merge to main."*
+> *"Don't ask permissions. Plan ahead, write the code, write/update the tests, write/update the docs (README, design-language, planning docs), build, test, and merge to production. Make it easy, fast, and make sense; be opinionated and verify you're doing the right thing by planning ahead."*
 
-So when CI is green and there are no unresolved review threads, **squash-merge the PR yourself**.
+Concretely on every task:
+
+1. **Plan first.** Map out what you'll change, in which files, and what tests + docs need to follow. If the plan is non-trivial, jot it as a TodoWrite list so the user can see your shape of mind.
+2. **Be opinionated.** Pick one path and commit. Two-roads-diverge is the enemy of velocity. If you land on the wrong path, the PR + revert is cheap.
+3. **Always update docs in the same PR.** Surface change → `docs/design-language.md`. Architecture change → `docs/architecture.md` and/or `docs/server-auth-plan.md`. Roadmap move → `docs/roadmap.md`. README badges or "Try it" copy if user-visible. CLAUDE.md if it's a workflow rule future you should inherit.
+4. **Always test before merging.** `npm test --prefix app` and `npm run build --prefix app` must both be green. Add a regression test for any user-reported bug — that's the single best forcing function against re-regressing.
+5. **Squash-merge yourself** once CI is green and there are no unresolved review threads.
+
+The standing scope is `oznakash/learnai` and `oznakash/mem0`. Do not write to other repos.
 
 ## When to push back
 

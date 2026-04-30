@@ -4,7 +4,12 @@ import { TOPIC_MAP } from "../content";
 
 export function AdminAnalytics() {
   const a = useAnalytics();
-  const { mockUsers } = useAdmin();
+  const { mockUsers, config } = useAdmin();
+
+  // The cohort either has only the real signed-in user (the production
+  // default) or the real user plus the seeded demo cohort. With one or
+  // zero users the charts render mostly empty — surface a hint instead.
+  const realUserOnly = mockUsers.length <= 1 && !config.flags.showDemoData;
 
   const signupSparks = a.newSignupsByDay.map((d) => d.count);
   const signupBars = a.newSignupsByDay.slice(-14).map((d) => ({
@@ -21,6 +26,16 @@ export function AdminAnalytics() {
 
   return (
     <div className="space-y-4">
+      {realUserOnly && (
+        <div className="card p-4 border-white/10 bg-white/[0.02]">
+          <div className="text-sm text-white/70">
+            Real-data only mode — analytics are based on the {a.totalUsers} signed-in user{a.totalUsers === 1 ? "" : "s"}.
+            Want to see how a populated dashboard looks? Flip on
+            <span className="font-mono"> Demo data </span>
+            in <span className="font-mono">Config → Demo data</span>.
+          </div>
+        </div>
+      )}
       <section className="grid sm:grid-cols-4 gap-3">
         <Stat label="Total users" value={a.totalUsers} />
         <Stat label="DAU" value={a.dau} hint={`${a.totalUsers === 0 ? 0 : Math.round((a.dau / a.totalUsers) * 100)}% of total`} />

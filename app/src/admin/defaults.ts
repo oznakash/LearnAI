@@ -226,6 +226,9 @@ export function defaultAdminConfig(): AdminConfig {
       // and flipping this to false.
       offlineMode: true,
       memoryPlayerOptIn: false,
+      // Demo cohort is off by default. Operators turn it on when they
+      // want a populated UI for screenshots / demos / glitch hunting.
+      showDemoData: false,
     },
     defaultDailyMinutes: 10,
     perUserDailyTokenCap: 0,
