@@ -153,6 +153,14 @@ export interface AdminConfig {
   contentOverrides: ContentOverrides;
   promptStudio: PromptStudioState;
   memoryConfig: MemoryConfig;
+  /**
+   * Google OAuth Client ID for Gmail sign-in. A deployment-level value set
+   * once by the operator via Admin → Config. Without it (and without
+   * AUTH_DISABLED-style demo mode), sign-in is not possible. Stored in the
+   * admin localStorage namespace, not per-player, because the same Client
+   * ID applies to every visitor of a given deployment.
+   */
+  googleClientId?: string;
 }
 
 export interface QueuedEmail {
