@@ -38,6 +38,13 @@ export function viewFromPath(pathname: string): View {
       const levelId = parts[2];
       return { name: "play", topicId: topicId as TopicId, levelId };
     }
+    case "u": {
+      // /u/<handle> → Public Profile. The handle is path-decoded; we
+      // don't validate here (the Profile view handles 404).
+      const handle = parts[1];
+      if (!handle) return { name: "home" };
+      return { name: "profile", handle: decodeURIComponent(handle) };
+    }
     default:
       return { name: "home" };
   }
@@ -62,6 +69,8 @@ export function pathForView(v: View): string {
     case "memory":
     case "admin":
       return `/${v.name}`;
+    case "profile":
+      return `/u/${encodeURIComponent(v.handle)}`;
   }
 }
 
