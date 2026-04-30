@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
+import { useAdmin } from "../admin/AdminContext";
 import {
   activityByDay,
   timeOnTopic,
@@ -13,6 +14,7 @@ import { BADGES } from "../store/badges";
 
 export function Dashboard({ onNav }: { onNav: (v: View) => void }) {
   const { state } = usePlayer();
+  const { config: adminCfg } = useAdmin();
   const activity = activityByDay(state, 14).map((d) => d.sparks);
   const totalSparks = state.history.reduce((a, h) => a + h.sparkIds.length, 0);
   const totalMinutes = state.history.reduce((a, h) => a + h.minutes, 0);
@@ -57,7 +59,7 @@ export function Dashboard({ onNav }: { onNav: (v: View) => void }) {
       </header>
 
       <section className="grid sm:grid-cols-4 gap-3">
-        <Stat label="Synapses ⚡" value={state.xp} hint={state.guildTier} />
+        <Stat label={`${adminCfg.branding.xpUnit} ⚡`} value={state.xp} hint={state.guildTier} />
         <Stat label="Streak 🔥" value={`${state.streak}d`} hint="Daily build streak" />
         <Stat label="Sparks ✨" value={totalSparks} hint={`${totalMinutes}m total`} />
         <Stat label="Accuracy 🎯" value={overallAcc !== null ? `${overallAcc}%` : "—"} hint={`${totalCorrect}/${totalAttempted} correct`} />

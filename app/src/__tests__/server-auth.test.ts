@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
+  fetchPublicAuthConfig,
   isSessionExpired,
   serverSignIn,
   serverSignOut,
@@ -142,6 +143,40 @@ describe("serverSignOut", () => {
   it("swallows network errors silently", async () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("offline"));
     await expect(serverSignOut(MEM0, "tkn")).resolves.toBeUndefined();
+  });
+});
+
+describe("fetchPublicAuthConfig", () => {
+  it("returns the parsed config on 200", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ google_client_id: "abc.apps.googleusercontent.com", session_ttl_days: 7 }),
+    });
+    const cfg = await fetchPublicAuthConfig(MEM0);
+    expect(cfg).toEqual({ googleClientId: "abc.apps.googleusercontent.com", sessionTtlDays: 7 });
+  });
+
+  it("returns null when the server returns an empty client_id", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ google_client_id: "", session_ttl_days: 7 }),
+    });
+    expect(await fetchPublicAuthConfig(MEM0)).toBeNull();
+  });
+
+  it("returns null on 4xx / network error / older mem0 build (no endpoint)", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: false, status: 404 });
+    expect(await fetchPublicAuthConfig(MEM0)).toBeNull();
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("offline"));
+    expect(await fetchPublicAuthConfig(MEM0)).toBeNull();
+  });
+
+  it("returns null when mem0 URL is empty (no fetch attempted)", async () => {
+    expect(await fetchPublicAuthConfig("")).toBeNull();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
 

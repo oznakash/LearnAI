@@ -29,7 +29,7 @@ After step 5, the product is "real": users sign in with their Gmail, memories pe
 |---|---|---|
 | **Curriculum** | 12 Constellations × 10 levels × 4–6 Sparks ≈ **480 hand-authored micro-lessons**. 8 Spark formats (MicroRead, Tip, Quick Pick, Pattern Match, Fill the Stack, Field Scenario, Build Card, Boss Cell). | ✅ |
 | **Onboarding** | 6-step ~90-sec wizard. Age band + skill level + interests + minutes + goal. Recalibration flow (5-Q quiz). | ✅ |
-| **Game loop** | Synapses (XP), Focus (lives, regen 18m), Build Streak, 5 Guild tiers, 14 Badges, anti-spam XP lock. | ✅ |
+| **Game loop** | XP, Focus (lives, regen 18m), Build Streak, 5 Guild tiers, 14 Badges, anti-spam XP lock. Mascot name + XP unit display name configurable in Admin → Branding. | ✅ |
 | **Identity** | Gmail-only sign-in via Google Identity Services (browser flow). Demo mode for trials without OAuth. | ✅ (needs Client ID) |
 | **Cognition layer** | `MemoryService` interface, `OfflineMemoryService` (localStorage) + `Mem0MemoryService` (HTTP). Event hooks for goals, calibration, strengths, gaps, history. | ✅ (needs mem0 server) |
 | **"Your Memory" tab** | List / filter / edit / forget / wipe / export. Read-write parity. | ✅ |

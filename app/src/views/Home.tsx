@@ -3,6 +3,7 @@ import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
 import { activityByDay, nextRecommendedSpark, suggestSwitchTopic, topicCompletion } from "../store/game";
 import { useTodayInsight } from "../memory/insight";
+import { useAdmin } from "../admin/AdminContext";
 import type { View } from "../App";
 import { Mascot } from "../visuals/Mascot";
 import { Sparkline, Ring } from "../visuals/Charts";
@@ -11,6 +12,7 @@ import type { TopicId } from "../types";
 
 export function Home({ onNav }: { onNav: (v: View) => void }) {
   const { state } = usePlayer();
+  const { config: adminCfg } = useAdmin();
   const { insight } = useTodayInsight(state);
   const [whyOpen, setWhyOpen] = useState(false);
   const interests: TopicId[] = state.profile?.interests?.length ? state.profile.interests : TOPICS.map((t) => t.id);
@@ -142,7 +144,7 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
         <div className="card p-4 flex items-center gap-4">
           <Ring pct={Math.min(100, Math.round((state.xp % 500) / 5))} size={84} stroke={10} sublabel="Tier ⚡" label={`${state.xp}`} />
           <div>
-            <div className="font-semibold text-white">Synapses</div>
+            <div className="font-semibold text-white">{adminCfg.branding.xpUnit}</div>
             <div className="muted text-sm">Tier: {state.guildTier}</div>
           </div>
         </div>

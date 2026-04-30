@@ -38,6 +38,16 @@ export function AdminConfigTab() {
             value={config.branding.logoEmoji}
             onChange={(v) => setConfig((cfg) => ({ ...cfg, branding: { ...cfg.branding, logoEmoji: v.slice(0, 4) } }))}
           />
+          <Field
+            label="Buddy / mascot name"
+            value={config.branding.mascotName}
+            onChange={(v) => setConfig((cfg) => ({ ...cfg, branding: { ...cfg.branding, mascotName: v.slice(0, 20) } }))}
+          />
+          <Field
+            label="XP unit name"
+            value={config.branding.xpUnit}
+            onChange={(v) => setConfig((cfg) => ({ ...cfg, branding: { ...cfg.branding, xpUnit: v.slice(0, 20) } }))}
+          />
           <div>
             <div className="label">Accent color</div>
             <div className="flex items-center gap-2">

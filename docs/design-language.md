@@ -85,7 +85,7 @@ Motion library (Tailwind animations): `pop` (220ms entry), `float` (4s loop, mas
 
 ## 5. Mascot, illustrations, and emoji
 
-- **Synapse** is the mascot — see `app/src/visuals/Mascot.tsx`. Use it on empty states, first-time screens, and nudges, not as decoration on every card.
+- **EmDash** is the mascot — see `app/src/visuals/Mascot.tsx`. Use it on empty states, first-time screens, and nudges, not as decoration on every card. The display name is `adminCfg.branding.mascotName` so a fork can rename it; never hardcode "EmDash" in UI strings — read it from the admin config.
 - **Illustrations** (`Illustrations.tsx`) are abstract gradient shapes — `rocket`, `neural`, `embed`, etc. Tag a screen with at most one. They live at low opacity (`/50` or below) so they don't fight the content.
 - **Emoji** are first-class typography. Use them in Spark titles, badges, and CTAs where they earn the slot. Keep them out of code, commit messages, and PR descriptions.
 

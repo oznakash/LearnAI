@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   isAdmin,
   queueEmail,
@@ -8,6 +8,7 @@ import {
 } from "../admin/store";
 import { defaultAdminConfig, DEFAULT_TEMPLATES } from "../admin/defaults";
 import { buildAnalytics, buildMockUsers } from "../admin/mockUsers";
+import { ADMIN_STORAGE_KEY, loadAdminConfig } from "../admin/store";
 
 describe("admin allowlist", () => {
   it("recognizes admins case-insensitively", () => {
@@ -65,6 +66,67 @@ describe("email queue", () => {
     expect(queued.to).toBe("alex@gmail.com");
     expect(queued.status).toBe("queued");
     expect(queued.subjectRendered).toContain("Alex");
+  });
+});
+
+describe("loadAdminConfig — legacy-string migration", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+  it("rewrites stale appName='BuilderQuest' to the fresh default ('LearnAI')", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ branding: { appName: "BuilderQuest", logoEmoji: "BQ" } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.appName).toBe("LearnAI");
+    expect(cfg.branding.logoEmoji).toBe("AI");
+  });
+
+  it("preserves a custom appName the operator explicitly set", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ branding: { appName: "ChessAI", logoEmoji: "CA" } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.appName).toBe("ChessAI");
+    expect(cfg.branding.logoEmoji).toBe("CA");
+  });
+
+  it("rewrites stale email fromName='BuilderQuest' to the fresh default", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ emailConfig: { provider: "none", fromName: "BuilderQuest", fromEmail: "x@y.com" } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.emailConfig.fromName).toBe("LearnAI");
+  });
+
+  it("rewrites stale mascotName='Synapse' and xpUnit='Synapses' to the fresh defaults", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ branding: { mascotName: "Synapse", xpUnit: "Synapses" } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.mascotName).toBe("EmDash");
+    expect(cfg.branding.xpUnit).toBe("XP");
+  });
+
+  it("preserves a custom mascotName the operator chose", () => {
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ branding: { mascotName: "Buddy" } })
+    );
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.mascotName).toBe("Buddy");
+  });
+
+  it("seeds defaults when no branding stored at all", () => {
+    const cfg = loadAdminConfig();
+    expect(cfg.branding.appName).toBe("LearnAI");
+    expect(cfg.branding.mascotName).toBe("EmDash");
+    expect(cfg.branding.xpUnit).toBe("XP");
+    expect(cfg.branding.logoEmoji).toBe("AI");
   });
 });
 

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PlayerProvider, usePlayer } from "./store/PlayerContext";
+import { pathForView, sameView, viewFromPath } from "./store/router";
 import { AdminProvider } from "./admin/AdminContext";
 import { MemoryProvider } from "./memory/MemoryContext";
 import { SignIn } from "./views/SignIn";
@@ -32,12 +33,27 @@ export type View =
 
 function Shell() {
   const { state } = usePlayer();
-  const [view, setView] = useState<View>({ name: "home" });
+  const [view, setView] = useState<View>(() =>
+    typeof window === "undefined" ? { name: "home" } : viewFromPath(window.location.pathname)
+  );
+
+  // Browser back / forward and any direct address-bar edit reseats the view.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onPop = () => setView(viewFromPath(window.location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   if (!state.identity) return <SignIn />;
   if (!state.profile) return <Onboarding />;
 
-  const go = (v: View) => setView(v);
+  const go = (next: View) => {
+    setView(next);
+    if (typeof window === "undefined") return;
+    if (sameView(next, viewFromPath(window.location.pathname))) return;
+    window.history.pushState(null, "", pathForView(next));
+  };
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getTopic, TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
 import { useMemory } from "../memory/MemoryContext";
+import { useAdmin } from "../admin/AdminContext";
 import type { MemoryItem } from "../memory/types";
 import {
   completedSparkIds,
@@ -32,6 +33,7 @@ interface PlayedSparkLog {
 export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const { state, completeSpark, passBoss, recordSession } = usePlayer();
   const { remember, recall } = useMemory();
+  const { config: adminCfg } = useAdmin();
   const [nudge, setNudge] = useState<MemoryItem | null>(null);
   const topic = getTopic(topicId);
 
@@ -208,7 +210,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
           <div className="mt-5 grid grid-cols-3 gap-3 text-center">
             <div className="card p-3"><div className="label">Sparks</div><div className="text-2xl font-bold text-white">{sessionLog.length}</div></div>
             <div className="card p-3"><div className="label">Correct</div><div className="text-2xl font-bold text-good">{correct}</div></div>
-            <div className="card p-3"><div className="label">Synapses ⚡</div><div className="text-2xl font-bold text-accent">{sessionLog.reduce((a, l) => a + (l.correct ? 12 : 4), 0)}</div></div>
+            <div className="card p-3"><div className="label">{adminCfg.branding.xpUnit} ⚡</div><div className="text-2xl font-bold text-accent">{sessionLog.reduce((a, l) => a + (l.correct ? 12 : 4), 0)}</div></div>
           </div>
           <div className="mt-6 flex flex-wrap gap-2 justify-center">
             <button className="btn-primary" onClick={onDone}>Continue path →</button>

@@ -60,7 +60,7 @@ export function AdminTuning() {
       </header>
 
       <section className="card p-5 space-y-2">
-        <h3 className="font-display font-semibold text-white">XP awards (Synapses ⚡)</h3>
+        <h3 className="font-display font-semibold text-white">XP awards ({config.branding.xpUnit} ⚡)</h3>
         <NumberRow label="MicroRead" value={t.xp.microread} min={0} hint="Reading a concept card." onChange={(v) => setXp("microread", v)} />
         <NumberRow label="Tip & Trick" value={t.xp.tip} min={0} hint="Default tip XP (per-tip override still wins)." onChange={(v) => setXp("tip", v)} />
         <NumberRow label="Build Card (tried)" value={t.xp.buildcard} min={0} onChange={(v) => setXp("buildcard", v)} />

@@ -297,11 +297,11 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 
 | 🧭 Strategy | 🛠 Technical | 🌍 Community |
 |---|---|---|
-| [`vision.md`](./docs/vision.md) — mission, end game | [`architecture.md`](./docs/architecture.md) — system diagram | [`contributing.md`](./docs/contributing.md) — how to PR |
-| [`problem.md`](./docs/problem.md) — what we're solving | [`technical.md`](./docs/technical.md) — services + types | [`fork-recipe.md`](./docs/fork-recipe.md) — fork for your domain |
-| [`use-cases.md`](./docs/use-cases.md) — personas | [`mem0.md`](./docs/mem0.md) — cognition layer | |
+| [`manifesto.md`](./docs/manifesto.md) — who we are, values, principles | [`architecture.md`](./docs/architecture.md) — system diagram | [`contributing.md`](./docs/contributing.md) — how to PR |
+| [`vision.md`](./docs/vision.md) — mission, end game | [`technical.md`](./docs/technical.md) — services + types | [`fork-recipe.md`](./docs/fork-recipe.md) — fork for your domain |
+| [`problem.md`](./docs/problem.md) — what we're solving | [`mem0.md`](./docs/mem0.md) — cognition layer | |
+| [`use-cases.md`](./docs/use-cases.md) — personas | [`design-language.md`](./docs/design-language.md) — colour, type, primitives, voice | |
 | [`competitors.md`](./docs/competitors.md) — landscape | [`ux.md`](./docs/ux.md) — UX of memory | |
-| | [`design-language.md`](./docs/design-language.md) — colour, type, primitives, voice | |
 | [`pitch-deck.md`](./docs/pitch-deck.md) — 12 slides | | |
 | [`mvp.md`](./docs/mvp.md) — what's shipped | | |
 | [`roadmap.md`](./docs/roadmap.md) — what's next | | |

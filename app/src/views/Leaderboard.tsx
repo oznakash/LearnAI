@@ -1,21 +1,34 @@
 import { useMemo } from "react";
 import { usePlayer } from "../store/PlayerContext";
+import { useAdmin } from "../admin/AdminContext";
 import { tierForXP } from "../store/game";
 import { Mascot } from "../visuals/Mascot";
 
-const FAKE_GUILD: { name: string; xp: number; emoji: string }[] = [
-  { name: "Synapse Bot", xp: 1240, emoji: "🤖" },
-  { name: "Ada (Architect)", xp: 980, emoji: "🦊" },
-  { name: "Marcus", xp: 740, emoji: "🐯" },
-  { name: "Priya", xp: 620, emoji: "🦋" },
-  { name: "Diego", xp: 410, emoji: "🐻" },
-  { name: "Yuki", xp: 270, emoji: "🐰" },
-  { name: "Sam", xp: 140, emoji: "🐧" },
-  { name: "Rae", xp: 60, emoji: "🐢" },
+const FAKE_GUILD: { nameKey: "mascotBot" | "ada" | "marcus" | "priya" | "diego" | "yuki" | "sam" | "rae"; xp: number; emoji: string }[] = [
+  { nameKey: "mascotBot", xp: 1240, emoji: "🤖" },
+  { nameKey: "ada", xp: 980, emoji: "🦊" },
+  { nameKey: "marcus", xp: 740, emoji: "🐯" },
+  { nameKey: "priya", xp: 620, emoji: "🦋" },
+  { nameKey: "diego", xp: 410, emoji: "🐻" },
+  { nameKey: "yuki", xp: 270, emoji: "🐰" },
+  { nameKey: "sam", xp: 140, emoji: "🐧" },
+  { nameKey: "rae", xp: 60, emoji: "🐢" },
 ];
+
+const FAKE_NAMES: Record<typeof FAKE_GUILD[number]["nameKey"], string> = {
+  mascotBot: "BOT",
+  ada: "Ada (Architect)",
+  marcus: "Marcus",
+  priya: "Priya",
+  diego: "Diego",
+  yuki: "Yuki",
+  sam: "Sam",
+  rae: "Rae",
+};
 
 export function Leaderboard() {
   const { state } = usePlayer();
+  const { config: adminCfg } = useAdmin();
   const me = useMemo(
     () => ({
       name: state.identity?.name ?? state.identity?.email?.split("@")[0] ?? "You",
@@ -26,9 +39,20 @@ export function Leaderboard() {
     [state]
   );
   const players = useMemo(() => {
-    const all = [...FAKE_GUILD.map((p) => ({ ...p, isMe: false })), me];
+    const all = [
+      ...FAKE_GUILD.map((p) => ({
+        name:
+          p.nameKey === "mascotBot"
+            ? `${adminCfg.branding.mascotName} Bot`
+            : FAKE_NAMES[p.nameKey],
+        xp: p.xp,
+        emoji: p.emoji,
+        isMe: false,
+      })),
+      me,
+    ];
     return all.sort((a, b) => b.xp - a.xp);
-  }, [me]);
+  }, [me, adminCfg.branding.mascotName]);
 
   const tier = tierForXP(state.xp);
 
@@ -49,7 +73,7 @@ export function Leaderboard() {
           <Mascot mood="wow" size={64} />
           <div>
             <div className="font-display font-semibold text-white">This week's standings</div>
-            <div className="text-xs text-white/50">Climb tiers by earning Synapses (⚡) and beating Boss Cells.</div>
+            <div className="text-xs text-white/50">Climb tiers by earning {adminCfg.branding.xpUnit} (⚡) and beating Boss Cells.</div>
           </div>
         </div>
         <ol className="space-y-2">
