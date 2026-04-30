@@ -64,7 +64,7 @@ Defined in [`app/src/index.css`](../app/src/index.css) under `@layer components`
 | `.pill` | larger pill | Inline action context (e.g. tier display). |
 | `.input` | `bg-white/5 border border-white/10 rounded-xl`, focus ring `accent/60` | All text inputs; `input` element. |
 | `.progress` + child `> div` | bar in `white/5`, fill is `accent → accent2` gradient | XP, level progress, completion. |
-| `.node` (+ states) | skill-tree pip with `unlocked / completed / current / locked` modifiers | Constellation map only. |
+| `.node` (+ states) | skill-tree pip with `unlocked / completed / current / locked` modifiers | Topic map only. |
 | `.dot` | 1.5 × 1.5 accent-coloured dot | Inline "live" / unread indicator. |
 
 **Rules of thumb**

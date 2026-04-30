@@ -46,7 +46,7 @@ For the first time, the unit economics of a *truly personalized, daily, evolving
 
 A web app you open for **5–10 minutes a day**.
 
-- **12 Constellations** (topics) × **10 Levels** each, in 8 micro-formats: read, tip, pick, match, fill, scenario, build, boss.
+- **12 Topics** (topics) × **10 Levels** each, in 8 micro-formats: read, tip, pick, match, fill, scenario, build, boss.
 - **Cognition layer** (self-hosted mem0): the system *remembers you* — your goals, gaps, strengths, stack, preferences. Inspectable, editable, ownable.
 - **Build Cards**: every level has a pasteable prompt for Claude Code that produces a tiny working artifact in 5 minutes.
 - **Personalized at the day-1 level**: age (kid / teen / adult), skill (starter → researcher), interests, daily minutes, goals.
@@ -145,7 +145,7 @@ Reasonable target: **$15/mo Pro, $99/mo Org seat, ~5–10% conversion** at matur
 ## Slide 10 — Traction & MVP status (as of today)
 
 **Built and deployed:**
-- 12 Constellations, ~480 hand-crafted Sparks, 8 exercise types.
+- 12 Topics, ~480 hand-crafted Sparks, 8 exercise types.
 - Gmail-only sign-in (Google Identity Services).
 - Cognition layer (offline / mem0) behind a feature flag, default-on for offline.
 - Admin Console with 7 tabs: Users, Analytics, Memory, Emails, Tuning, Content, Prompt Studio, Config.

@@ -9,7 +9,7 @@
 | 🐛 **Bug fix** | Something is wrong, you fix it | Open a PR. Include a test that fails before your fix and passes after. |
 | 📚 **A new Spark** | Add or improve a single micro-lesson | Edit a topic file in `app/src/content/topics/*.ts`. Or use the **Admin → Prompt Studio** + **Content** tabs and export the JSON. |
 | 🛠️ **A new Build Card** | Add a pasteable Claude Code prompt that produces a real artifact | Same as a Spark, type `buildcard`. Test it end-to-end yourself first. |
-| 🌐 **A new Constellation** | A whole new topic (10 levels) | Big PR. Discuss in an issue first. |
+| 🌐 **A new Topic** | A whole new topic (10 levels) | Big PR. Discuss in an issue first. |
 | 🧠 **Engine work** | Game logic, cognition layer, admin, deploy, docs | Standard PR. Tests required for game logic; docs required for new admin features. |
 
 ## Quick start

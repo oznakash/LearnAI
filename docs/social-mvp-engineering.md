@@ -8,7 +8,7 @@
 
 ## 1. Mental model in one paragraph
 
-We're adding a second self-hosted backend that mirrors the **shape** of how we shipped mem0: thin client in the SPA, narrow service interface, decoupled storage, optional + flag-gated, fork-friendly. The cognition layer (mem0) stays exactly as it is — private, per-Gmail. The new **Social Graph Service** is its sibling: public-shaped data only (profiles, tune-ins, blocks, reports, Signals, Stream events), in its own Postgres, behind a tiny **auth-verifying proxy** that verifies a Google ID token, injects `userEmail`, rate-limits, and forwards. The SPA gets a new `SocialService` interface (offline impl + HTTP impl) wrapped in a React provider that mirrors `MemoryContext`. Five new player views (Profile, SparkStream, Network) and three upgraded views (Leaderboard → Boards, Settings, Home, TopicView), one new admin tab (Moderation). One PR.
+We're adding a second self-hosted backend that mirrors the **shape** of how we shipped mem0: thin client in the SPA, narrow service interface, decoupled storage, optional + flag-gated, fork-friendly. The cognition layer (mem0) stays exactly as it is — private, per-Gmail. The new **Social Graph Service** is its sibling: public-shaped data only (profiles, follows, blocks, reports, Signals, Stream events), in its own Postgres, behind a tiny **auth-verifying proxy** that verifies a Google ID token, injects `userEmail`, rate-limits, and forwards. The SPA gets a new `SocialService` interface (offline impl + HTTP impl) wrapped in a React provider that mirrors `MemoryContext`. Five new player views (Profile, SparkStream, Network) and three upgraded views (Leaderboard → Boards, Settings, Home, TopicView), one new admin tab (Moderation). One PR.
 
 ---
 
@@ -69,7 +69,7 @@ CREATE TABLE profiles (
   show_activity   BOOLEAN NOT NULL DEFAULT TRUE,
   show_badges     BOOLEAN NOT NULL DEFAULT TRUE,
   show_signup     BOOLEAN NOT NULL DEFAULT TRUE,
-  signals_galaxy  BOOLEAN NOT NULL DEFAULT TRUE,     -- show on Galaxy Board
+  signals_global  BOOLEAN NOT NULL DEFAULT TRUE,     -- show on Global Leaderboard
   banned          BOOLEAN NOT NULL DEFAULT FALSE,
   banned_social   BOOLEAN NOT NULL DEFAULT FALSE,    -- banned from social only
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -88,7 +88,7 @@ CREATE TABLE profile_aggregates (
   xp_month          INTEGER NOT NULL DEFAULT 0,
   streak            INTEGER NOT NULL DEFAULT 0,
   guild_tier        TEXT    NOT NULL DEFAULT 'Builder',
-  current_topic_id  TEXT,                           -- the Constellation they last touched
+  current_topic_id  TEXT,                           -- the Topic they last touched
   current_level     INTEGER,                        -- the level they last reached
   badges            JSONB NOT NULL DEFAULT '[]'::jsonb, -- string ids
   topic_xp          JSONB NOT NULL DEFAULT '{}'::jsonb, -- { topicId: xp }
@@ -106,11 +106,11 @@ CREATE TABLE signals (
 );
 -- Cap of 5 enforced in social-svc handler, not via constraint (so admin can bump).
 
--- 3.1.4 Tune-in graph — asymmetric directional edges.
+-- 3.1.4 Follow graph — asymmetric directional edges.
 -- An edge exists with status='approved' (Open profile) or 'pending' (Closed).
-CREATE TABLE tune_ins (
+CREATE TABLE follows (
   follower    CITEXT NOT NULL REFERENCES profiles(email) ON DELETE CASCADE,  -- the one tuning in
-  target      CITEXT NOT NULL REFERENCES profiles(email) ON DELETE CASCADE,  -- the one being tuned in to
+  target      CITEXT NOT NULL REFERENCES profiles(email) ON DELETE CASCADE,  -- the one being following to
   status      TEXT   NOT NULL CHECK (status IN ('approved','pending')) DEFAULT 'approved',
   muted       BOOLEAN NOT NULL DEFAULT FALSE,                                -- follower muted target
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -118,8 +118,8 @@ CREATE TABLE tune_ins (
   PRIMARY KEY (follower, target),
   CHECK (follower <> target)
 );
-CREATE INDEX tune_ins_target_idx ON tune_ins (target, status);
-CREATE INDEX tune_ins_follower_idx ON tune_ins (follower, status);
+CREATE INDEX follows_target_idx ON follows (target, status);
+CREATE INDEX follows_follower_idx ON follows (follower, status);
 
 -- 3.1.5 Blocks — symmetric ban between two profiles in either direction.
 CREATE TABLE blocks (
@@ -166,7 +166,7 @@ CREATE INDEX stream_events_created_idx     ON stream_events (created_at DESC);
 -- with Cloudflare Durable Objects later; in MVP, this table is fine.
 CREATE TABLE rate_limits (
   email       CITEXT NOT NULL,
-  action      TEXT   NOT NULL,                       -- 'tune_in' | 'report' | 'snapshot'
+  action      TEXT   NOT NULL,                       -- 'follow_action' | 'report' | 'snapshot'
   window_at   TIMESTAMPTZ NOT NULL,                  -- bucketed start (1-min granularity)
   count       INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (email, action, window_at)
@@ -188,7 +188,7 @@ CREATE TABLE admin_audit (
 - **Email is the primary key everywhere.** It's already the cognition-layer's tenancy primitive; we keep one tenancy concept across both backends.
 - **`profile_aggregates` is a derived projection**, not source-of-truth. Source of truth lives in the SPA's `PlayerState`. The SPA POSTs idempotent snapshots; social-svc upserts. We never re-derive XP from the social DB — it's a cache that's allowed to be a few minutes stale.
 - **`stream_events` is append-only.** No deletes (other than via profile cascade). This avoids any "edit history" foot-gun and lets us re-rank a card at any point without touching its row.
-- **`tune_ins.status` collapses approved + pending into one table** instead of two. Simpler queries, single-row state changes on approval, fewer round-trips.
+- **`follows.status` collapses approved + pending into one table** instead of two. Simpler queries, single-row state changes on approval, fewer round-trips.
 - **`profiles.banned_social`** is a separate column from `profiles.banned` (the global ban already in `MockUser.banned`). Lets admin scope a punishment to social only and keep the player learning.
 
 ### 3.3 Why **not** here
@@ -230,12 +230,12 @@ export interface PublicProfile {
   activity14d?:    number[];
 }
 
-export type TuneInStatus = "approved" | "pending";
+export type FollowStatus = "approved" | "pending";
 
-export interface TuneInEdge {
+export interface FollowEdge {
   follower: string;
   target:   string;
-  status:   TuneInStatus;
+  status:   FollowStatus;
   muted:    boolean;
   createdAt: number;
   approvedAt?: number;
@@ -255,8 +255,8 @@ export interface StreamCard {
   kind: StreamCardKind;
   detail?: Record<string, unknown>;
   createdAt: number;
-  iAmTunedIn: boolean;
-  iCanTuneIn: boolean;          // false if Closed and no pending request
+  iAmFollowing: boolean;
+  iCanFollow: boolean;          // false if Closed and no pending request
 }
 
 export type ReportReason =
@@ -266,12 +266,12 @@ export interface SocialService {
   // -- read --
   getMyProfile():                                Promise<PublicProfile>;
   getProfile(handle: string):                    Promise<PublicProfile | null>;
-  listCrew():                                     Promise<TuneInEdge[]>;
-  listTunedInToMe():                              Promise<TuneInEdge[]>;
-  listPendingIncoming():                          Promise<TuneInEdge[]>;
-  listPendingOutgoing():                          Promise<TuneInEdge[]>;
+  listFollowing():                                     Promise<FollowEdge[]>;
+  listFollowers():                              Promise<FollowEdge[]>;
+  listPendingIncoming():                          Promise<FollowEdge[]>;
+  listPendingOutgoing():                          Promise<FollowEdge[]>;
   listBlocked():                                   Promise<string[]>;
-  getBoard(scope: "galaxy" | TopicId | "following",
+  getBoard(scope: "global" | TopicId | "following",
            period: "week" | "month" | "all"):     Promise<PublicProfile[]>;
   getStream(opts?: { limit?: number; before?: number }): Promise<StreamCard[]>;
 
@@ -282,8 +282,8 @@ export interface SocialService {
   pushSnapshot(s: PlayerSnapshot):                Promise<void>;   // §4.4
 
   // -- write (graph) --
-  tuneIn(targetHandle: string):                   Promise<TuneInEdge>;
-  tuneOut(targetHandle: string):                  Promise<void>;
+  follow(targetHandle: string):                   Promise<FollowEdge>;
+  unfollow(targetHandle: string):                  Promise<void>;
   approveSignalRequest(followerEmail: string):     Promise<void>;
   declineSignalRequest(followerEmail: string):     Promise<void>;
   cancelMyPendingRequest(targetHandle: string):    Promise<void>;
@@ -323,11 +323,11 @@ All endpoints are POST/PUT/DELETE *or* GET, all under `/v1/social/`. Auth: beare
 | `POST /v1/social/me/snapshot` | `PlayerSnapshot` | `204` |
 | `PUT  /v1/social/me/signals` | `{ topics: TopicId[] }` | `{ topics }` |
 | `GET  /v1/social/profiles/:handle` | — | `PublicProfile \| null` (viewer-resolved) |
-| `GET  /v1/social/me/crew?status=approved\|pending` | — | `TuneInEdge[]` |
-| `GET  /v1/social/me/tuned-in-to-me?status=approved\|pending` | — | `TuneInEdge[]` |
+| `GET  /v1/social/me/following?status=approved\|pending` | — | `FollowEdge[]` |
+| `GET  /v1/social/me/followers?status=approved\|pending` | — | `FollowEdge[]` |
 | `GET  /v1/social/me/blocked` | — | `string[]` |
-| `POST /v1/social/tune-in/:handle` | — | `TuneInEdge` |
-| `DELETE /v1/social/tune-in/:handle` | — | `204` |
+| `POST /v1/social/follow/:handle` | — | `FollowEdge` |
+| `DELETE /v1/social/follow/:handle` | — | `204` |
 | `POST /v1/social/requests/:followerEmail/approve` | — | `204` |
 | `POST /v1/social/requests/:followerEmail/decline` | — | `204` |
 | `DELETE /v1/social/requests/outgoing/:targetHandle` | — | `204` |
@@ -335,7 +335,7 @@ All endpoints are POST/PUT/DELETE *or* GET, all under `/v1/social/`. Auth: beare
 | `POST /v1/social/blocks/:handle` | — | `204` |
 | `DELETE /v1/social/blocks/:targetEmail` | — | `204` |
 | `POST /v1/social/reports` | `{ targetHandle, reason, note?, context? }` | `204` |
-| `GET  /v1/social/boards/:scope?period=…` | scope = `galaxy` \| `following` \| `topic:<id>` | `PublicProfile[]` (≤100) |
+| `GET  /v1/social/boards/:scope?period=…` | scope = `global` \| `following` \| `topic:<id>` | `PublicProfile[]` (≤100) |
 | `GET  /v1/social/stream?limit=&before=` | — | `StreamCard[]` |
 | `GET  /v1/social/admin/reports?status=open` | admin only | `Report[]` |
 | `POST /v1/social/admin/reports/:id/resolve` | admin only `{ resolution }` | `204` |
@@ -349,13 +349,13 @@ All endpoints are POST/PUT/DELETE *or* GET, all under `/v1/social/`. Auth: beare
 | `403 closed_profile` | viewer is not approved for this Closed profile |
 | `403 blocked` | block in either direction |
 | `404 not_found` | profile or report not found, *or* viewer is blocked (intentional ambiguity) |
-| `409 already_tuned_in` | idempotency on tune-in is "no-op + return current edge" not 409 — we only 409 on *contradictory* requests (e.g. blocking yourself) |
-| `422 cap_exceeded` | Signals > 5, outbound tune-ins > 500 |
+| `409 already_following` | idempotency on follow is "no-op + return current edge" not 409 — we only 409 on *contradictory* requests (e.g. blocking yourself) |
+| `422 cap_exceeded` | Signals > 5, outbound follows > 500 |
 | `429 rate_limited` | with `Retry-After` |
 
 ### 4.3 Idempotency
 
-- `tune-in`, `tune-out`, `block`, `unblock`, `mute`: idempotent (re-running yields current state, never an error).
+- `follow`, `unfollow`, `block`, `unblock`, `mute`: idempotent (re-running yields current state, never an error).
 - `report`: 1 client-id-scoped report per `(reporter, reported, reason)` per 24 h is collapsed into a single row. Spam protection.
 - `pushSnapshot`: idempotent server-side via `(email, clientWindow.to)` upsert key.
 
@@ -393,8 +393,8 @@ for the calling user U:
             AND e.email NOT IN (people-who-blocked-me)
             AND e.email NOT IN (U's muted authors)
             AND (
-              -- visible because tuned in
-              e.email IN (U's approved tune-ins)
+              -- visible because following
+              e.email IN (U's approved follows)
               OR
               -- visible because Signal overlap and author is Open
               (EXISTS Signal overlap AND author.profile_mode = 'open')
@@ -443,17 +443,17 @@ Handles are immutable in MVP. (Documented; revisited Sprint 3.)
 | `app/src/social/handles.ts` | new | Local handle utilities (used by Profile view router). |
 | `app/src/views/Profile.tsx` | new | Public profile screen. |
 | `app/src/views/SparkStream.tsx` | new | The feed. |
-| `app/src/views/Network.tsx` | new | Manage Constellation / Tuned-in / Pending / Blocked / Signals. |
+| `app/src/views/Network.tsx` | new | Manage Topic / Followers / Pending / Blocked / Signals. |
 | `app/src/admin/AdminModeration.tsx` | new | Reports queue tab. |
 | `app/src/App.tsx` | edit | Add `social` views to `View` union; wrap tree in `SocialProvider`. |
 | `app/src/components/TabBar.tsx` | edit | 4 → 5 tabs; rename Guild → Boards. |
 | `app/src/components/TopBar.tsx` | edit | Avatar menu entries; unread dots. |
-| `app/src/views/Home.tsx` | edit | "On your Stream" rail + "People in your Crew" widget. |
-| `app/src/views/TopicView.tsx` | edit | "On the {Topic} Constellation Board" rail. |
+| `app/src/views/Home.tsx` | edit | "On your Stream" rail + "People you follow" widget. |
+| `app/src/views/TopicView.tsx` | edit | "On the {Topic} Topic Board" rail. |
 | `app/src/views/Leaderboard.tsx` | edit | Becomes Boards (tabbed). Keep file name to minimize diff churn; rename only the export when the whole rename is one PR. |
 | `app/src/views/Settings.tsx` | edit | New Network section. |
 | `app/src/admin/AdminConsole.tsx` | edit | Register `AdminModeration` tab. |
-| `app/src/admin/types.ts` | edit | Add `socialEnabled`, `streamEnabled`, `boardsEnabled`, `socialServerUrl`, `socialApiKey`, `defaultProfileMode`, `streamWeights`, `signalsMaxPerUser`, `tuneInRateLimits` to `FeatureFlags` and `AdminConfig`. |
+| `app/src/admin/types.ts` | edit | Add `socialEnabled`, `streamEnabled`, `boardsEnabled`, `socialServerUrl`, `socialApiKey`, `defaultProfileMode`, `streamWeights`, `signalsMaxPerUser`, `followRateLimits` to `FeatureFlags` and `AdminConfig`. |
 | `app/src/admin/defaults.ts` | edit | Defaults for the new flags (off in code; on in live `localStorage`). |
 | `app/src/admin/store.ts` | edit | Forward-compat merge of new fields. |
 | `app/src/types.ts` | edit | Optional: add `socialPrefs` to `PlayerState` (mirror of profile-mode for offline). Keep the addition narrow. |
@@ -518,7 +518,7 @@ A real, working service backed by `localStorage` (per `state.identity.email`). I
 
 - Maintains a single-tenant view: it's *only* this user's data, simulated.
 - Returns an empty Stream / Boards.
-- Profile is editable; settings persist; "Tune-in" is a no-op that surfaces a toast: *"Social network is offline. Configure social-svc in admin."*
+- Profile is editable; settings persist; "Follow" is a no-op that surfaces a toast: *"Social network is offline. Configure social-svc in admin."*
 - `health()` always `{ ok: true, backend: "offline" }`.
 
 This matches the precedent set by `OfflineMemoryService` and keeps the offline path a first-class citizen for forks.
@@ -548,7 +548,7 @@ Static hosts (Vercel / Netlify / cloud-claude.com) all do SPA fallback for unkno
 ### 5.6 Pulling stream/board data — caching
 
 - Stream + Boards use a tiny SWR-style hook (`useSocialQuery(key, fn, ttlMs)`) that's <30 LOC. No external dep added.
-- TTL: 60s for Boards, 30s for Stream, 15s for "Pending Signal requests" (it's the most latency-sensitive).
+- TTL: 60s for Boards, 30s for Stream, 15s for "Pending Follow requests" (it's the most latency-sensitive).
 - Pull-to-refresh in mobile-first views invalidates the relevant cache key.
 
 ---
@@ -583,11 +583,11 @@ The Worker holds the upstream API keys in its env (`UPSTREAM_KEY_MEM0`, `UPSTREA
 
 ### 6.3 Rate limits (per-email, sliding window)
 
-Defaults (admin-tunable via env on the Worker, mirrored in `AdminConfig.tuneInRateLimits`):
+Defaults (admin-tunable via env on the Worker, mirrored in `AdminConfig.followRateLimits`):
 
 | Action prefix | Per minute | Per hour |
 |---|---|---|
-| `POST /v1/social/tune-in` | 60 | 600 |
+| `POST /v1/social/follow` | 60 | 600 |
 | `POST /v1/social/reports` | 5 | 20 |
 | `POST /v1/social/me/snapshot` | 60 | 1800 |
 | `GET  /v1/social/*` | 600 | 6000 |
@@ -630,11 +630,11 @@ export interface SocialConfig {
   serverUrl: string;
   apiKey?: string;
   signalsMaxPerUser: number;     // default 5
-  tuneInsMaxOutbound: number;    // default 500
+  followsMaxOutbound: number;    // default 500
   reportsPerEmailPerDay: number; // default 20
   streamWeights: {
     recencyHalfLifeHours: number; // default 18
-    tuneIn: number;               // default 1.0
+    follow: number;               // default 1.0
     signalOverlap: number;        // default 0.3
     qualityTier: number;          // default 0.2
   };
@@ -660,16 +660,16 @@ UI:
 
 ### 7.3 `AdminUsers` extensions
 
-Each row gains: `Profile mode`, `# tune-ins`, `# tuned-in-to-them`, `# active reports`, `Ban from social` switch (separate from the existing global ban).
+Each row gains: `Profile mode`, `# follows`, `# their followers`, `# active reports`, `Ban from social` switch (separate from the existing global ban).
 
 ### 7.4 `AdminAnalytics` extensions
 
 Already shows DAU/WAU/MAU. We add (graceful-degradation if social is offline):
 
-- Tune-in graph density (`edges / profiles²`).
+- Follow graph density (`edges / profiles²`).
 - Stream cards / day, by kind.
-- Signals distribution across Constellations.
-- Average per-Constellation Board population.
+- Signals distribution across Topics.
+- Average per-Topic Board population.
 - % profiles set to Closed (overall + by age band).
 
 Pulled via new `/v1/social/admin/analytics` endpoints.
@@ -682,12 +682,12 @@ Today's test floor is **90 / 90** across 12 files. We add **at least 28 new test
 
 | File | Locks in |
 |---|---|
-| `__tests__/social.offline.test.ts` | OfflineSocialService: profile read/write round-trip, tune-in is a no-op with toast, no network call ever. |
-| `__tests__/social.online.test.ts` | Mocks `fetch`. Verifies path, headers, body shape, error surfacing for: tune-in / tune-out / block / report / snapshot. |
+| `__tests__/social.offline.test.ts` | OfflineSocialService: profile read/write round-trip, follow is a no-op with toast, no network call ever. |
+| `__tests__/social.online.test.ts` | Mocks `fetch`. Verifies path, headers, body shape, error surfacing for: follow / unfollow / block / report / snapshot. |
 | `__tests__/social.snapshot.test.ts` | `buildSnapshot(prev, next)` produces correct events for: spark complete, level reach, boss pass, streak crossing 7/30/100. Idempotent across StrictMode double-fires (clientId stable). |
 | `__tests__/social.guard.test.ts` | `withSocialGuard()` swallows 5xx + timeout, returns sentinel. UI never throws. |
 | `__tests__/social.privacy.test.tsx` | A Closed profile renders the gated card. Owner sees full content. Approved follower sees full content. Blocked viewer sees 404. Kid profile invisible to adult viewer. |
-| `__tests__/social.boards.test.tsx` | Galaxy includes only Open profiles with Synapses > 0. Per-Constellation requires a Signal. Following filter respects approved tune-ins only. Mock filler sorts below real rows. |
+| `__tests__/social.boards.test.tsx` | Global Leaderboard includes only Open profiles with Synapses > 0. Per-Topic requires a Signal. Following filter respects approved follows only. Mock filler sorts below real rows. |
 | `__tests__/social.stream.test.tsx` | Ranking deterministic given fixed weights; my own events filtered out; muted author filtered out; spotlight cards present iff topic ∈ my Signals. |
 | `__tests__/admin.moderation.test.tsx` | Listing reports requires admin allowlist. Resolving writes audit row. Bulk-no-action works. |
 | `__tests__/admin.flags.social.test.ts` | Toggling `socialEnabled` swaps Online ↔ Offline; toggling `boardsEnabled` hides Boards tabs. |
@@ -697,8 +697,8 @@ Server-side tests (under `services/social-svc/__tests__/`):
 
 - Migrations apply cleanly to a fresh DB.
 - Snapshot upsert is idempotent on `(email, clientWindow.to)`.
-- Tune-in onto a Closed profile creates a `pending` row; approval flips it to `approved` and sets `approved_at`.
-- Block cascades: removes any pending request both ways; subsequent tune-in returns 403.
+- Follow onto a Closed profile creates a `pending` row; approval flips it to `approved` and sets `approved_at`.
+- Block cascades: removes any pending request both ways; subsequent follow returns 403.
 - Report: 21st report from same email in 24h returns 429.
 - Stream query filters: blocked, banned, kid-vs-adult, muted authors all excluded.
 - Spotlight cron emits one row per signal per ≥6h window.
@@ -734,15 +734,15 @@ Server-side:
 
 Server-side (already-existing `admin_audit` + new `social_metrics`):
 
-- Counter: `social.tune_in.created`, `social.tune_out.removed`, `social.block.created`, `social.report.created`, by reason.
+- Counter: `social.follow.created`, `social.unfollow.removed`, `social.block.created`, `social.report.created`, by reason.
 - Gauge: open profiles, closed profiles, by age band; total edges; total active Signals by topic.
 - Histogram: snapshot latency, board query latency.
 - Per-card: card kind, author tier, viewer-tier, score, position.
 
 Client-side (logs to social-svc via a small `/v1/social/me/events` endpoint, batched 30s):
 
-- `stream.card.shown`, `stream.card.tap`, `stream.card.tune_in`, `stream.card.mute_author`, `stream.card.report`.
-- `boards.tab.open`, `boards.row.tune_in`.
+- `stream.card.shown`, `stream.card.tap`, `stream.card.follow_action`, `stream.card.mute_author`, `stream.card.report`.
+- `boards.tab.open`, `boards.row.follow_action`.
 - `profile.open`, `profile.share_link`.
 - `network.profile_mode.flip`.
 
@@ -802,7 +802,7 @@ Mirroring `technical.md` §10:
 1. Flip `socialEnabled → false` in admin. Within 30 s, all SPA sessions read the flag (next render) and revert to `OfflineSocialService`. UI hides social affordances.
 2. social-svc keeps running. Postgres-2 keeps the data.
 3. Re-enable later: data still there, profiles pop back. No data loss.
-4. **Permanent rollback** (worst case): drop the four new tabs, scrub `tune_ins` / `blocks` / `reports` / `stream_events` / `signals`. `profile_aggregates` survives if we want to keep public profiles read-only.
+4. **Permanent rollback** (worst case): drop the four new tabs, scrub `follows` / `blocks` / `reports` / `stream_events` / `signals`. `profile_aggregates` survives if we want to keep public profiles read-only.
 
 ---
 
@@ -811,7 +811,7 @@ Mirroring `technical.md` §10:
 | Risk | Likelihood | Severity | Mitigation |
 |---|---|---|---|
 | Snapshot push grows unbounded if a player has lots of events | Medium | Medium | Server caps `events.length ≤ 50` per snapshot; client buckets older events. |
-| `tune_ins` unique constraint races on rapid double-tap | Medium | Low | Idempotent UPSERT with `ON CONFLICT DO UPDATE`. |
+| `follows` unique constraint races on rapid double-tap | Medium | Low | Idempotent UPSERT with `ON CONFLICT DO UPDATE`. |
 | Handle generation collides at scale | Low | Medium | Disambiguation up to 9999, then 409 + admin-set handle. |
 | Proxy cold-start latency in CF Workers | Low | Low | Pre-warm via cron ping. |
 | Postgres-2 row growth from `stream_events` | Medium | Medium | Daily partitioning by `created_at` once `stream_events > 10M`; nightly cron prunes rows older than 90 days. |
@@ -838,7 +838,7 @@ Mirroring `technical.md` §10:
 
 1. **Real-time?** Boards: 60s server-cached query. Stream: 30s SWR cache + pull-to-refresh. Plan to revisit with WebSockets only if the post-launch success metric "Stream tab feels alive" requires it.
 2. **Handle uniqueness on Gmail-only sign-in.** §4.6 algorithm; immutable in MVP.
-3. **Stream backfill on first tune-in.** Yes — last 7 days of cards from that author, capped at 5. Cheap (one query). Already handled by the `WHERE created_at > now() - 14d` clause; the new tune-in is just immediately included next cache refresh.
+3. **Stream backfill on first follow.** Yes — last 7 days of cards from that author, capped at 5. Cheap (one query). Already handled by the `WHERE created_at > now() - 14d` clause; the new follow is just immediately included next cache refresh.
 4. **`AdminModeration` ships in this PR.** Confirmed — see §7.2.
 5. **`FAKE_GUILD`** — kept; demoted to an explicit "Sample roster" module (`mockUsers.ts`-style), pulled in only when the real-data result has < 10 rows. No data leakage between players.
 

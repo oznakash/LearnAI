@@ -40,8 +40,8 @@
 **The thing he has today:** 12 Twitter tabs, 4 newsletters he never has time to read, a backlog of 80 saved papers.
 
 **The thing LearnAI gives him:**
-- Onboards as `Frontier visionary`. Skips L1–L4 in every Constellation he marks "I know this."
-- Daily 5-minute "Pulse": 2–3 freshly-generated Sparks from the **AI Trends** + **AI News** Constellations, calibrated to his level. The cognition layer remembers the model versions he's worked with so it doesn't waste his time on basics.
+- Onboards as `Frontier visionary`. Skips L1–L4 in every Topic he marks "I know this."
+- Daily 5-minute "Pulse": 2–3 freshly-generated Sparks from the **AI Trends** + **AI News** Topics, calibrated to his level. The cognition layer remembers the model versions he's worked with so it doesn't waste his time on basics.
 - A weekly Boss Cell that tests him on the *new* stuff — last week's news, distilled into 3 sharp questions.
 - His memory grows: *"Watched the o5 release. Skeptical of multi-agent papers. Likes pgvector."* The system stops recommending pgvector tutorials (he wrote one).
 

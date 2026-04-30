@@ -10,7 +10,7 @@ LearnAI is a tiny, opinionated team building the **AI-native learning network** 
 
 We're not a course. We're not a video site. We're not a Q&A board. We're a daily place — five minutes, sometimes ten, sometimes thirty — where the AI firehose becomes a personalized path, and where what you learn turns into something you can actually ship.
 
-The product is **LearnAI**. The in-app experience is **BuilderQuest** — EmDash the mascot, Sparks, streaks, Constellations, build cards. The engine is open source. The cognition layer (mem0) is self-hosted. The whole thing is yours to fork, run, and remix for any domain a community cares about.
+The product is **LearnAI**. The in-app experience is **BuilderQuest** — EmDash the mascot, Sparks, streaks, Topics, build cards. The engine is open source. The cognition layer (mem0) is self-hosted. The whole thing is yours to fork, run, and remix for any domain a community cares about.
 
 ## Mission
 
@@ -52,7 +52,7 @@ You don't need to know everything. You need to keep moving. The cognition layer 
 
 Theory without doing rots. Doing without theory misleads. Every level pairs both — and ends with a Build Card: a pasteable prompt for Claude Code that produces a tiny, working artifact you can run, see, and feel.
 
-> _How:_ every Constellation has Build Cards from level 1. Build Cards reference real models (Claude, GPT, Gemini, Llama), real tools (Cursor, Claude Code, pgvector), real patterns. No vendor euphemisms.
+> _How:_ every Topic has Build Cards from level 1. Build Cards reference real models (Claude, GPT, Gemini, Llama), real tools (Cursor, Claude Code, pgvector), real patterns. No vendor euphemisms.
 
 ### 4. Your data is your data — and follows you across devices
 
@@ -119,7 +119,7 @@ The principles are stable. If we ever need a twelfth, this doc updates in the sa
 | If you are… | Start here |
 |---|---|
 | **Someone who wants to learn AI** | Open the live app at [`learnai.cloud-claude.com`](https://learnai.cloud-claude.com) and sign in. Five minutes a day from there. |
-| **A contributor** | [`contributing.md`](./contributing.md). Five flavours of contribution, from a single Spark to a full Constellation. |
+| **A contributor** | [`contributing.md`](./contributing.md). Five flavours of contribution, from a single Spark to a full Topic. |
 | **An educator wanting your own version** | [`fork-recipe.md`](./fork-recipe.md). Thirty-minute fork. Same engine, your domain. |
 | **A company that wants to find people who shipped** | The platform isn't there yet (Year 2 in the arc) — but the data shape is. Watch the repo or [open an issue](https://github.com/oznakash/LearnAI/issues). |
 | **An investor / partner** | [`pitch-deck.md`](./pitch-deck.md). Twelve text-only slides. |

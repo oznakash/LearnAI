@@ -35,7 +35,7 @@ Every signed-in player simultaneously plays four roles. The MVP supports the fir
 
 | Role | What they do | Who they are in this PR |
 |---|---|---|
-| **Learner** | Completes Sparks, climbs Constellations | Every signed-in user. The default. |
+| **Learner** | Completes Sparks, climbs Topics | Every signed-in user. The default. |
 | **Discoverer** | Browses other players, leaderboards, the feed | Every signed-in user. Gated behind privacy toggles for the people they're discovering. |
 | **Public builder** | Has a profile other people can see, opts into one or more leaderboards | Every signed-in user *with `profileVisibility = public`* (default). |
 | **Author** *(Sprint 3)* | Contributes Sparks, gets attribution | Out of scope for this PR. We must not block it. |
@@ -50,7 +50,7 @@ The social MVP introduces or upgrades four user-visible surfaces. Two are net-ne
 |---|---|---|
 | **Public Profile** (`/u/<handle>`) | New | New `Profile` view, reachable from anywhere a player's name appears. |
 | **Explore feed** (the *Spark Stream*) | New | New top-level tab, replacing the current 4-tab `TabBar` layout with a 5-tab one. |
-| **Topic leaderboards** (the *Constellation Boards*) | Upgrade | Existing `Leaderboard.tsx` becomes a tabbed view: *Global* / *Per-Constellation* / *Following*. |
+| **Topic leaderboards** (the *Topic Leaderboards*) | Upgrade | Existing `Leaderboard.tsx` becomes a tabbed view: *Global* / *Per-Topic* / *Following*. |
 | **Follow / privacy controls** | Upgrade | New `Settings → Network` section + a follow button on every Profile + an inline follow chip on Spark Stream cards. |
 
 ### 2.3 The social loop
@@ -72,22 +72,22 @@ The social MVP introduces or upgrades four user-visible surfaces. Two are net-ne
                 └──────┬──────────────┬───────┘
                        │              │
               ┌────────▼──┐      ┌────▼────────────────┐
-              │ Spark     │      │ Constellation Board  │
+              │ Spark     │      │ Topic Board  │
               │ Stream    │◀─────│ (per-topic + global) │
               │ (feed)    │      │ – I appear if I      │
-              │           │      │   "tuned in" to that │
+              │           │      │   "following" to that │
               │ – cards   │      │   topic              │
               │   from    │      └─────────┬───────────┘
               │   players │                │
               │   I       │                ▼
-              │   tune in │      ┌─────────────────────┐
+              │   follow │      ┌─────────────────────┐
               │   to      │      │ Player profile      │
               │           │      │ (behavioral, public)│
               └─────┬─────┘      └─────────┬───────────┘
                     │                      │
                     ▼                      ▼
               ┌─────────────────────────────┐
-              │  Tune-in / Mute / Block /    │
+              │  Follow / Mute / Block /    │
               │  Report                      │
               │  (private if-they're-private │
               │   approval flow)             │
@@ -100,24 +100,25 @@ The loop is asymmetric (Twitter-style follow), not bidirectional (Facebook-style
 
 ## 3. Naming — the words we ship
 
-Names matter. The current naming system (Sparks, Constellations, Synapses, Guild Tiers, Boss Cells) is rich, internally consistent, and astronomical. The social MVP must extend that vocabulary, not contradict it.
+Names matter, but plain wins. We had a richer metaphor in earlier drafts (Constellation / Tune-in / Crew / Galaxy Board) and walked it back deliberately: **for the social MVP we use the standard, familiar vocabulary that any social-platform user already knows**, layered onto the product terms that are already established (Sparks, Topics, Synapses, Guild Tiers, Boss Cells).
 
 | Mechanic | We will call it | We will *not* call it | Why |
 |---|---|---|---|
-| The asymmetric follow link | **Tune-in** (verb: *tune in*, *tune out*) | "Follow", "Subscribe" | The Constellation metaphor demands it. You don't *follow* a star — you *tune in* to its signal. |
-| The set of people you've tuned in to | **Your Crew** | "Your Constellation", "Following list", "Friends" | "Constellation" is already the user-facing word for our 12 topics — overloading it for people would confuse. "Crew" is plain English, builder-shaped, and short. |
-| The set of people who tune in to you | **Tuned-in to you** (count + list) | "Followers", "Audience" | Symmetric to the verb. Avoids "follower" baggage. |
-| The explore feed | **Spark Stream** | "Feed", "Timeline" | Sparks are already the unit. The Stream is the moving river of Sparks visible to you. |
-| Per-topic leaderboards | **Constellation Boards** | "Topic leaderboards" | Each Constellation has its own Board. The global one is the **Galaxy Board**. |
-| The "tags I want my profile to be discoverable under" | **Signals** | "Tags", "Skills" | Each topic a player tunes their profile *into* is a Signal. They show up on that Constellation Board. |
+| The asymmetric follow link (verb) | **Follow** / **Unfollow** | "Tune in", "Subscribe" | Universally understood. Lower cognitive load than coined verbs for v1. We may revisit a brand-shaped verb later. |
+| The set of people I follow | **Following** | "My Crew", "My Constellation" | Same. |
+| The set of people who follow me | **Followers** | "Tuned-in to you", "Audience" | Same. |
+| The explore feed | **Spark Stream** | "Feed", "Timeline" | "Spark" is already the unit of value in the product; "Stream" is the moving river of Sparks. The one place we keep our coined name. |
+| Per-topic leaderboards | **Topic Leaderboards** (one per Topic) | "Constellation Boards" | Plain, mirrors the Topic vocabulary. |
+| The single global leaderboard | **Global Leaderboard** | "Galaxy Board" | Plain. |
+| The "topics I want my profile to be discoverable under" | **Signals** | "Tags", "Skills" | "Tags" is already overloaded; "Skills" is too narrow (some Topics are news, not skills). Signals = "the set of Topics I want to send a signal in" — short, evocative, no collision with anything else. |
 | The privacy toggle (default public → opt-in private) | **Profile mode** with two values: *Open* and *Closed* | "Public / Private" | Closed implies an active gate (approval), Open implies discoverability. Cleaner than "private = hidden". |
-| A pending tune-in request to a Closed profile | **Signal request** | "Follow request" | Same word family as Signals. A request to be allowed to receive someone's signal. |
+| A pending follow request to a Closed profile | **Follow request** | "Signal request" | Plain English. |
 
-> **Naming bar:** "If a 14-year-old player can't read it once and get the metaphor, we change it." Tune-in, Your Crew, Spark Stream, Constellation Boards, Galaxy Board, Signals, Signal requests — all pass the test.
+> **Naming bar:** "If a 14-year-old can read it once and get it, we ship it." Follow, Unfollow, Followers, Following, Spark Stream, Topic Leaderboards, Global Leaderboard, Signals, Follow requests — all pass the test.
 >
-> **Why "Crew" and not "Constellation" for the follow list:** "Constellation" is already the established user-facing word for our 12 topics (AI Foundations, AI PM, etc., per [`vision.md`](./vision.md)). Reusing it for *people* would overload one word with two meanings on the same screen. We keep "Constellation Boards" (per-topic leaderboards) because that usage is consistent with the existing topic = Constellation metaphor.
+> **Why we walked back the metaphor-heavy names:** earlier drafts coined *Tune-in / Your Crew / Constellation Boards / Galaxy Board*. Two problems: (1) "Constellation" is already the user-facing word for our 12 Topics in the existing product, so reusing it for people overloads one word with two meanings; (2) coined verbs like "Tune-in" raise the cognitive cost of every button label. Plain words let the product itself be the surprising thing.
 
-These names appear in copy, button labels, settings, and notifications. The engineering doc mirrors them in code identifiers (`tuneIn`, `tunedIns`, `crew`, `sparkStream`, `signals`, `profileMode`).
+These names appear in copy, button labels, settings, and notifications. The engineering doc mirrors them in code identifiers (`follow`, `following`, `followers`, `sparkStream`, `signals`, `profileMode`).
 
 ---
 
@@ -125,10 +126,10 @@ These names appear in copy, button labels, settings, and notifications. The engi
 
 Each section below has the same shape: **what**, **why**, **what the player can do**, **rules/edge cases**, **UI surface**.
 
-### 4.1 Tune-in mechanics (Followers / Following + block + report)
+### 4.1 Follow mechanics (Followers / Following + block + report)
 
 #### What
-An asymmetric directional graph: any player can **tune in** to any other player whose profile is *Open*, instantly. For *Closed* profiles, tuning in creates a **Signal request** that must be approved. A player can also **mute**, **tune out**, **block**, or **report** any other player.
+An asymmetric directional graph: any player can **follow** to any other player whose profile is *Open*, instantly. For *Closed* profiles, tuning in creates a **Follow request** that must be approved. A player can also **mute**, **unfollow**, **block**, or **report** any other player.
 
 #### Why
 This is the connective tissue of the network. Without an asymmetric graph, there is no Spark Stream and no following-tab on the Boards. Symmetric "friend" requests would be a worse fit for a learning audience that includes 12-year-olds learning from staff engineers.
@@ -137,20 +138,20 @@ This is the connective tissue of the network. Without an asymmetric graph, there
 
 | Action | Available where | Outcome |
 |---|---|---|
-| **Tune in** | Any Open profile, Constellation Board row, Spark Stream card byline | Other player added to "Your Crew" — instant for Open, Signal request for Closed. |
-| **Tune out** | Same surfaces, where I'm already tuned in | Removes the link. Their Sparks stop appearing in my Stream within 24 h. |
-| **Mute** | Any tune-in row, any Stream card | I stay tuned in (counts unchanged), but their Sparks stop appearing in my Stream. They are not notified. |
-| **Block** | Any profile, any Stream card | They cannot see my profile, cannot send me Signal requests. I cannot see theirs. Counts on both sides update. Mutual unfollow. |
+| **Follow** | Any Open profile, Topic Board row, Spark Stream card byline | Other player added to "Following" — instant for Open, Follow request for Closed. |
+| **Unfollow** | Same surfaces, where I'm already following | Removes the link. Their Sparks stop appearing in my Stream within 24 h. |
+| **Mute** | Any follow row, any Stream card | I stay following (counts unchanged), but their Sparks stop appearing in my Stream. They are not notified. |
+| **Block** | Any profile, any Stream card | They cannot see my profile, cannot send me Follow requests. I cannot see theirs. Counts on both sides update. Mutual unfollow. |
 | **Report** | Any profile, any Stream card | Opens a 1-click reason picker (*spam* / *harassment* / *off-topic content* / *impersonation* / *other*) + optional 280-char note. Goes to a moderation queue (admin tab — see §6.2). I'm auto-muted from them on report submission. |
-| **Approve / decline Signal request** *(Closed profile only)* | Settings → Network → "Pending requests" | List view; bulk-approve and individual-deny supported. |
-| **Cancel a pending Signal request** | "Your Crew" list (pending section) | Removes the request silently from the recipient's queue. |
+| **Approve / decline Follow request** *(Closed profile only)* | Settings → Network → "Pending requests" | List view; bulk-approve and individual-deny supported. |
+| **Cancel a pending Follow request** | "Following" list (pending section) | Removes the request silently from the recipient's queue. |
 
 #### Rules and edge cases
 
-- **Self-tune-in**: blocked at API + UI. A player cannot tune in to themselves.
-- **Cap on outbound tune-ins**: 500 in MVP (mostly to prevent scrape-and-spam). Configurable in admin.
-- **Rate limit on tune-in actions**: 60/min, 600/hour per player (admin-tunable). Prevents follow-spam and abuse of Signal requests.
-- **Block precedence**: Block > Mute > Tune-out. Block removes any pending Signal request both ways.
+- **Self-follow**: blocked at API + UI. A player cannot follow to themselves.
+- **Cap on outbound follows**: 500 in MVP (mostly to prevent scrape-and-spam). Configurable in admin.
+- **Rate limit on follow actions**: 60/min, 600/hour per player (admin-tunable). Prevents follow-spam and abuse of Follow requests.
+- **Block precedence**: Block > Mute > Unfollow. Block removes any pending Follow request both ways.
 - **Reports do not delete content** in MVP — they queue for admin review. Reported content stays visible to others until an admin acts. This is a deliberate trade-off in v1: we do not have automated moderation.
 - **No notifications for blocks**. Blocked players see no error — your profile simply appears as if it doesn't exist. Same convention as Twitter / Bluesky.
 - **Mute is one-way and silent.** Standard convention.
@@ -159,18 +160,18 @@ This is the connective tissue of the network. Without an asymmetric graph, there
 
 | Where | Change |
 |---|---|
-| **Public Profile** (`/u/<handle>`) | Top-right action cluster: `Tune in` / `Tuned in` (toggle), kebab menu with `Mute`, `Block`, `Report`. Counts displayed: *X Constellation · Y tuned in*. |
-| **Spark Stream cards** | Compact byline includes a `Tune in` chip (if not yet tuned in) and a kebab with the same actions. |
-| **Constellation Board rows** | Each row has a `Tune in` chip on hover / tap. Row is dimmed if I've muted that player; hidden if I've blocked. |
-| **Settings → Network** | New section. Lists my Constellation (people I tuned in to), my Tuned-in-to-you list, pending Signal requests in/out, blocked list. Each row has the relevant inverse action. |
-| **Top-Bar** | A small dot on the avatar when I have unread Signal requests. Tappable → Settings → Network. |
+| **Public Profile** (`/u/<handle>`) | Top-right action cluster: `Follow` / `Following` (toggle), kebab menu with `Mute`, `Block`, `Report`. Counts displayed: *X Topic · Y following*. |
+| **Spark Stream cards** | Compact byline includes a `Follow` chip (if not yet following) and a kebab with the same actions. |
+| **Topic Board rows** | Each row has a `Follow` chip on hover / tap. Row is dimmed if I've muted that player; hidden if I've blocked. |
+| **Settings → Network** | New section. Lists my Following list(people I follow), my Followers list, pending Follow requests in/out, blocked list. Each row has the relevant inverse action. |
+| **Top-Bar** | A small dot on the avatar when I have unread Follow requests. Tappable → Settings → Network. |
 
 #### Out of scope (Sprint 3+)
 
 - DMs / private messaging.
-- Notifications when someone tunes in to me (we just bump a counter and the dot).
+- Notifications when someone follows me (we just bump a counter and the dot).
 - Group/cohort follow ("everyone in the Spanish Class fork").
-- Recommendations of who to tune in to.
+- Recommendations of who to follow to.
 
 ---
 
@@ -196,14 +197,14 @@ This is the core artifact of the entire vision. From Sprint 2 of the roadmap: *"
 Layout, top to bottom:
 
 1. **Header** — display name (first name only by default; toggle in §4.3 to show full name), handle (`@maya`), avatar (Google picture or initials), Guild Tier badge, current streak, total Synapses. **No email. No age. No location.**
-2. **Topic map** — a visual radar / chip cloud of the topics (Constellations) they've made progress in, ordered by Synapses-in-topic. Each chip is clickable → that Constellation Board, scrolled to this player. Toggle in §4.3 to hide.
-3. **Signals** — the topics this player has *opted into being discoverable for* (max 5; see §4.4). These are the topics they show up on in the Constellation Boards. Always visible if the player has set any.
-4. **What they're working on** — current Constellation + level, *if profile mode is Open and `currentWork` is enabled*. Player can hide this even when Open. Shows: *"Maya is on AI PM — Level 6 (Reframing requirements as evals)"*. **Never shows their answers, scores, or specific Sparks.**
+2. **Topic map** — a visual radar / chip cloud of the Topics they've made progress in, ordered by Synapses-per-Topic. Each chip is clickable → that Topic's Leaderboard, scrolled to this player. Toggle in §4.3 to hide.
+3. **Signals** — the topics this player has *opted into being discoverable for* (max 5; see §4.4). These are the topics they show up on in the Topic Leaderboards. Always visible if the player has set any.
+4. **What they're working on** — current Topic + level, *if profile mode is Open and `currentWork` is enabled*. Player can hide this even when Open. Shows: *"Maya is on AI PM — Level 6 (Reframing requirements as evals)"*. **Never shows their answers, scores, or specific Sparks.**
 5. **Streak + activity** — a 14-day Sparkline of activity counts (no per-Spark detail). The same widget already on Home for the player themselves. Toggle-able.
 6. **Badges** — visible badges only (player can hide individual ones). Default: all visible.
 7. **Footer** — handle, sign-up month (e.g. *"Joined March 2026"*), report button.
 
-A profile in *Closed* mode shows only header + a "This profile is closed. Tune in to follow their progress." card with a *Send Signal request* button. Nothing else leaks.
+A profile in *Closed* mode shows only header + a "This profile is closed. Follow to follow their progress." card with a *Send Follow request* button. Nothing else leaks.
 
 #### What's *intentionally* missing (the balance the user asked for)
 
@@ -241,8 +242,8 @@ A profile in *Closed* mode shows only header + a "This profile is closed. Tune i
 #### What
 A single, prominent toggle in **Settings → Network** with two values:
 
-- **Open** *(default)* — anyone with the link can see your profile. Anyone can tune in instantly.
-- **Closed** — your profile is gated. Strangers see only your name + a *Send Signal request* card. They can tune in only after you approve.
+- **Open** *(default)* — anyone with the link can see your profile. Anyone can follow instantly.
+- **Closed** — your profile is gated. Strangers see only your name + a *Send Follow request* card. They can follow only after you approve.
 
 Below the toggle, a set of **field-level visibility checkboxes** for the player to fine-tune what their profile shows when Open:
 
@@ -250,7 +251,7 @@ Below the toggle, a set of **field-level visibility checkboxes** for the player 
 [ Open ▾ ]  Profile mode
 
 When my profile is Open, also show:
-  ☑ My current Constellation + level (what I'm working on)
+  ☑ My current Topic + level (what I'm working on)
   ☑ My Topic map (topic affinities)
   ☑ My 14-day activity sparkline
   ☑ My badges
@@ -276,23 +277,23 @@ For minors (`ageBand === "kid"`):
 
 - Profile mode forced to **Closed**, not user-editable.
 - Discovery of any kid profile from the Spark Stream is suppressed.
-- They appear on Constellation Boards under a generic display name shape (*"Builder #1842"*) and not under their first name. Their handle is not exposed.
-- Tune-in *to* a kid profile is blocked entirely from non-kid accounts in MVP. (Aggressive default; we relax it once we have a real moderation story.)
+- They appear on Topic Leaderboards under a generic display name shape (*"Builder #1842"*) and not under their first name. Their handle is not exposed.
+- Follow *to* a kid profile is blocked entirely from non-kid accounts in MVP. (Aggressive default; we relax it once we have a real moderation story.)
 
 #### What the player can do
 
 - Flip Open ↔ Closed at any time. Switching to Closed:
-  - **Keeps** existing Constellation + Tuned-in-to-you links intact.
-  - Cancels any pending outbound or inbound Signal requests visible to non-followers.
+  - **Keeps** existing Topic + Followers links intact.
+  - Cancels any pending outbound or inbound Follow requests visible to non-followers.
   - Hides the profile from search/Boards/Stream **for non-followers** within 60s.
-- Approve / deny pending Signal requests. List view, bulk-approve.
+- Approve / deny pending Follow requests. List view, bulk-approve.
 - Toggle individual field visibility (the checkboxes above).
 - Withdraw consent for *being on a leaderboard* even with Open profile (`signalsAllowed` toggle per-Signal — see §4.4).
 - "Take me down" panic button — flips to Closed, suspends Signals, clears Stream presence in one tap.
 
 #### Rules and edge cases
 
-- **Approval is per-tune-in, not per-account.** Granted once; revocable any time via "Tuned in to you" list.
+- **Approval is per-follow, not per-account.** Granted once; revocable any time via "Following to you" list.
 - **Bulk-approve is allowed**, but a request can sit in the queue forever. We do not auto-expire requests in MVP.
 - **A player who blocks me cannot reach me through approval.** Block > everything.
 - **Settings → Network header** always shows current mode at a glance with a one-tap flip.
@@ -310,9 +311,9 @@ Settings → Network
   When Open, also show: [field-level checkboxes]
 
   ─────────────────────────────────
-  Your Crew (12)                   "Manage →"
-  Tuned in to you (4)              "Manage →"
-  Signal requests (2 pending)      "Review →"
+  Following (12)                   "Manage →"
+  Following to you (4)              "Manage →"
+  Follow requests (2 pending)      "Review →"
   Blocked (1)                       "Manage →"
 
   ─────────────────────────────────
@@ -321,35 +322,35 @@ Settings → Network
 
 ---
 
-### 4.4 Constellation Boards + Signals — leaderboards by topic
+### 4.4 Topic Leaderboards + Signals — leaderboards by topic
 
 #### What
 
 We replace the current single global `Leaderboard.tsx` with a **tabbed leaderboard view** that has three modes:
 
-1. **Galaxy Board** — global, all-topics. The current leaderboard, but populated with real (Open-profile, opted-in) players ranked by Synapses this week / month / all-time. Deterministic-mock fallback only when we have <10 real players in scope (the current behaviour stays as graceful degradation).
-2. **Constellation Boards** — one per topic. Each board ranks players who have **set that topic as one of their Signals** by Synapses-in-that-topic this week / month / all-time.
-3. **Following** — same Galaxy Board, filtered to people I've tuned in to. Empty state encourages tuning in.
+1. **Global Leaderboard** — global, all-topics. The current leaderboard, but populated with real (Open-profile, opted-in) players ranked by Synapses this week / month / all-time. Deterministic-mock fallback only when we have <10 real players in scope (the current behaviour stays as graceful degradation).
+2. **Topic Leaderboards** — one per topic. Each board ranks players who have **set that topic as one of their Signals** by Synapses-in-that-topic this week / month / all-time.
+3. **Following** — same Global Leaderboard, filtered to people I've following to. Empty state encourages tuning in.
 
 #### Signals — the "topics I want to blend in to" mechanic
 
 The user's request: *"ability for users to add certain topics they want to blend in into their content — find good names for the mechanics here."* Our answer:
 
-> **Signals** are the topics a player opts into being discoverable for. Adding `AI PM` as a Signal means: "Show me on the AI PM Constellation Board. Show me as an AI PM player on the Stream and on my profile."
+> **Signals** are the topics a player opts into being discoverable for. Adding `AI PM` as a Signal means: "Show me on the AI PM Topic Board. Show me as an AI PM player on the Stream and on my profile."
 
-Each player has up to **5 active Signals** in MVP (configurable). A new player auto-receives Signals for the top 2 Constellations from their onboarding interests, but can change them at any time in Settings → Network → Signals.
+Each player has up to **5 active Signals** in MVP (configurable). A new player auto-receives Signals for the top 2 Topics from their onboarding interests, but can change them at any time in Settings → Network → Signals.
 
 #### Why
-- Without Signals, every Constellation Board would be cluttered with players who touched a topic once. Bad signal-to-noise.
-- With Signals, Boards reward *commitment to a topic*. A staff engineer who's tuning in to AI Trends + Memory & Safety becomes findable and valuable on those two Boards instead of being lost in a Galaxy of 100k.
-- Signals are also the **first-class input to the Spark Stream** (§4.5). You see Sparks from people in your tuned-in graph **and** from top players on Boards you yourself signal into.
+- Without Signals, every Topic Board would be cluttered with players who touched a topic once. Bad signal-to-noise.
+- With Signals, Boards reward *commitment to a topic*. A staff engineer who's tuning in to AI Trends + Memory & Safety becomes findable and valuable on those two Boards instead of being lost in a global pool of 100k.
+- Signals are also the **first-class input to the Spark Stream** (§4.5). You see Sparks from people in your follow graph **and** from top players on Boards you yourself signal into.
 
 #### What the player can do
 
 - Pick / change / drop Signals (max 5).
 - See, for each Signal, "Where I rank" on that Board (week/month/all-time).
-- Hide themselves from the Galaxy Board only (`signalsAllowed.galaxy = false`) while keeping per-Constellation Signals on. Inverse: stay only on the Galaxy and turn off all per-topic Signals.
-- See on a Board: any player's avatar, first name, handle, current rank, Synapses in that period and Constellation, and an inline `Tune in` button.
+- Hide themselves from the Global Leaderboard only (`signalsAllowed.global = false`) while keeping per-Topic Signals on. Inverse: stay only on the Global Leaderboard and turn off all per-topic Signals.
+- See on a Board: any player's avatar, first name, handle, current rank, Synapses in that period and Topic, and an inline `Follow` button.
 - Tap any board row → that player's profile.
 
 #### What appears on a Board
@@ -362,13 +363,13 @@ Each player has up to **5 active Signals** in MVP (configurable). A new player a
 | Tier | Builder / Architect / Visionary / Founder / Singularity | Already in `tierForXP`. |
 | Synapses (period) | Number | Sortable column. Default: descending. |
 | Streak | 🔥 N | If still alive. |
-| Tune-in chip | inline | Hidden if I'm already tuned in or blocked. |
+| Follow chip | inline | Hidden if I'm already following or blocked. |
 
 #### Rules and edge cases
 
 - **A Closed-profile player does not appear on any Board.** Closing your profile pulls you off automatically.
 - **Banned, muted-by-me, blocked-by-me players are filtered out of my view of every Board.**
-- **A player without Signals shows up on the Galaxy Board only** (if Open and Synapses > 0). Per-Constellation Boards require an active Signal for that topic.
+- **A player without Signals shows up on the Global Leaderboard only** (if Open and Synapses > 0). Per-Topic Leaderboards require an active Signal for that topic.
 - **Periods**: this week (Mon-anchored), this month (calendar), all-time. Three pills above the list.
 - **Empty Board state** (real-data sparse): we keep a small deterministic mock cohort (the existing `FAKE_GUILD`) as filler, clearly labeled "Sample roster" and ranked *below* real players. This preserves the "feels alive on day one" property of the current MVP.
 - **Live-ish update**: Board ranks recompute server-side on a 60-second cadence in MVP. Fine for the load.
@@ -380,14 +381,14 @@ Each player has up to **5 active Signals** in MVP (configurable). A new player a
 ```
 Boards
 ─────────────────────────────────
-[ Galaxy ]  [ AI Foundations ]  [ AI PM ]  ...  [ Following ]
+[ Global ]  [ AI Foundations ]  [ AI PM ]  ...  [ Following ]
                                                     ─────
 [ Week ▾ ]   [ Month ▾ ]   [ All-time ▾ ]
 
-Rank · Avatar · Name · Tier · Synapses · 🔥 · [Tune in]
+Rank · Avatar · Name · Tier · Synapses · 🔥 · [Follow]
 ```
 
-The constellation tabs are **only the player's own Signals** (so they don't see 12 tabs they don't care about); a `+` chip at the end opens a picker for any Constellation. The TabBar's "Guild" entry is renamed **Boards** with the trophy icon retained.
+The topic tabs are **only the player's own Signals** (so they don't see 12 tabs they don't care about); a `+` chip at the end opens a picker for any Topic. The TabBar's "Guild" entry is renamed **Boards** with the trophy icon retained.
 
 ---
 
@@ -397,7 +398,7 @@ The constellation tabs are **only the player's own Signals** (so they don't see 
 
 A new top-level tab — the **Spark Stream** — that surfaces a chronologically-blended-with-relevance feed of cards generated by what other players are doing in LearnAI. The user said: *"Feed — ability to explore different content and follow it (find another name for it, probably not follow). I like the spark name we use."*
 
-→ **Spark Stream**. The verb is *tune in*. The cards themselves are **Spark Cards** (extending the existing in-game Spark vocabulary).
+→ **Spark Stream**. The verb is *follow*. The cards themselves are **Spark Cards** (extending the existing in-game Spark vocabulary).
 
 #### Why
 
@@ -409,24 +410,24 @@ In MVP, the Stream is composed of four card types, all auto-generated from exist
 
 | Card type | Trigger | Content shown |
 |---|---|---|
-| **Level-up card** | A player I'm tuned in to (or who shares ≥1 Signal with me) reaches a new level in a Constellation | `🚀 @priya hit Level 7 in AI Builder`. CTA: *Try this Constellation* / *Tune in to Priya*. |
-| **Boss-beaten card** | A player I'm tuned in to passes a Boss Cell | `👾 @avi beat the Memory & Safety L8 Boss with 5/6`. CTA: *Try the Boss yourself when ready* / *Profile*. |
-| **Streak-milestone card** | A player I'm tuned in to crosses a streak threshold (7 / 30 / 100 days) | `🔥 @maya is on a 30-day streak`. CTA: *Tune in / Profile*. |
-| **Constellation-spotlight card** | Algorithmic — a Constellation I have a Signal in surfaces a top player I'm not yet tuned in to | `✨ @sam is climbing AI Foundations — #3 this week. Tune in?`. CTA: *Tune in / Profile*. |
+| **Level-up card** | A player I'm following to (or who shares ≥1 Signal with me) reaches a new level in a Topic | `🚀 @priya hit Level 7 in AI Builder`. CTA: *Try this Topic* / *Follow to Priya*. |
+| **Boss-beaten card** | A player I'm following to passes a Boss Cell | `👾 @avi beat the Memory & Safety L8 Boss with 5/6`. CTA: *Try the Boss yourself when ready* / *Profile*. |
+| **Streak-milestone card** | A player I'm following to crosses a streak threshold (7 / 30 / 100 days) | `🔥 @maya is on a 30-day streak`. CTA: *Follow / Profile*. |
+| **Topic-spotlight card** | Algorithmic — a Topic I have a Signal in surfaces a top player I'm not yet following to | `✨ @sam is climbing AI Foundations — #3 this week. Follow?`. CTA: *Follow / Profile*. |
 
 #### What's *not* in the Stream (yet)
 
 - Not user-typed posts. (Sprint 3.)
 - Not images / media. (User explicitly excluded.)
-- Not Sparks themselves (the lessons stay inside Constellations, not in the Stream).
+- Not Sparks themselves (the lessons stay inside Topics, not in the Stream).
 - Not comments / replies / reactions. (Sprint 3.)
-- Not from anyone with `profileMode = Closed` who hasn't tuned me in to themselves explicitly.
+- Not from anyone with `profileMode = Closed` who hasn't followed me to themselves explicitly.
 
 #### Ranking — kept simple in MVP
 
 ```
 score = w_recency · recency        +  ← time-decayed (half-life 18 h)
-        w_tunein  · is_tuned_in    +  ← +1 if it's someone in My Constellation
+        w_follow  · is_following    +  ← +1 if it's someone in my Following list
         w_signal  · signal_overlap +  ← +0.3 per shared Signal
         w_quality · streak_or_tier    ← small boost if author tier ≥ Architect
 ```
@@ -438,16 +439,16 @@ All weights live in `AdminConfig.tuning.streamWeights` (admin-tunable). No ML in
 | Action | Outcome |
 |---|---|
 | Tap the card body | Open the player's profile. |
-| Tap *Tune in* (if shown) | Same as profile-tune-in. |
-| Tap topic chip (e.g. *AI PM*) | Open that Constellation. |
-| Tap *Try this Constellation* CTA | Open the Constellation; if the player isn't already started, kick them into Level 1. |
+| Tap *Follow* (if shown) | Same as profile-follow. |
+| Tap topic chip (e.g. *AI PM*) | Open that Topic. |
+| Tap *Try this Topic* CTA | Open the Topic; if the player isn't already started, kick them into Level 1. |
 | Kebab → *Mute author* | Stop seeing this author in Stream. Standard Twitter pattern. |
 | Kebab → *Show fewer like this* | Logs a `down_vote` weight tweak, future-tense in MVP (just stored — no recompute yet). |
 | Kebab → *Report* | Same flow as profile report. |
 
 #### Edge cases
 
-- **Empty Stream (zero tune-ins, no Signals overlap)**: we show 5–8 Constellation-spotlight cards seeded from the `FAKE_GUILD` mock. Same dignity rule as Boards.
+- **Empty Stream (zero follows, no Signals overlap)**: we show 5–8 Topic-spotlight cards seeded from the `FAKE_GUILD` mock. Same dignity rule as Boards.
 - **Stream is one-page**: 50 cards in MVP, infinite-scroll later.
 - **Refresh frequency**: pull-to-refresh on mobile, header refresh button on desktop. No live websocket in MVP.
 - **No notifications.** A red dot on the Stream tab if there are >5 new cards since last visit. That's it.
@@ -510,7 +511,7 @@ The ranking formula has no `clicks`, no `dwell`, no `like_count` term. Vision §
 Per the fork ethos in `vision.md`:
 - The social schema is in the engine, not in any specific topic.
 - A fork (e.g. Spanish-Anya) gets its own social graph instance — no cross-fork follow.
-- Naming (Tune-in, Spark Stream, Constellation Boards) is theme-able via `branding` config exactly like the rest of the app.
+- Naming (Follow, Spark Stream, Topic Leaderboards) is theme-able via `branding` config exactly like the rest of the app.
 
 ### 5.8 We do *not* introduce a "post" as a primitive
 
@@ -529,30 +530,30 @@ A consolidated map of every UI change in the social MVP, by file. **The engineer
 | `app/src/App.tsx` | New views in the `View` union: `profile`, `stream`, `network`. Settings → Network sub-route. |
 | `app/src/components/TabBar.tsx` | 4 → 5 tabs. New `Stream` tab between Home and Tasks. Renamed Guild → Boards. |
 | `app/src/components/TopBar.tsx` | Avatar menu gains *View my profile* / *Network*. New Stream-unread dot. New Signal-request dot on avatar. |
-| `app/src/views/Home.tsx` | New "On your Stream" rail (3 most-recent cards) above Discover-more. New "People in your Crew today" small card. |
-| `app/src/views/TopicView.tsx` | New "On the {Topic} Constellation Board" rail (top 5) below Sparks-per-level. |
-| `app/src/views/Leaderboard.tsx` | Becomes the Boards view: tabbed (Galaxy / per-Signal / Following), period pills, real-cohort first then mock filler. |
-| `app/src/views/Settings.tsx` | New "Network" section above Preferences: Profile mode, field-level visibility, links to manage Crew/Tuned-in/Pending/Blocked, Signals picker, Take-me-down. |
+| `app/src/views/Home.tsx` | New "On your Stream" rail (3 most-recent cards) above Discover-more. New "People you follow today" small card. |
+| `app/src/views/TopicView.tsx` | New "On the {Topic} Topic Board" rail (top 5) below Sparks-per-level. |
+| `app/src/views/Leaderboard.tsx` | Becomes the Boards view: tabbed (Global / per-Signal / Following), period pills, real-cohort first then mock filler. |
+| `app/src/views/Settings.tsx` | New "Network" section above Preferences: Profile mode, field-level visibility, links to manage Following/Followers/Pending/Blocked, Signals picker, Take-me-down. |
 | `app/src/views/Profile.tsx` | **New file.** Public profile view. |
 | `app/src/views/SparkStream.tsx` | **New file.** The feed. |
-| `app/src/views/Network.tsx` | **New file.** Sub-view for managing Constellation / Tuned-in / Pending / Blocked / Signals lists. |
-| `app/src/visuals/Mascot.tsx` | New mood: `social` (used on empty Stream / first tune-in). |
+| `app/src/views/Network.tsx` | **New file.** Sub-view for managing Topic / Followers / Pending / Blocked / Signals lists. |
+| `app/src/visuals/Mascot.tsx` | New mood: `social` (used on empty Stream / first follow). |
 
 ### 6.2 Admin surfaces
 
 | Tab | What changes |
 |---|---|
-| `AdminConfig` (existing tab) | New flags: `socialEnabled`, `streamEnabled`, `boardsEnabled`, `defaultProfileMode`, plus per-mechanic feature flags. New tunables: `streamWeights`, `signalsMaxPerUser`, `tuneInRateLimits`. |
-| `AdminUsers` (existing tab) | Each user row gains: profile mode, # tune-ins, # tuned-in-to-them, # active reports, ban-from-social-only switch. |
+| `AdminConfig` (existing tab) | New flags: `socialEnabled`, `streamEnabled`, `boardsEnabled`, `defaultProfileMode`, plus per-mechanic feature flags. New tunables: `streamWeights`, `signalsMaxPerUser`, `followRateLimits`. |
+| `AdminUsers` (existing tab) | Each user row gains: profile mode, # follows, # their followers, # active reports, ban-from-social-only switch. |
 | **New tab: `AdminModeration`** | Reports queue. Each row: who reported whom, reason, optional note, the Spark Stream card or profile snapshot they reported, *resolve* / *act* (warn / ban-from-social / global ban). Admin-only. |
-| `AdminAnalytics` (existing tab) | New panels: tune-in graph density, Stream cards / day, Signal distribution across Constellations, average Constellation Board size, % profiles set to Closed. |
+| `AdminAnalytics` (existing tab) | New panels: follow graph density, Stream cards / day, Signal distribution across Topics, average Topic Board size, % profiles set to Closed. |
 
 ### 6.3 Data + auth boundary (the big new architectural fact)
 
 The `architecture.md` already calls out that the *"social/talent-graph data goes in a separate Postgres database alongside mem0"*. This PR is the first to actually require that.
 
 - Memories (cognitive, private, per-Gmail) → mem0 / Postgres-1. Unchanged.
-- Social graph (profiles, tune-ins, blocks, reports, Signals, Stream events) → **Postgres-2 (new)**.
+- Social graph (profiles, follows, blocks, reports, Signals, Stream events) → **Postgres-2 (new)**.
 - A tiny auth-verifying proxy sits in front of both, doing Google ID-token verification and per-Gmail rate-limiting (this is the Sprint-2 proxy from the existing roadmap; it lands in this PR).
 - The SPA never calls Postgres-2 directly. It calls the proxy, which calls Postgres-2.
 
@@ -565,7 +566,7 @@ Engineering details in [`social-mvp-engineering.md`](./social-mvp-engineering.md
 ### 7.1 Day-of-merge bar (the green-CI gate)
 
 - 100 % of existing 90 / 90 tests still pass.
-- New tests added across at least: profile rendering, tune-in/out idempotence, Closed-profile gating, block precedence, report queue, Signals cap, Boards filtering, Stream ranking determinism. (Coverage owned by engineering doc.)
+- New tests added across at least: profile rendering, follow/out idempotence, Closed-profile gating, block precedence, report queue, Signals cap, Boards filtering, Stream ranking determinism. (Coverage owned by engineering doc.)
 - `npm run build` clean, bundle delta ≤ +120 KB gzipped (target).
 - All five capabilities reachable behind feature flags in `AdminConfig.flags`. Flags default ON for the live deploy, default OFF in `defaults.ts` (fork-safe — a fork inherits a non-social engine until they flip the flags).
 
@@ -573,12 +574,12 @@ Engineering details in [`social-mvp-engineering.md`](./social-mvp-engineering.md
 
 | Metric | Target | Why this number |
 |---|---|---|
-| Profile view → tune-in conversion | ≥ 20 % | A profile is finally *useful*. |
-| % active players with ≥1 tune-in | ≥ 35 % at week 2 | The graph is forming. |
+| Profile view → follow conversion | ≥ 20 % | A profile is finally *useful*. |
+| % active players with ≥1 follow | ≥ 35 % at week 2 | The graph is forming. |
 | Stream tab DAU / Home tab DAU | ≥ 0.5 | Players are using the feed without it eating Home's attention. |
 | % profiles set to Closed | 5–25 % | Healthy band. <5 % means the toggle is invisible; >25 % means defaults are wrong. |
 | Reports per 1k DAU | < 5 | Above that, we ship Sprint 3 moderation tooling earlier. |
-| Constellation Board MAU vs. Galaxy Board MAU | Constellation > Galaxy | Signals work — players prefer their topics. |
+| Topic Board MAU vs. Global Leaderboard MAU | Topic > Global | Signals work — players prefer their topics. |
 | Crash-free sessions on the new screens | ≥ 99.5 % | Standard. |
 | Time-on-Stream (median) | We don't optimize for this | We watch it for *runaway* increases — vision-pillar §4 violation. |
 
@@ -610,8 +611,8 @@ Listed here so reviewers can stop asking *"shouldn't we also …"*:
 
 | Risk | Likelihood | Severity | Mitigation |
 |---|---|---|---|
-| Privacy footgun: a kid is exposed via a Stream card | Low | **Critical** | Minors forced to Closed, kid-profiles never appear in adult Streams, kid → adult tune-in disabled outright. |
-| Spam / bot tune-ins | Medium | High | 60/min, 600/hr rate limits. Outbound cap of 500. Captcha re-entry on suspicious bursts. Pre-shipped flags to disable tune-ins per-account. |
+| Privacy footgun: a kid is exposed via a Stream card | Low | **Critical** | Minors forced to Closed, kid-profiles never appear in adult Streams, kid → adult follow disabled outright. |
+| Spam / bot follows | Medium | High | 60/min, 600/hr rate limits. Outbound cap of 500. Captcha re-entry on suspicious bursts. Pre-shipped flags to disable follows per-account. |
 | Reports flood with no admin bandwidth | Medium | High | Each Gmail capped at 20 outbound reports / day. Triage filters in `AdminModeration`. SLA: act on every report within 72 h, document in `docs/operator-checklist.md`. |
 | Stream encourages *time-on-app* and we drift from the vision | Medium | High | Ranking formula admin-tunable, no engagement-feedback term, success metrics include "time-on-Stream is *not* optimized" check. |
 | Postgres-2 + auth proxy adds operator complexity | High | Medium | The auth proxy is ~50 lines (per `architecture.md`). One Fly app. We add `npm run deploy:social` mirroring `deploy:mem0`. |
@@ -626,7 +627,7 @@ Listed here so reviewers can stop asking *"shouldn't we also …"*:
 
 | Vision pillar | This MVP advances it by |
 |---|---|
-| §1. Cognition layer is the moat | Stream + Boards both use Signals, which become first-class memory inputs (`category: "preference"` for Signal selections, `category: "history"` for tune-ins) — the cognition layer gets richer because of social. |
+| §1. Cognition layer is the moat | Stream + Boards both use Signals, which become first-class memory inputs (`category: "preference"` for Signal selections, `category: "history"` for follows) — the cognition layer gets richer because of social. |
 | §2. Bite-size is non-negotiable | Stream cards are 30-second cards. Profiles are scannable in 10 seconds. No long-form posts. |
 | §3. Open source is the multiplier | Social schema is themable. Names live in branding. Forks get a social network for free. |
 | §4. Social on top of value, never below | We did *not* ship: likes, comments, media, DMs, reactions, time-on-app metrics, engagement ranking. We only added affordances that surface what learners already do. |
@@ -640,7 +641,7 @@ These are the places we explicitly want the engineering doc to push back if some
 
 1. **Real-time?** We've said 60-second cadence on Boards, pull-to-refresh on Stream. Is that fine, or does the proxy need a long-poll endpoint we should plan for?
 2. **Handle uniqueness on Gmail-only sign-in.** We've said handle = local-part of Gmail, with disambiguation. Engineering owns the algorithm.
-3. **Stream backfill on first tune-in.** When a player tunes in, do we backfill the last 7 days of cards from that author? PRD says yes (it makes the empty-state smoother); flag if cost is non-trivial.
+3. **Stream backfill on first follow.** When a player tunes in, do we backfill the last 7 days of cards from that author? PRD says yes (it makes the empty-state smoother); flag if cost is non-trivial.
 4. **`AdminModeration` scope.** Does it ship in this PR or get its own follow-up? PRD says same PR — it cannot be a TODO.
 5. **Existing `FAKE_GUILD`** — keep, replace, or relegate to admin-only sample data? PRD says keep as filler.
 

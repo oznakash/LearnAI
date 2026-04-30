@@ -30,7 +30,7 @@ The MVP ([`mvp.md`](./mvp.md)) is shipped. From here, we layer the social graph 
 | Item | Why |
 |---|---|
 | Auth-verifying proxy in front of mem0 (Cloudflare Worker, ~50 lines) — verifies Google ID token, injects `user_id`, rate-limits per Gmail | Prerequisite for any multi-user feature. Drops the bearer-in-browser model. |
-| Public profile schema (separate Postgres alongside mem0) — email-hash, name, picture, tier, streak, mastered Constellations, badges, opt-in flag | Foundation of the social layer. |
+| Public profile schema (separate Postgres alongside mem0) — email-hash, name, picture, tier, streak, mastered Topics, badges, opt-in flag | Foundation of the social layer. |
 | `/profile/<handle>` public page (read-only) | First shareable artifact. |
 | Real cohort leaderboard (this week / this month / all-time) | Replaces bot Guild. |
 | Settings → Privacy: opt in/out of public profile, granularity per field | Trust. |
@@ -62,7 +62,7 @@ The MVP ([`mvp.md`](./mvp.md)) is shipped. From here, we layer the social graph 
 
 | Item | Why |
 |---|---|
-| Behavioral search index — projects mastered Constellations, completed Build Cards, contribution stats, recent activity per public-opted-in user | The actual signal. |
+| Behavioral search index — projects mastered Topics, completed Build Cards, contribution stats, recent activity per public-opted-in user | The actual signal. |
 | Recruiter view — search by stack + capabilities + recency + contribution depth | The hire moment in [`use-cases.md`](./use-cases.md). |
 | Verified Build Card completions — signed artifacts (URL → SHA → claim) recruiters can trust | Anti-fake. |
 | "I'm interested in roles" toggle on profile (with privacy controls) | Opt-in supply. |

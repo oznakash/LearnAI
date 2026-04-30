@@ -52,7 +52,7 @@ LinkedIn is the social network of *professional claims* — resumes, endorsement
 | Connections | Followers, study buddies, contributed Sparks |
 | Job posting | Talent Match search (*"shipped X with Y in last 90 days"*) |
 | Endorsement | Verified Build Card completion |
-| Resume | Public builder profile: streak, tier, mastered Constellations, contributed Sparks, recent Build Cards |
+| Resume | Public builder profile: streak, tier, mastered Topics, contributed Sparks, recent Build Cards |
 | Recruiter InMail | Same — but on behavioral data, not keywords |
 
 We don't replace LinkedIn for sales or marketing roles. We replace it for **AI-builder roles**, by accident. (See *Persona 6* in [`use-cases.md`](./use-cases.md).)

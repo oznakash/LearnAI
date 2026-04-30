@@ -61,7 +61,7 @@ You now have your own gamified, micro-dosed, optionally-cognitive learning app.
 
 ## Recommended initial domains
 
-| Domain | Why it fits | Suggested first 12 Constellations |
+| Domain | Why it fits | Suggested first 12 Topics |
 |---|---|---|
 | **AI for kids** | Same engine, kid-tone shaping already exists | What is AI · Smart Helpers · Robots · Pictures from Words · Voice · Safety · Building · Famous AI · How AI learns · Asking AI Better · Funny mistakes · Build a chat app |
 | **On-call / SRE** | Drilling failure modes is exactly the bite-size shape | Incident anatomy · Pages · Runbooks · Postmortems · SLOs · Cascading failures · DB outages · Network partitions · Capacity · Observability · Recovery · Tabletop |

@@ -166,7 +166,7 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
 
       <section>
         <div className="flex items-end justify-between mb-3">
-          <h2 className="h2">Your Constellations</h2>
+          <h2 className="h2">Your Topics</h2>
           <button className="text-xs text-accent hover:underline" onClick={() => onNav({ name: "dashboard" })}>
             See all progress →
           </button>

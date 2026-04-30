@@ -75,14 +75,14 @@ export const BADGES: Badge[] = [
     id: "explorer-3",
     name: "Polymath",
     emoji: "🧭",
-    description: "Touched 3 different Constellations.",
+    description: "Touched 3 different Topics.",
     rule: (s) => Object.keys(s.progress.topicXP).length >= 3,
   },
   {
     id: "explorer-6",
     name: "Renaissance Builder",
     emoji: "🎨",
-    description: "Touched 6 different Constellations.",
+    description: "Touched 6 different Topics.",
     rule: (s) => Object.keys(s.progress.topicXP).length >= 6,
   },
   {
