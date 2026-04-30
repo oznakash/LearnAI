@@ -214,5 +214,6 @@ export function defaultAdminConfig(): AdminConfig {
       apiKey: "",
       perUserDailyCap: 200,
     },
+    googleClientId: "",
   };
 }
