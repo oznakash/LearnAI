@@ -226,7 +226,7 @@ export interface PublicProfile {
   signupAt: number;
   // Optional sections — undefined if hidden by the owner or by a Closed profile.
   currentWork?:    { topicId: TopicId; level: number; topicName: string };
-  constellation?: { topicId: TopicId; xp: number }[];
+  topicMap?:       { topicId: TopicId; xp: number }[];
   activity14d?:    number[];
 }
 
@@ -266,7 +266,7 @@ export interface SocialService {
   // -- read --
   getMyProfile():                                Promise<PublicProfile>;
   getProfile(handle: string):                    Promise<PublicProfile | null>;
-  listConstellation():                            Promise<TuneInEdge[]>;
+  listCrew():                                     Promise<TuneInEdge[]>;
   listTunedInToMe():                              Promise<TuneInEdge[]>;
   listPendingIncoming():                          Promise<TuneInEdge[]>;
   listPendingOutgoing():                          Promise<TuneInEdge[]>;
@@ -323,7 +323,7 @@ All endpoints are POST/PUT/DELETE *or* GET, all under `/v1/social/`. Auth: beare
 | `POST /v1/social/me/snapshot` | `PlayerSnapshot` | `204` |
 | `PUT  /v1/social/me/signals` | `{ topics: TopicId[] }` | `{ topics }` |
 | `GET  /v1/social/profiles/:handle` | — | `PublicProfile \| null` (viewer-resolved) |
-| `GET  /v1/social/me/constellation?status=approved\|pending` | — | `TuneInEdge[]` |
+| `GET  /v1/social/me/crew?status=approved\|pending` | — | `TuneInEdge[]` |
 | `GET  /v1/social/me/tuned-in-to-me?status=approved\|pending` | — | `TuneInEdge[]` |
 | `GET  /v1/social/me/blocked` | — | `string[]` |
 | `POST /v1/social/tune-in/:handle` | — | `TuneInEdge` |
@@ -448,7 +448,7 @@ Handles are immutable in MVP. (Documented; revisited Sprint 3.)
 | `app/src/App.tsx` | edit | Add `social` views to `View` union; wrap tree in `SocialProvider`. |
 | `app/src/components/TabBar.tsx` | edit | 4 → 5 tabs; rename Guild → Boards. |
 | `app/src/components/TopBar.tsx` | edit | Avatar menu entries; unread dots. |
-| `app/src/views/Home.tsx` | edit | "On your Stream" rail + "People in your Constellation" widget. |
+| `app/src/views/Home.tsx` | edit | "On your Stream" rail + "People in your Crew" widget. |
 | `app/src/views/TopicView.tsx` | edit | "On the {Topic} Constellation Board" rail. |
 | `app/src/views/Leaderboard.tsx` | edit | Becomes Boards (tabbed). Keep file name to minimize diff churn; rename only the export when the whole rename is one PR. |
 | `app/src/views/Settings.tsx` | edit | New Network section. |
