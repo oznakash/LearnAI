@@ -1,8 +1,12 @@
 // Google Identity Services (GIS) — Gmail-only sign-in helper.
-// Loads the GIS script once. Decodes the ID token (JWT) client-side
-// to extract email/name/picture. Restricted to @gmail.com addresses
-// (or any address — caller decides). For server-side validation,
-// you should verify the JWT signature with Google's certs in your backend.
+//
+// SECURITY NOTE: decodeIdToken() does NOT verify the JWT signature, audience,
+// issuer, or expiry. It only extracts the payload to drive the UI. Anyone
+// with devtools open can paste a forged token and the SPA will treat them as
+// the corresponding email. All admin gating in this app is therefore a
+// client-side UX boundary, not a security boundary. If you ever add a
+// backend, verify the JWT against Google's JWKS there before trusting the
+// caller's identity.
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 
@@ -65,8 +69,10 @@ export function decodeIdToken(token: string): GoogleIdentity | null {
   try {
     const payload = token.split(".")[1];
     if (!payload) return null;
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const obj = JSON.parse(decodeURIComponent(escape(json)));
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const json = new TextDecoder("utf-8").decode(bytes);
+    const obj = JSON.parse(json);
     return {
       email: obj.email,
       name: obj.name,

@@ -22,6 +22,7 @@ import { AdminConsole } from "./admin/AdminConsole";
 import type { TopicId } from "./types";
 import { TopBar } from "./components/TopBar";
 import { TabBar } from "./components/TabBar";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 export type View =
   | { name: "home" }
@@ -94,14 +95,16 @@ function Shell() {
 
 export default function App() {
   return (
-    <PlayerProvider>
-      <AdminProvider>
-        <MemoryProvider>
-          <SocialProvider>
-            <Shell />
-          </SocialProvider>
-        </MemoryProvider>
-      </AdminProvider>
-    </PlayerProvider>
+    <ErrorBoundary>
+      <PlayerProvider>
+        <AdminProvider>
+          <MemoryProvider>
+            <SocialProvider>
+              <Shell />
+            </SocialProvider>
+          </MemoryProvider>
+        </AdminProvider>
+      </PlayerProvider>
+    </ErrorBoundary>
   );
 }
