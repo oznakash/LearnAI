@@ -14,6 +14,7 @@
 - **Mission, end-game, vision:** [`docs/vision.md`](./docs/vision.md)
 - **Today's MVP:** [`docs/mvp.md`](./docs/mvp.md)
 - **Architecture:** [`docs/architecture.md`](./docs/architecture.md)
+- **Metrics & KPIs (North Star + guardrails):** [`docs/metrics.md`](./docs/metrics.md)
 - **Wiki TOC:** [`docs/INDEX.md`](./docs/INDEX.md)
 - **Content-experience plan (active):** [`docs/content-experience-plan.md`](./docs/content-experience-plan.md). Three workstreams: session sequencer + visual-box redesign · `PodcastNugget` Spark variant + admin feature flag · 👍/👎 with permanent skip on 👎.
 - **External content seam — Lenny's Podcast archive:** [`docs/lenny-archive.md`](./docs/lenny-archive.md). The transcripts themselves live **outside** this repo at `/Users/oznakash/Downloads/Lenny's Podcast Transcripts Archive [public]` (319 files, ~27 MB). That folder is read-only reference material, **not** committed to git. Use the doc above as the staging surface for any `PodcastNugget` Spark before it ships into `app/src/content/topics/*.ts`.
@@ -78,6 +79,7 @@ If your PR changes user-visible behavior, update **at least one** of:
 - `docs/architecture.md` — if a box on the diagram changes.
 - `docs/roadmap.md` — if a sprint item moves status.
 - `docs/design-language.md` — if a colour, shadow, primitive, motion, or third-party-widget pattern changes.
+- `docs/metrics.md` — if the change is expected to move a North Star, supporting KPI, or guardrail. PR description should list which curve and the expected delta.
 
 If you add a Spark or a Constellation, you don't need a doc change — the seed file is the doc.
 
