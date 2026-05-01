@@ -1,20 +1,25 @@
 // Entry point. Reads env, builds the store, mounts the app, listens on $PORT.
 //
 // Required env vars (production):
-//   JWT_SECRET             — same value as mem0's JWT_SECRET (HS256)
-//   SOCIAL_ADMIN_EMAILS    — comma-separated emails granted admin access
-//   SOCIAL_DB_PATH         — file path for JSON persistence (mounted volume)
+//   JWT_SECRET                  — same value as mem0's JWT_SECRET (HS256)
+//   SOCIAL_ADMIN_EMAILS         — comma-separated emails granted admin access
+//   SOCIAL_DB_PATH              — file path for JSON persistence (mounted volume)
 //
 // Optional env vars:
-//   PORT                       (default 8787)
-//   SOCIAL_ALLOWED_ORIGINS     (default "*"; restrict in non-same-origin setups)
-//   SOCIAL_DEMO_TRUST_HEADER   (default "0"; "1" enables X-User-Email path —
-//                               refused when NODE_ENV=production)
-//   NODE_ENV                   (set to "production" on the live deploy)
+//   PORT                        (default 8787)
+//   SOCIAL_ALLOWED_ORIGINS      (default "*"; restrict in non-same-origin setups)
+//   SOCIAL_DEMO_TRUST_HEADER    (default "0"; "1" enables X-User-Email path
+//                                — refused when NODE_ENV=production)
+//   NODE_ENV                    (set to "production" on the live deploy)
+//
+// Storage path: in-memory + JSON-file persistence on the mounted volume.
+// A Postgres adapter is intentionally NOT shipped here — the engineering
+// plan retains it for the scale-out moment, not Sprint 2.5.
 
 import { createApp } from "./app.js";
 import { createStore } from "./store.js";
 import { log } from "./log.js";
+import { startSpotlightCron } from "./spotlight.js";
 
 const port = parseInt(process.env.PORT ?? "8787", 10);
 const dbPath = process.env.SOCIAL_DB_PATH || undefined;
@@ -41,10 +46,15 @@ if (process.env.NODE_ENV === "production") {
 const store = createStore({ dbPath });
 const app = createApp({ store, admins, jwtSecret, allowedOrigins, demoTrustHeader });
 
+// Spotlight cron — emits one `kind="spotlight"` event per Topic
+// every ~6 hours. Keeps the Spark Stream alive even for users with
+// no follows yet (PRD §4.5 visibility path 3).
+startSpotlightCron(store);
+
 app.listen(port, () => {
   log.info("listening", {
     port,
-    db: dbPath ?? "memory-only",
+    backend: store.backendName?.() ?? "memory",
     admins: admins.length,
     jwt: jwtSecret ? "configured" : "missing",
     demo_trust_header: demoTrustHeader,

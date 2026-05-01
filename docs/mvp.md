@@ -83,7 +83,7 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ### Quality bar
 
-- **300 tests passing**: 265 SPA (Vitest) + 35 social-svc (supertest+vitest). After Sprint 2.5 consolidation, the auth-proxy package was folded into social-svc and its 10 tests were either retained as JWT-verification tests or made obsolete by the simpler architecture.
+- **310 tests passing**: 266 SPA (Vitest) + 44 social-svc (supertest+vitest). Sprint 2.5 PR 12 added the close-out polish: `/health` startup state, Stream Signal-overlap + spotlight cron, telemetry endpoint, and admin telemetry panel.
 - Build: ~556 KB JS / ~30 KB CSS gzipped, ~83 modules.
 - Pinch-zoom + double-tap-zoom blocked (mobile + desktop trackpad). Keyboard zoom intentionally preserved.
 - Overscroll bounce stopped.
@@ -127,8 +127,8 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ```sh
 # Source on disk, not screenshots:
-npm test                              # SPA: 265 / 265
-npm test --prefix services/social-svc # 35 / 35
+npm test                              # SPA: 266 / 266
+npm test --prefix services/social-svc # 44 / 44
 npm run build                         # green
 npm run dev                           # play it
 ```

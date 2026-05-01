@@ -70,9 +70,32 @@ export interface Store {
   ): StreamEventRecord;
   listEventsSince(sinceMs: number, limit?: number): StreamEventRecord[];
 
+  // Telemetry
+  statsSnapshot(): StoreStats;
+  /** Identifier surfaced on /health (e.g. "memory-only", "memory+jsonfile", "postgres"). */
+  backendName?(): string;
+
   // Persistence
   flush(): void;
   reset(): void;
+}
+
+export interface StoreStats {
+  profileCount: number;
+  openProfiles: number;
+  closedProfiles: number;
+  kidProfiles: number;
+  followCount: number;
+  approvedFollows: number;
+  pendingFollows: number;
+  blockCount: number;
+  reportCount: number;
+  openReports: number;
+  resolvedReports: number;
+  eventCount: number;
+  events24h: number;
+  eventsByKind: Record<string, number>;
+  signalsByTopic: Record<string, number>;
 }
 
 export function createStore(opts: { dbPath?: string } = {}): Store {
@@ -288,6 +311,53 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       return state.events
         .filter((e) => e.createdAt >= sinceMs)
         .slice(0, limit);
+    },
+
+    // Telemetry -----------------------------------------------------------
+    statsSnapshot() {
+      const last24h = Date.now() - 24 * 60 * 60 * 1000;
+      const eventsByKind: Record<string, number> = {};
+      let events24h = 0;
+      for (const e of state.events) {
+        eventsByKind[e.kind] = (eventsByKind[e.kind] ?? 0) + 1;
+        if (e.createdAt >= last24h) events24h++;
+      }
+      const signalsByTopic: Record<string, number> = {};
+      let kidProfiles = 0;
+      let openProfiles = 0;
+      let closedProfiles = 0;
+      for (const p of state.profiles) {
+        if (p.ageBand === "kid") kidProfiles++;
+        if (p.profileMode === "open") openProfiles++;
+        else closedProfiles++;
+        for (const s of p.signals) {
+          signalsByTopic[s] = (signalsByTopic[s] ?? 0) + 1;
+        }
+      }
+      const approvedFollows = state.follows.filter((e) => e.status === "approved").length;
+      const pendingFollows = state.follows.filter((e) => e.status === "pending").length;
+      const openReports = state.reports.filter((r) => r.status === "open").length;
+      const resolvedReports = state.reports.filter((r) => r.status === "resolved").length;
+      return {
+        profileCount: state.profiles.length,
+        openProfiles,
+        closedProfiles,
+        kidProfiles,
+        followCount: state.follows.length,
+        approvedFollows,
+        pendingFollows,
+        blockCount: state.blocks.length,
+        reportCount: state.reports.length,
+        openReports,
+        resolvedReports,
+        eventCount: state.events.length,
+        events24h,
+        eventsByKind,
+        signalsByTopic,
+      };
+    },
+    backendName() {
+      return opts.dbPath ? "memory+jsonfile" : "memory-only";
     },
 
     // Persistence ----------------------------------------------------------

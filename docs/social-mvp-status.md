@@ -23,11 +23,12 @@
 | [#48](https://github.com/oznakash/learnai/pull/48) | `4ce6d14` | 2026-04-30 | PR 9 — AdminModeration tab |
 | [#49](https://github.com/oznakash/learnai/pull/49) | `6932f95` | 2026-04-30 | Doc PR — README, mvp, roadmap, INDEX, architecture, this status doc |
 | [#50](https://github.com/oznakash/learnai/pull/50) | `8d3aec5` | 2026-04-30 | Sprint 2.5 PR 10 — closed 8 P0s + 2 P1s (snapshot pipeline, upstream bearer, email leak, handle fix, clientId idempotency, snapshot validation, kid-safety, closed-stub leak) |
-| (this PR) | (pending) | 2026-05-01 | Sprint 2.5 PR 11 — **architecture consolidation**: deleted `services/auth-proxy/`; folded its logic into `services/social-svc/`; bundled the sidecar into the SPA container; switched auth from injected-X-User-Email to local session-JWT verification; same-origin defaults on the SPA; structured JSON logging; Dockerfile + entrypoint script. Three deploy units → two. No Cloudflare account needed. |
+| [#51](https://github.com/oznakash/learnai/pull/51) | `7dc9b66` | 2026-05-01 | Sprint 2.5 PR 11 — **architecture consolidation**: deleted `services/auth-proxy/`; folded its logic into `services/social-svc/`; bundled the sidecar into the SPA container; switched auth to local session-JWT verification; same-origin defaults on the SPA; structured JSON logging; Dockerfile + entrypoint script. Three deploy units → two. No Cloudflare account needed. |
+| (this PR) | (pending) | 2026-05-01 | Sprint 2.5 PR 12 — **close-out polish**: `/health` exposes startup state (`jwt_configured`, `demo_trust_header`, `admins`, `backend`, `misconfig`); Stream Signal-overlap visibility path + spotlight cron (PRD §4.5 paths 2 & 3); telemetry endpoint (`/v1/social/admin/analytics`) + AdminAnalytics social panel (profile counts, follow edges, events 24h, by-kind, by-Topic Signal distribution). **Postgres-2 swap intentionally rolled back** per founder call: postpone the new-DB infra until we need to scale beyond a single host; in-memory + JSON-file on the mounted `/data` volume continues to be the storage path. |
 
 ### By the numbers
 
-- Test count: 90 → **300** (265 SPA + 35 social-svc).
+- Test count: 90 → **310** (266 SPA + 44 social-svc).
 - Bundle delta: ~+50 KB JS gzipped.
 - Deploy units on cloud-claude: **2** (the SPA container with social-svc sidecar bundled in + mem0). Was briefly 3 between PR 7 and PR 11.
 - Engagement-feedback ranking signals shipped: **0** (vision §4).
