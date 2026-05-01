@@ -4,6 +4,9 @@ import { useMemory } from "../memory/MemoryContext";
 import { Mem0MemoryService } from "../memory";
 import { usePlayer } from "../store/PlayerContext";
 import { fetchAdminServerStatus, type AdminServerStatus } from "../auth/server";
+import { buildCohortCognition, relativeTime, type CohortCognition } from "./cognition";
+import { Bars } from "../visuals/Charts";
+import { TOPIC_MAP } from "../content";
 
 /**
  * Admin → Memory tab.
@@ -23,7 +26,7 @@ import { fetchAdminServerStatus, type AdminServerStatus } from "../auth/server";
  * ADMIN_EMAILS list, CORS_ORIGINS, etc.) without leaving the SPA.
  */
 export function AdminMemory() {
-  const { config, setConfig } = useAdmin();
+  const { config, setConfig, mockUsers } = useAdmin();
   const { state: player } = usePlayer();
   const { backend, status, refreshHealth } = useMemory();
 
@@ -215,16 +218,90 @@ export function AdminMemory() {
     }
   };
 
+  // ---------- Cohort cognition (top of page) ----------
+  // Reads the same `mockUsers` AdminContext exposes (which already folds
+  // mem0's user_state list with self/demo) and fans out one
+  // GET /v1/memories/?user_id=... per real-user row. Reduces locally into
+  // CohortCognition. Refetches when the cohort or session token changes,
+  // and when the operator hits the manual refresh button.
+  const realEmails = useMemo(
+    () =>
+      mockUsers
+        .filter((u) => u.id === "self" || u.id.startsWith("mem0:"))
+        .map((u) => u.email),
+    [mockUsers],
+  );
+  const [cohort, setCohort] = useState<CohortCognition | null>(null);
+  const [cohortBusy, setCohortBusy] = useState(false);
+  const [cohortError, setCohortError] = useState<string | null>(null);
+  const [cohortBumpKey, setCohortBumpKey] = useState(0);
+  useEffect(() => {
+    if (!effectiveUrl || !sessionToken || realEmails.length === 0) {
+      setCohort(null);
+      setCohortError(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    setCohortBusy(true);
+    setCohortError(null);
+    void buildCohortCognition({
+      base: effectiveUrl,
+      token: sessionToken,
+      emails: realEmails,
+      signal: ctrl.signal,
+    })
+      .then((c) => {
+        if (!ctrl.signal.aborted) setCohort(c);
+      })
+      .catch((e) => {
+        if (!ctrl.signal.aborted) setCohortError((e as Error).message);
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setCohortBusy(false);
+      });
+    return () => ctrl.abort();
+  }, [effectiveUrl, sessionToken, realEmails, cohortBumpKey]);
+  const refreshCohort = () => setCohortBumpKey((k) => k + 1);
+
   return (
     <div className="space-y-5">
       <header>
         <h2 className="h2">🧠 Memory & Cognition</h2>
         <p className="muted text-sm">
-          The cognition layer is powered by <strong>self-hosted mem0</strong>. Master switch, the live config
-          actually being used by the SPA, server-side env snapshot, and a per-user inspector.
+          The cognition layer is powered by <strong>self-hosted mem0</strong>. Cohort signal up top
+          (engagement, where users struggle, live activity), then config + per-user inspector.
           See <code>docs/mem0.md</code> for the architecture.
         </p>
       </header>
+
+      {/* ---------- Cohort cognition (new) ---------- */}
+      <CohortSnapshot
+        cohort={cohort}
+        busy={cohortBusy}
+        error={cohortError}
+        onRefresh={refreshCohort}
+        emailsAttempted={realEmails.length}
+      />
+
+      {cohort && cohort.totalMemories > 0 && (
+        <>
+          <CohortEngagement cohort={cohort} />
+          <StruggleRadar cohort={cohort} />
+          <LiveMemoryFeed cohort={cohort} />
+          <PerUserDepth
+            cohort={cohort}
+            onPickEmail={(email) => {
+              setInspectEmail(email);
+              // Scroll to inspector after a tick so the state lands first.
+              setTimeout(() => {
+                document
+                  .getElementById("admin-memory-inspector")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 30);
+            }}
+          />
+        </>
+      )}
 
       {/* Live status — what the SPA is using right now */}
       <section className="card p-5 space-y-3">
@@ -446,7 +523,7 @@ export function AdminMemory() {
       </section>
 
       {/* Per-user inspector */}
-      <section className="card p-5 space-y-3">
+      <section id="admin-memory-inspector" className="card p-5 space-y-3">
         <h3 className="font-display font-semibold text-white">Per-user inspector</h3>
         <p className="muted text-xs">
           View, edit, forget-one, export, or wipe-all memories for a specific Gmail. Useful for debugging,
@@ -547,5 +624,273 @@ export function AdminMemory() {
         )}
       </section>
     </div>
+  );
+}
+
+// =====================================================================
+// Cohort cognition sub-sections — feed off the same CohortCognition shape
+// produced by buildCohortCognition(). All components are pure renders;
+// the parent owns the fetch + refresh.
+// =====================================================================
+
+function CohortSnapshot({
+  cohort,
+  busy,
+  error,
+  onRefresh,
+  emailsAttempted,
+}: {
+  cohort: CohortCognition | null;
+  busy: boolean;
+  error: string | null;
+  onRefresh: () => void;
+  emailsAttempted: number;
+}) {
+  if (error) {
+    return (
+      <section className="card p-4 border-bad/30 bg-bad/[0.05]">
+        <div className="text-sm text-bad">
+          Couldn't aggregate cohort cognition: {error}.
+          {error === "not_admin" && (
+            <> Make sure your account is in mem0's <span className="font-mono">ADMIN_EMAILS</span>.</>
+          )}
+        </div>
+      </section>
+    );
+  }
+  if (!cohort) {
+    return (
+      <section className="card p-4 border-white/10 bg-white/[0.02]">
+        <div className="text-sm text-white/70">
+          {busy
+            ? `Loading cognition signal across ${emailsAttempted} user${emailsAttempted === 1 ? "" : "s"}…`
+            : emailsAttempted === 0
+              ? "No real users yet — cognition aggregates light up on first sign-in."
+              : "Need a live admin session + a configured mem0 URL to load cohort cognition."}
+        </div>
+      </section>
+    );
+  }
+  const stats = [
+    { label: "Total memories", value: cohort.totalMemories },
+    { label: "Users with memory", value: `${cohort.usersWithMemories} / ${cohort.totalUsers}` },
+    { label: "Avg / active user", value: cohort.avgMemoriesPerUser },
+    { label: "Last write", value: relativeTime(cohort.lastWriteAt) },
+  ];
+  return (
+    <section className="card p-5 space-y-3">
+      <header className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="font-display font-semibold text-white">Cohort cognition</h3>
+        <button
+          className="btn-ghost text-xs"
+          onClick={onRefresh}
+          disabled={busy}
+          title="Refetch /v1/memories for every user in the cohort and re-aggregate."
+        >
+          {busy ? "Refreshing…" : "↻ Refresh"}
+        </button>
+      </header>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <div key={s.label} className="card p-3">
+            <div className="text-2xl font-display font-bold text-white tabular-nums">
+              {s.value}
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-white/50">{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+        {cohort.byCategory.map((c) => (
+          <div
+            key={c.key}
+            className="flex items-center justify-between border border-white/5 rounded px-2 py-1 bg-white/[0.02]"
+          >
+            <span className="text-white/70">{c.key}</span>
+            <span className="text-white tabular-nums">{c.n}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CohortEngagement({ cohort }: { cohort: CohortCognition }) {
+  const topicBars = cohort.byTopic.slice(0, 8).map((t) => {
+    const known = TOPIC_MAP[t.key as keyof typeof TOPIC_MAP];
+    return { label: known?.emoji ?? "?", value: t.n };
+  });
+  const sparkBars = cohort.bySparkType.slice(0, 8).map((s) => ({
+    label: s.key.slice(0, 6),
+    value: s.n,
+  }));
+  return (
+    <section className="grid lg:grid-cols-2 gap-3">
+      <div className="card p-4">
+        <h3 className="font-display font-semibold text-white mb-2">Memories by topic</h3>
+        <p className="text-[11px] text-white/50 mb-2">
+          Where the cognition layer is actually getting fed. Topics with no
+          bar are content the cohort hasn't engaged with.
+        </p>
+        {topicBars.length === 0 ? (
+          <div className="text-xs text-white/40 italic">No topic-tagged memories yet.</div>
+        ) : (
+          <Bars data={topicBars} width={500} height={140} color="#7c5cff" />
+        )}
+        <ul className="mt-3 text-xs space-y-1">
+          {cohort.byTopic.slice(0, 6).map((t) => {
+            const known = TOPIC_MAP[t.key as keyof typeof TOPIC_MAP];
+            return (
+              <li key={t.key} className="flex items-center justify-between">
+                <span className="text-white/80">
+                  {known?.emoji ?? "?"} {known?.name ?? t.key}
+                </span>
+                <span className="text-white/60 tabular-nums">{t.n}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div className="card p-4">
+        <h3 className="font-display font-semibold text-white mb-2">By Spark type</h3>
+        <p className="text-[11px] text-white/50 mb-2">
+          What interaction modes users actually finish. A type that's
+          conspicuously low after launch may have a UX issue.
+        </p>
+        {sparkBars.length === 0 ? (
+          <div className="text-xs text-white/40 italic">No spark-typed memories yet.</div>
+        ) : (
+          <Bars data={sparkBars} width={500} height={140} color="#28e0b3" />
+        )}
+        <ul className="mt-3 text-xs space-y-1">
+          {cohort.bySparkType.slice(0, 6).map((s) => (
+            <li key={s.key} className="flex items-center justify-between">
+              <span className="text-white/80">{s.key}</span>
+              <span className="text-white/60 tabular-nums">{s.n}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function StruggleRadar({ cohort }: { cohort: CohortCognition }) {
+  if (cohort.struggle.length === 0) {
+    return (
+      <section className="card p-4 text-xs text-white/50">
+        <h3 className="font-display font-semibold text-white text-sm mb-1">Struggle radar</h3>
+        No <code>correct=false</code> events captured yet. Once players try a Spark and miss
+        the first attempt, those moments land here as content-fix candidates.
+      </section>
+    );
+  }
+  return (
+    <section className="card p-4 space-y-2">
+      <header className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="font-display font-semibold text-white">Struggle radar</h3>
+          <p className="text-[11px] text-white/50">
+            Recent first-try misses. Each row is a real player getting tripped up — the
+            highest-signal candidates for content rewrites.
+          </p>
+        </div>
+        <span className="text-[11px] text-white/40">{cohort.struggle.length} captured</span>
+      </header>
+      <ul className="text-xs divide-y divide-white/5">
+        {cohort.struggle.slice(0, 8).map((m) => {
+          const md = m.metadata ?? {};
+          const known = TOPIC_MAP[md.topicId as keyof typeof TOPIC_MAP];
+          return (
+            <li key={m.id} className="py-1.5 flex items-start gap-3">
+              <span className="text-bad/80 shrink-0 w-3 text-center">⚠</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-white truncate">{m.memory}</div>
+                <div className="text-white/50 mt-0.5">
+                  <span className="font-mono">{m.user_id}</span>
+                  <span className="ml-2">
+                    {known?.emoji} {known?.name ?? md.topicId ?? "?"}
+                  </span>
+                  {md.sparkType && <span className="ml-2 chip text-[10px]">{md.sparkType}</span>}
+                  <span className="ml-2 text-white/40">
+                    {relativeTime(m.created_at ? Date.parse(m.created_at) : null)}
+                  </span>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function LiveMemoryFeed({ cohort }: { cohort: CohortCognition }) {
+  return (
+    <section className="card p-4 space-y-2">
+      <header className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="font-display font-semibold text-white">Live memory feed</h3>
+          <p className="text-[11px] text-white/50">
+            Last {cohort.recent.length} writes across all users. Refresh to pull again.
+          </p>
+        </div>
+      </header>
+      <ul className="text-xs divide-y divide-white/5 max-h-[40vh] overflow-y-auto">
+        {cohort.recent.map((m) => {
+          const md = m.metadata ?? {};
+          return (
+            <li key={m.id} className="py-1.5">
+              <div className="flex items-baseline gap-2 text-white/40">
+                <span className="text-white/30 tabular-nums w-[58px] shrink-0">
+                  {relativeTime(m.created_at ? Date.parse(m.created_at) : null)}
+                </span>
+                <span className="font-mono text-white/70 truncate">{m.user_id}</span>
+                {md.category && (
+                  <span className="chip text-[10px]">{md.category}</span>
+                )}
+              </div>
+              <div className="text-white/85 mt-0.5 truncate">{m.memory}</div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function PerUserDepth({
+  cohort,
+  onPickEmail,
+}: {
+  cohort: CohortCognition;
+  onPickEmail: (email: string) => void;
+}) {
+  return (
+    <section className="card p-4 space-y-2">
+      <header>
+        <h3 className="font-display font-semibold text-white">Per-user depth</h3>
+        <p className="text-[11px] text-white/50">
+          Which users have rich memory profiles vs. silent. Click a row to load it into the
+          inspector below.
+        </p>
+      </header>
+      <ul className="text-xs divide-y divide-white/5">
+        {cohort.perUser.map((u) => (
+          <li key={u.email} className="py-1.5 flex items-center justify-between gap-3">
+            <button
+              className="text-left text-accent hover:underline truncate"
+              onClick={() => onPickEmail(u.email)}
+              title={`Inspect ${u.email}`}
+            >
+              {u.email}
+            </button>
+            <span className="text-white/60 tabular-nums shrink-0">
+              {u.memories} mems · {relativeTime(u.lastWriteAt)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
