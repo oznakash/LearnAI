@@ -156,6 +156,67 @@ describe("Mem0MemoryService", () => {
     await svc.forget("x");
     expect(String(fetchMock.mock.calls[0][0])).toBe("https://mem0.example.com/v1/memories/x/");
   });
+
+  it("auth circuit breaker: short-circuits after a 401 instead of hammering the server", async () => {
+    // First call returns 401 → cool-down activates.
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: "Authentication required" }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const svc = new Mem0MemoryService(baseOpts);
+    await expect(svc.add({ text: "hi", category: "goal" })).rejects.toThrow(/HTTP 401/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Subsequent non-health calls do NOT hit the network.
+    await expect(svc.add({ text: "hi 2", category: "goal" })).rejects.toThrow(/auth-failure backoff/);
+    await expect(svc.search("anything")).rejects.toThrow(/auth-failure backoff/);
+    await expect(svc.list()).rejects.toThrow(/auth-failure backoff/);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // still only the original 401
+  });
+
+  it("auth circuit breaker: /health is exempt from the backoff", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response("nope", { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
+    const svc = new Mem0MemoryService(baseOpts);
+    await expect(svc.add({ text: "x", category: "goal" })).rejects.toThrow(/HTTP 401/);
+    const h = await svc.health();
+    expect(h.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("auth circuit breaker: a successful response clears the gate", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response("nope", { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "m_1", memory: "ok" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
+    const svc = new Mem0MemoryService(baseOpts);
+    await expect(svc.add({ text: "x", category: "goal" })).rejects.toThrow(/HTTP 401/);
+    // Health succeeds → gate clears.
+    const h = await svc.health();
+    expect(h.ok).toBe(true);
+    // Subsequent non-health calls hit the network again.
+    const item = await svc.add({ text: "y", category: "goal" });
+    expect(item.id).toBe("m_1");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("withMemoryGuard", () => {

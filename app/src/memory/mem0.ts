@@ -40,11 +40,21 @@ interface RawMemory {
   updated_at?: string | number;
 }
 
+/**
+ * Cool-down after a 401/403 before we retry. Without this, every Spark
+ * answer / level-up / boss event fires a memory write that all 401, and
+ * the SPA hammers the server (dozens of failed requests/min). The pause
+ * is short so a re-auth recovers quickly; any successful response (incl.
+ * /health) clears the gate immediately.
+ */
+const AUTH_FAILURE_PAUSE_MS = 30_000;
+
 export class Mem0MemoryService implements MemoryService {
   private readonly base: string;
   private readonly apiKey?: string;
   private readonly userId: string;
   private readonly timeoutMs: number;
+  private authBlockedUntil = 0;
 
   constructor(opts: Mem0Options) {
     this.base = trimTrailing(opts.serverUrl);
@@ -65,6 +75,13 @@ export class Mem0MemoryService implements MemoryService {
     path: string,
     init: RequestInit & { timeoutMs?: number } = {}
   ): Promise<T> {
+    // Auth circuit breaker: skip non-health calls while a recent 401/403
+    // is still in cool-down. /health is always allowed so the user can
+    // re-probe after fixing credentials.
+    const isHealth = path === "/health" || path.startsWith("/health");
+    if (!isHealth && this.authBlockedUntil > Date.now()) {
+      throw new Error(`mem0 ${path} → paused (auth-failure backoff)`);
+    }
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), init.timeoutMs ?? this.timeoutMs);
     try {
@@ -74,6 +91,9 @@ export class Mem0MemoryService implements MemoryService {
         headers: { ...this.headers(), ...((init.headers as Record<string, string>) ?? {}) },
       });
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          this.authBlockedUntil = Date.now() + AUTH_FAILURE_PAUSE_MS;
+        }
         let body = "";
         try {
           body = await res.text();
@@ -82,6 +102,8 @@ export class Mem0MemoryService implements MemoryService {
         }
         throw new Error(`mem0 ${path} → HTTP ${res.status} ${body}`.trim());
       }
+      // Any successful response clears the gate — auth is healthy again.
+      this.authBlockedUntil = 0;
       const ct = res.headers.get("content-type") ?? "";
       if (!ct.includes("application/json")) return undefined as unknown as T;
       return (await res.json()) as T;
