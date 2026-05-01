@@ -14,6 +14,7 @@ import type {
   ServerSessionState,
   Spark,
   SessionRecord,
+  SparkVote,
   Task,
   TopicId,
 } from "../types";
@@ -26,6 +27,7 @@ import {
   regenFocus,
   saveState,
   type SparkResult,
+  voteOnSpark,
   xpForExercise,
 } from "./game";
 import { evaluateBadges } from "./badges";
@@ -86,6 +88,21 @@ interface Ctx {
   addTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt" | "status"> & { status?: Task["status"] }) => Task;
   updateTask: (id: string, patch: Partial<Task>) => void;
   removeTask: (id: string) => void;
+  /**
+   * Record (or flip) the user's 👍 / 👎 vote on a Spark. Idempotent on a
+   * repeat of the same value; flipping overwrites the prior vote and
+   * bumps the timestamp. The optional `reason` is the one-line "why"
+   * the user can attach to a 👎.
+   *
+   * Note: this only writes the vote into PlayerState. The cognition-layer
+   * (`MemoryContext.remember`) write on a 👎 is the caller's job (see
+   * `views/Play.tsx`) — we keep the Player ↔ Memory boundary clean here.
+   */
+  voteSpark: (
+    sparkId: string,
+    vote: SparkVote,
+    opts?: { reason?: string; topicId?: TopicId; levelId?: string }
+  ) => void;
 }
 
 const PlayerCtx = createContext<Ctx | null>(null);
@@ -324,6 +341,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [setState]
   );
 
+  const voteSpark: Ctx["voteSpark"] = useCallback(
+    (sparkId, vote, opts) =>
+      setState((s) => voteOnSpark(s, sparkId, vote, opts ?? {})),
+    [setState]
+  );
+
   const value = useMemo<Ctx>(
     () => ({
       state,
@@ -340,8 +363,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       addTask,
       updateTask,
       removeTask,
+      voteSpark,
     }),
-    [state, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask]
+    [state, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask, voteSpark]
   );
 
   return <PlayerCtx.Provider value={value}>{children}</PlayerCtx.Provider>;

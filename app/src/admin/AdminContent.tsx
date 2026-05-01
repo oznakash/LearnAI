@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useAdmin } from "./AdminContext";
 import { SEED_TOPICS } from "../content";
-import type { Topic, TopicId } from "../types";
+import { usePlayer } from "../store/PlayerContext";
+import type { Spark, Topic, TopicId } from "../types";
 
 /**
  * Read-only browser + bulk JSON edit for game content.
@@ -269,6 +270,120 @@ type Exercise =
           )}
         </div>
       </div>
+
+      <SparkFeedbackRollup />
     </div>
+  );
+}
+
+interface SparkLookup {
+  spark: Spark;
+  topicName: string;
+  topicId: TopicId;
+  levelIndex: number;
+  levelId: string;
+}
+
+/**
+ * Surfaces the local player's 👍 / 👎 feedback aggregated by Spark.
+ *
+ * **Scope.** This is the per-device slice — the admin's own votes (and,
+ * once the social-svc-backed rollup ships, every signed-in user's votes
+ * pooled at the server). For now we deliberately render only what's in
+ * `PlayerState.feedback` so the MVP works without a backend; the panel
+ * is shaped to extend cleanly when cross-user counts arrive.
+ *
+ * **Use.** Sparks with sustained 👎-ratio go into the queue for revision —
+ * we don't auto-delete content. The "what to revise" judgement stays
+ * with the editor.
+ */
+function SparkFeedbackRollup() {
+  const { state } = usePlayer();
+  const feedback = state.feedback ?? [];
+
+  const sparkIndex = useMemo<Record<string, SparkLookup>>(() => {
+    const out: Record<string, SparkLookup> = {};
+    for (const t of SEED_TOPICS) {
+      for (const lvl of t.levels) {
+        for (const sp of lvl.sparks) {
+          out[sp.id] = {
+            spark: sp,
+            topicName: t.name,
+            topicId: t.id,
+            levelIndex: lvl.index,
+            levelId: lvl.id,
+          };
+        }
+      }
+    }
+    return out;
+  }, []);
+
+  const ups = feedback.filter((f) => f.vote === "up");
+  const downs = feedback.filter((f) => f.vote === "down");
+
+  if (feedback.length === 0) {
+    return (
+      <section className="card p-4 space-y-2">
+        <h3 className="h2">📊 Spark feedback</h3>
+        <p className="muted text-sm">
+          No 👍 / 👎 votes yet on this device. Players' votes show up here as they cast them.
+          When a Spark gets sustained 👎 it goes into the queue for revision — we don't auto-delete content.
+        </p>
+        <p className="muted text-xs">
+          Cross-user rollups will appear here once social-svc aggregates votes server-side.
+        </p>
+      </section>
+    );
+  }
+
+  const renderRow = (sparkId: string, reason?: string) => {
+    const meta = sparkIndex[sparkId];
+    return (
+      <li
+        key={sparkId}
+        className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm flex flex-wrap items-center gap-2"
+      >
+        <span className="text-white font-semibold">
+          {meta?.spark.title ?? <span className="text-white/40 italic">deleted spark</span>}
+        </span>
+        {meta && (
+          <span className="text-white/55 text-xs">
+            · {meta.topicName} · L{meta.levelIndex}
+          </span>
+        )}
+        {reason && (
+          <span className="text-white/70 italic text-xs basis-full">"{reason}"</span>
+        )}
+      </li>
+    );
+  };
+
+  return (
+    <section className="card p-4 space-y-3">
+      <header className="flex flex-wrap items-baseline gap-3">
+        <h3 className="h2">📊 Spark feedback</h3>
+        <span className="text-xs text-white/55">
+          {ups.length} 👍 · {downs.length} 👎 (this device)
+        </span>
+      </header>
+      <p className="muted text-xs">
+        Per-Spark 👍 / 👎 votes from the local player. Cross-user rollups arrive once social-svc aggregates server-side.
+      </p>
+
+      {downs.length > 0 && (
+        <div>
+          <div className="label mb-1">👎 Skipped Sparks ({downs.length})</div>
+          <ul className="space-y-1.5">{downs.map((f) => renderRow(f.sparkId, f.reason))}</ul>
+        </div>
+      )}
+
+      {ups.length > 0 && (
+        <div>
+          <div className="label mb-1">👍 Helpful Sparks ({ups.length})</div>
+          <ul className="space-y-1.5">{ups.map((f) => renderRow(f.sparkId))}</ul>
+        </div>
+      )}
+    </section>
   );
 }

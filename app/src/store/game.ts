@@ -4,6 +4,8 @@ import type {
   PlayerState,
   SessionRecord,
   Spark,
+  SparkFeedback,
+  SparkVote,
   TopicId,
 } from "../types";
 import { TOPICS, getTopic } from "../content";
@@ -43,6 +45,7 @@ export function defaultState(): PlayerState {
     },
     history: [],
     tasks: [],
+    feedback: [],
     prefs: { sound: true, haptics: true },
   };
 }
@@ -210,6 +213,54 @@ export function completedSparkIds(s: PlayerState, levelId: string): string[] {
   return s.progress.completed[levelId] ?? [];
 }
 
+/**
+ * Set of Spark IDs the user has thumbed-down. These are permanently
+ * skipped — never shown again by `nextRecommendedSpark`, and excluded
+ * from level/topic completion totals.
+ */
+export function dislikedSparkIds(s: PlayerState): Set<string> {
+  const out = new Set<string>();
+  for (const f of s.feedback ?? []) {
+    if (f.vote === "down") out.add(f.sparkId);
+  }
+  return out;
+}
+
+/** The user's current vote on a Spark, or null if none. */
+export function getSparkVote(s: PlayerState, sparkId: string): SparkVote | null {
+  const f = (s.feedback ?? []).find((x) => x.sparkId === sparkId);
+  return f ? f.vote : null;
+}
+
+/**
+ * Idempotent vote write: if the user has already cast the same vote on
+ * the same spark, returns the state unchanged. Flipping up → down (or
+ * vice-versa) overwrites the prior vote and bumps the timestamp.
+ */
+export function voteOnSpark(
+  s: PlayerState,
+  sparkId: string,
+  vote: SparkVote,
+  opts: { reason?: string; topicId?: TopicId; levelId?: string; ts?: number } = {}
+): PlayerState {
+  const ts = opts.ts ?? Date.now();
+  const prior = (s.feedback ?? []).find((f) => f.sparkId === sparkId);
+  if (prior && prior.vote === vote && (opts.reason ?? prior.reason) === prior.reason) {
+    // No-op when nothing meaningful changes.
+    return s;
+  }
+  const others = (s.feedback ?? []).filter((f) => f.sparkId !== sparkId);
+  const next: SparkFeedback = {
+    sparkId,
+    vote,
+    reason: opts.reason ?? prior?.reason,
+    topicId: opts.topicId ?? prior?.topicId,
+    levelId: opts.levelId ?? prior?.levelId,
+    ts,
+  };
+  return { ...s, feedback: [next, ...others] };
+}
+
 export function levelCompletion(
   s: PlayerState,
   topicId: TopicId,
@@ -217,22 +268,29 @@ export function levelCompletion(
 ): { done: number; total: number; pct: number } {
   const t = getTopic(topicId);
   const lvl = t?.levels.find((l) => l.id === levelId);
-  const total = lvl?.sparks.length ?? 0;
-  const done = completedSparkIds(s, levelId).length;
+  // Disliked Sparks are permanently skipped for this user, so they
+  // come out of the denominator — a user who dislikes one Spark in a
+  // 5-Spark level can still 100%-clear it by completing the other 4.
+  const disliked = dislikedSparkIds(s);
+  const playable = lvl?.sparks.filter((sp) => !disliked.has(sp.id)) ?? [];
+  const total = playable.length;
+  const done = completedSparkIds(s, levelId).filter((id) => !disliked.has(id)).length;
   return { done, total, pct: total === 0 ? 0 : Math.round((done / total) * 100) };
 }
 
 export function topicCompletion(s: PlayerState, topicId: TopicId) {
   const t = getTopic(topicId);
   if (!t) return { done: 0, total: 0, pct: 0, levelsDone: 0 };
+  const disliked = dislikedSparkIds(s);
   let done = 0;
   let total = 0;
   let levelsDone = 0;
   for (const lvl of t.levels) {
-    total += lvl.sparks.length;
-    const d = completedSparkIds(s, lvl.id).length;
+    const playable = lvl.sparks.filter((sp) => !disliked.has(sp.id));
+    total += playable.length;
+    const d = completedSparkIds(s, lvl.id).filter((id) => !disliked.has(id)).length;
     done += d;
-    if (d >= lvl.sparks.length) levelsDone += 1;
+    if (playable.length > 0 && d >= playable.length) levelsDone += 1;
   }
   return { done, total, pct: total === 0 ? 0 : Math.round((done / total) * 100), levelsDone };
 }
@@ -266,10 +324,11 @@ export function nextRecommendedSpark(
 ): { levelId: string; spark: Spark } | null {
   const t = getTopic(topicId);
   if (!t) return null;
+  const disliked = dislikedSparkIds(s);
   for (const lvl of t.levels) {
     if (!isLevelUnlocked(s, topicId, lvl.index)) break;
     const done = new Set(completedSparkIds(s, lvl.id));
-    const spark = lvl.sparks.find((sp) => !done.has(sp.id));
+    const spark = lvl.sparks.find((sp) => !done.has(sp.id) && !disliked.has(sp.id));
     if (spark) return { levelId: lvl.id, spark };
   }
   return null;

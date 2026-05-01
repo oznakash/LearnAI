@@ -88,8 +88,27 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
   }, [fallbackBackend]);
 
   useEffect(() => {
-    refreshHealth();
-  }, [refreshHealth, service]);
+    let cancelled = false;
+    // Local copy of refreshHealth that bails if the effect was torn down
+    // before the in-flight health() promise resolved. Without this, a
+    // unit test that unmounts mid-flight (or any fast remount) would
+    // setState on a dead component — JSDOM teardown then trips
+    // `window is not defined` inside React's scheduler. Visible only
+    // under unfavourable test ordering, but a real bug regardless.
+    void (async () => {
+      try {
+        const s = await serviceRef.current.health();
+        if (!cancelled) setStatus(s);
+      } catch (e) {
+        if (!cancelled) {
+          setStatus({ ok: false, backend: fallbackBackend, reason: (e as Error).message });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshHealth, service, fallbackBackend]);
 
   const remember = useCallback(
     (input: MemoryAddInput) =>
