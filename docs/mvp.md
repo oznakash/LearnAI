@@ -68,17 +68,36 @@ Source: **`https://github.com/oznakash/learnai`**.
 - Self-hosted mem0 via `docker-compose.mem0.yml` + `.env.example`.
 - One-command Fly deploy: `OPENAI_API_KEY=... npm run deploy:mem0` + `npm run smoke:memory`.
 
+### Social layer (Sprint 2 — shipped behind feature flags)
+
+- **Public Profile** at `/u/<handle>` — behavioral résumé: Topic map, Signals, currently-working-on, 14-day activity, badges. No bio, no employer, no email displayed. Closed-mode profiles render a single gated card to non-followers.
+- **Settings → Network** — Profile mode toggle (Open / Closed), field-level visibility (full name, current Topic, Topic map, activity, badges, sign-up month, Global Leaderboard), Signals picker (max 5 Topics), Take-me-down panic switch.
+- **Follow / Unfollow / Mute / Block / Report** — every Profile (and inline on Stream cards). Asymmetric graph; report auto-mutes; block precedence removes existing edges. 5-reason picker on reports, 280-char note.
+- **Topic Leaderboards (Boards)** — replaces the single Guild leaderboard with tabbed Global / per-Topic / Following + Week/Month/All-time pills. Per-Topic tabs only appear for the player's active Signals (max 5); `+ Topic` button opens an ad-hoc picker for any of the 12 Topics. Mock filler ("sample" tag) below real rows when sparse.
+- **Spark Stream** — auto-derived feed (level-up / boss-beaten / streak-milestone / spotlight cards). Per-card actions: Follow, Try this Topic, Mute author. "All / Only people I follow" filter. **No engagement-feedback term in ranking** (vision §4).
+- **Admin → Moderation tab** — report queue (Open / Resolved). Resolution actions: ✓ No action / ⚠ Warn / 🚫 Ban from social / 🚷 Global ban. Optimistic removal + audit on resolve.
+- **`services/social-svc/`** — Node + Express + TypeScript backend. 19 REST endpoints, in-memory store with optional JSON-file persistence, viewer-aware projection. Production migration to Postgres-2 documented in the README.
+- **`services/auth-proxy/`** — Cloudflare Worker that fronts both mem0 + social-svc. Verifies Google ID token, injects `X-User-Email`, rate-limits per email, swaps in upstream API keys (kept out of the browser). **Closes the bearer-in-browser issue.**
+- **All flags default OFF** in `defaults.ts` so a fork pulling main today sees zero behavior change. Live deploy flips them on via admin localStorage.
+
+→ Sprint changelog + open punch list: [`social-mvp-status.md`](./social-mvp-status.md).
+
 ### Quality bar
 
-- **90 / 90** Vitest tests across 12 files.
-- Build: 478 KB JS / 29 KB CSS gzipped, 75 modules.
+- **287 tests passing**: 256 SPA (Vitest) + 21 social-svc (supertest+vitest) + 10 auth-proxy (vitest).
+- Build: ~556 KB JS / ~30 KB CSS gzipped, ~83 modules.
 - Pinch-zoom + double-tap-zoom blocked (mobile + desktop trackpad). Keyboard zoom intentionally preserved.
 - Overscroll bounce stopped.
 - Confetti, mascot moods, illustrations, animated transitions.
 
 ### Documentation library (`docs/`)
 
-- [`vision.md`](./vision.md) · [`problem.md`](./problem.md) · [`use-cases.md`](./use-cases.md) · [`competitors.md`](./competitors.md) · [`pitch-deck.md`](./pitch-deck.md) · [`architecture.md`](./architecture.md) · [`mvp.md`](./mvp.md) (this) · [`roadmap.md`](./roadmap.md) · [`contributing.md`](./contributing.md) · [`fork-recipe.md`](./fork-recipe.md) · [`ux.md`](./ux.md) · [`technical.md`](./technical.md) · [`mem0.md`](./mem0.md).
+- Strategy: [`vision.md`](./vision.md) · [`problem.md`](./problem.md) · [`use-cases.md`](./use-cases.md) · [`competitors.md`](./competitors.md) · [`pitch-deck.md`](./pitch-deck.md) · [`manifesto.md`](./manifesto.md).
+- Technical: [`architecture.md`](./architecture.md) · [`technical.md`](./technical.md) · [`mem0.md`](./mem0.md) · [`ux.md`](./ux.md) · [`design-language.md`](./design-language.md).
+- Social MVP: [`social-mvp-product.md`](./social-mvp-product.md) (PRD) · [`social-mvp-engineering.md`](./social-mvp-engineering.md) (eng plan) · [`social-mvp-status.md`](./social-mvp-status.md) (changelog).
+- Sprint planning: [`mvp.md`](./mvp.md) (this) · [`roadmap.md`](./roadmap.md).
+- Community: [`contributing.md`](./contributing.md) · [`fork-recipe.md`](./fork-recipe.md).
+- Service READMEs: [`../services/social-svc/README.md`](../services/social-svc/README.md) · [`../services/auth-proxy/README.md`](../services/auth-proxy/README.md).
 
 ---
 
@@ -94,13 +113,11 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 | Capability | Why we don't have it yet | When |
 |---|---|---|
-| Public builder profile pages | Needs backend storage for shared profile data | Sprint 2 |
-| Follow graph (followers, feed of who's learning what) | Same | Sprint 2 |
+| Production hardening of the social layer (Postgres-2 swap, snapshot pipeline wiring, server-side upstream-bearer enforcement) | The Sprint-2 PRs shipped the surface; Sprint 2.5 closes the open P0/P1 punch list before flipping flags on in production. See [`social-mvp-status.md`](./social-mvp-status.md). | Sprint 2.5 |
 | Contribution flow (community-authored Sparks with AI-assisted review) | Needs review pipeline + maintainer queue | Sprint 3 |
-| Talent Match (recruiters search the behavioral graph) | Needs public profiles + skills index | Sprint 3 |
-| Audio / voice mode (listen + answer) | Demand-gated — no users have asked yet | Sprint 4 |
-| Native mobile shell | Web works great on mobile; revisit when retention proves it | Sprint 4–5 |
-| Auth-verifying proxy in front of mem0 | Required before going truly multi-tenant | Sprint 2 |
+| Talent Match (recruiters search the behavioral graph) | Needs public profiles (✅ Sprint 2) + skills index | Sprint 4 |
+| Audio / voice mode (listen + answer) | Demand-gated — no users have asked yet | Sprint 5 |
+| Native mobile shell | Web works great on mobile; revisit when retention proves it | Sprint 5–6 |
 | Multi-admin sync (admin config in mem0 system-scope) | One admin per deploy is enough today | Sprint 3 |
 | Stripe / billing | No revenue feature gated yet | Whenever we decide to monetize |
 
@@ -110,9 +127,11 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ```sh
 # Source on disk, not screenshots:
-npm test           # 90 / 90
-npm run build      # green
-npm run dev        # play it
+npm test                              # SPA: 256 / 256
+npm test --prefix services/social-svc # 21 / 21
+npm test --prefix services/auth-proxy # 10 / 10
+npm run build                         # green
+npm run dev                           # play it
 ```
 
 ---

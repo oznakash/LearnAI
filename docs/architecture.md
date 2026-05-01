@@ -203,14 +203,43 @@ A senior engineer can read this page in 15 minutes and ship a feature in an hour
 - Demo-data toggle for clean production analytics
 - Build tests + post-deploy smoke (`npm run smoke:deploy`)
 
-**Next (post-MVP roadmap, see `docs/roadmap.md`):**
+**Sprint 2 — social MVP (shipped behind feature flags, see `docs/social-mvp-status.md`):**
 
-- Public profile pages (`/profile/<handle>`)
-- Real cohort leaderboards (real users, not seeded mock)
-- Community-contributed Sparks with attribution
-- Talent Match — recruiter view over the behavioral graph
-- Native mobile shell (PWA → Capacitor)
-- On-device cognition (smaller models maturing)
+- `services/social-svc/` — Node + Express social-graph backend (profiles, follows, blocks, reports, signals, stream events). 19 REST endpoints, in-memory store with optional JSON-file persistence. Postgres-2 swap path documented in the service README.
+- `services/auth-proxy/` — Cloudflare Worker fronting both mem0 + social-svc. Verifies Google ID tokens (JWKS via `jose`), injects `X-User-Email` server-side, rate-limits per email, swaps in upstream API keys (kept out of the browser). Closes the bearer-in-browser issue.
+- SPA: Public Profile (`/u/<handle>`), Settings → Network, Follow / Unfollow / Mute / Block / Report, Topic Leaderboards (Boards), Spark Stream, AdminModeration tab. All gated behind `flags.socialEnabled`, `streamEnabled`, `boardsEnabled`.
+
+```
+                    ┌────────────────────────────────────┐
+                    │  auth-proxy (Cloudflare Worker)    │
+                    │   verify(ID token) →               │
+                    │   inject X-User-Email →            │
+                    │   rate-limit per email →           │
+                    │   swap upstream key →              │
+                    │   forward                          │
+                    └─────────┬──────────────┬───────────┘
+                              │              │
+                  /v1/social/*│              │/v1/memories/*
+                              ▼              ▼
+                    ┌──────────────┐  ┌──────────────┐
+                    │ social-svc   │  │ mem0 server  │
+                    │ Node+Express │  │ FastAPI      │
+                    └──────┬───────┘  └──────┬───────┘
+                           │                  │
+                    ┌──────▼───────┐   ┌──────▼───────┐
+                    │ social store │   │ Postgres +   │
+                    │ (JSON-file → │   │ pgvector     │
+                    │  Postgres-2) │   │              │
+                    └──────────────┘   └──────────────┘
+```
+
+**Next (post-Sprint-2 roadmap, see `docs/roadmap.md`):**
+
+- **Sprint 2.5** — close the social-MVP P0/P1 punch list (`docs/social-mvp-status.md`); wire `pushSnapshot` from `PlayerProvider`; `social-svc` enforces the upstream-bearer; Postgres-2 migration; deploy automation.
+- **Sprint 3** — community-contributed Sparks with AI-assisted review + attribution.
+- **Sprint 4** — Talent Match (recruiter view over the behavioral graph).
+- **Sprint 5** — Stream v2 (user-authored cards) + content compounding + notifications.
+- **Sprint 6** — Native mobile shell (PWA → Capacitor) + voice mode + on-device cognition.
 
 ---
 
