@@ -1,0 +1,21 @@
+{
+  "name": "auth-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LearnAI auth-verifying Cloudflare Worker — verifies Google ID tokens, injects X-User-Email, rate-limits per email, and forwards to mem0 / social-svc.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "jose": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.0.0"
+  }
+}
