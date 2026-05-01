@@ -82,6 +82,12 @@ export function createApp(opts: AppOpts) {
     );
   }
 
+  // Behind nginx in production. Trust the immediate proxy so req.ip
+  // reflects the real client (used by the visit-tracking rate limiter).
+  // Setting "loopback" rather than `true` avoids accepting forged
+  // X-Forwarded-For headers from non-loopback origins.
+  app.set("trust proxy", "loopback");
+
   app.use(express.json({ limit: "256kb" }));
 
   // -- Per-request log line + req_id ---------------------------------------
@@ -245,6 +251,43 @@ export function createApp(opts: AppOpts) {
       // someone enabled the impersonation footgun.
       misconfig: !jwtSecret && !demoTrustHeader,
     });
+  });
+
+  // -- Visit tracking ------------------------------------------------------
+  // Anonymous traffic beacon. Open (no auth) — first-time visitors aren't
+  // signed in yet, and source-attribution is the whole point of this
+  // endpoint. Stores ONLY:
+  //   - pathname (no full URL, so query params can't leak)
+  //   - normalized referrer domain (or "(direct)" / "(internal)")
+  //   - utm_source / ref / from query param (lowercased)
+  // No IP, no UA, no email. The point of capturing this is for the admin
+  // operator to see "did the LinkedIn post bring 12 visits?" in the
+  // Traffic dashboard — nothing else.
+  //
+  // Rate-limited per source IP via a synthetic action key so the bucket
+  // can't be wedged by hostile callers. The cap is generous because real
+  // browsers fire at most one beacon per session.
+  app.post("/v1/social/track/visit", express.json({ limit: "2kb" }), (req, res) => {
+    const ip = (req.ip || req.socket?.remoteAddress || "unknown").toString();
+    const rule: RateRule = { action: "track_visit", perMinute: 30, perHour: 200 };
+    const r = rateBucket.hit(`ip:${ip}`, rule);
+    if (!r.ok) {
+      // Best-effort silence — don't reveal limits to scrapers, just 204
+      // so the SPA's beacon resolves successfully.
+      return res.status(204).end();
+    }
+    const body = req.body ?? {};
+    const path = typeof body.path === "string" ? body.path.slice(0, 200) : "/";
+    const refDomain =
+      typeof body.refDomain === "string" && body.refDomain.length > 0
+        ? body.refDomain.toLowerCase().slice(0, 200)
+        : "(direct)";
+    const source =
+      typeof body.source === "string" && body.source.length > 0
+        ? body.source.toLowerCase().trim().slice(0, 80)
+        : null;
+    store.recordVisit({ path, refDomain, source });
+    return res.status(204).end();
   });
 
   // -- /me -----------------------------------------------------------------
@@ -713,8 +756,10 @@ export function createApp(opts: AppOpts) {
   // same shape via SQL aggregates.
   app.get("/v1/social/admin/analytics", requireUser, requireAdmin, (_req, res) => {
     const stats = store.statsSnapshot();
+    const traffic = store.trafficSnapshot();
     res.json({
       ...stats,
+      traffic,
       generatedAt: Date.now(),
     });
   });

@@ -4,6 +4,16 @@ import { Bars, Ring, Sparkline } from "../visuals/Charts";
 import { TOPIC_MAP } from "../content";
 import { usePlayer } from "../store/PlayerContext";
 
+interface TrafficStats {
+  totalVisits: number;
+  visits24h: number;
+  visits7d: number;
+  visits30d: number;
+  topReferrers7d: Array<{ refDomain: string; visits: number }>;
+  topSources7d: Array<{ source: string; visits: number }>;
+  daily7d: Array<{ date: string; visits: number }>;
+}
+
 interface SocialStats {
   profileCount: number;
   openProfiles: number;
@@ -20,6 +30,8 @@ interface SocialStats {
   events24h: number;
   eventsByKind: Record<string, number>;
   signalsByTopic: Record<string, number>;
+  /** Optional — older sidecars without the traffic rollup omit this. */
+  traffic?: TrafficStats;
   generatedAt: number;
 }
 
@@ -294,7 +306,96 @@ export function AdminAnalytics() {
           )}
         </section>
       )}
+
+      {config.flags.socialEnabled && social?.traffic && (
+        <TrafficSection traffic={social.traffic} />
+      )}
     </div>
+  );
+}
+
+function TrafficSection({ traffic }: { traffic: TrafficStats }) {
+  const dailyBars = traffic.daily7d.map((d) => ({
+    label: d.date.slice(5), // MM-DD
+    value: d.visits,
+  }));
+  const totalSourceAttributed = traffic.topSources7d.reduce((acc, s) => acc + s.visits, 0);
+  return (
+    <section className="card p-5 space-y-4">
+      <header className="flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="h2">Traffic & sources</h2>
+          <p className="muted text-xs">
+            Anonymous SPA-load beacons. Tag your share URLs with{" "}
+            <code className="text-white/70">?ref=…</code> or{" "}
+            <code className="text-white/70">?utm_source=…</code> to see which posts brought visits.
+          </p>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat label="Visits (24h)" value={traffic.visits24h} />
+        <Stat label="Visits (7d)" value={traffic.visits7d} />
+        <Stat label="Visits (30d)" value={traffic.visits30d} />
+        <Stat label="Total recorded" value={traffic.totalVisits} hint="capped at 50k" />
+      </div>
+
+      <div>
+        <div className="label mb-1">Last 7 days</div>
+        {traffic.visits7d === 0 ? (
+          <div className="text-xs text-white/40 italic">No visits recorded in the last 7 days yet.</div>
+        ) : (
+          <Bars data={dailyBars} width={520} height={120} color="#28e0b3" />
+        )}
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <div className="label mb-2">Top referrers (7d)</div>
+          {traffic.topReferrers7d.length === 0 ? (
+            <div className="text-xs text-white/40 italic">No referrers yet.</div>
+          ) : (
+            <ul className="text-sm space-y-1">
+              {traffic.topReferrers7d.map((r) => (
+                <li key={r.refDomain} className="flex items-center justify-between border-b border-white/5 pb-1">
+                  <span className="text-white truncate">{r.refDomain}</span>
+                  <span className="text-white/60 tabular-nums ml-2">{r.visits}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="text-[11px] text-white/40 mt-2">
+            <code>(direct)</code> = no referrer (paste / bookmark / app handoff).{" "}
+            <code>(internal)</code> = SPA-internal nav.
+          </div>
+        </div>
+
+        <div>
+          <div className="label mb-2">
+            Top sources (7d){" "}
+            <span className="text-white/40 font-normal">
+              · {totalSourceAttributed} attributed
+            </span>
+          </div>
+          {traffic.topSources7d.length === 0 ? (
+            <div className="text-xs text-white/40 italic">
+              No tagged sources yet. Try sharing{" "}
+              <code className="text-white/70">https://learnai.cloud-claude.com/?ref=ozs_blog</code>{" "}
+              to see this populate.
+            </div>
+          ) : (
+            <ul className="text-sm space-y-1">
+              {traffic.topSources7d.map((s) => (
+                <li key={s.source} className="flex items-center justify-between border-b border-white/5 pb-1">
+                  <span className="text-white truncate">{s.source}</span>
+                  <span className="text-white/60 tabular-nums ml-2">{s.visits}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 

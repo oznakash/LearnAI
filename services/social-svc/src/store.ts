@@ -17,6 +17,7 @@ import type {
   ProfileRecord,
   ReportRecord,
   StreamEventRecord,
+  VisitRecord,
 } from "./types.js";
 
 interface Snapshot {
@@ -26,8 +27,12 @@ interface Snapshot {
   blocks: BlockEdge[];
   reports: ReportRecord[];
   events: StreamEventRecord[];
+  visits: VisitRecord[];
   ids: { reportId: number; eventId: number };
 }
+
+/** Cap visits to bound memory + JSON-file size. ~50K is fine for MVP. */
+const MAX_VISITS = 50_000;
 
 export interface Store {
   // Profiles
@@ -57,6 +62,11 @@ export interface Store {
   insertReport(r: Omit<ReportRecord, "id">): ReportRecord;
   listReports(opts?: { status?: ReportRecord["status"] }): ReportRecord[];
   resolveReport(id: number, by: string, resolution: string): ReportRecord | null;
+
+  // Visits (anonymous traffic tracking)
+  recordVisit(v: Omit<VisitRecord, "ts">): VisitRecord;
+  /** Traffic rollup for the admin Analytics tab. */
+  trafficSnapshot(now?: number): TrafficStats;
 
   // Stream events
   insertEvent(e: Omit<StreamEventRecord, "id">): StreamEventRecord;
@@ -98,6 +108,19 @@ export interface StoreStats {
   signalsByTopic: Record<string, number>;
 }
 
+export interface TrafficStats {
+  totalVisits: number;
+  visits24h: number;
+  visits7d: number;
+  visits30d: number;
+  /** Top 10 by visits in the last 7 days. */
+  topReferrers7d: Array<{ refDomain: string; visits: number }>;
+  /** Top 10 by visits in the last 7 days; only entries with a source. */
+  topSources7d: Array<{ source: string; visits: number }>;
+  /** YYYY-MM-DD buckets, oldest first, exactly 7 entries. */
+  daily7d: Array<{ date: string; visits: number }>;
+}
+
 export function createStore(opts: { dbPath?: string } = {}): Store {
   const state: Snapshot = {
     profiles: [],
@@ -106,6 +129,7 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
     blocks: [],
     reports: [],
     events: [],
+    visits: [],
     ids: { reportId: 0, eventId: 0 },
   };
 
@@ -122,6 +146,7 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       state.blocks ??= [];
       state.reports ??= [];
       state.events ??= [];
+      state.visits ??= [];
       state.ids ??= { reportId: 0, eventId: 0 };
     } catch (e) {
       console.warn("[social-svc] failed to load db file:", (e as Error).message);
@@ -267,6 +292,80 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       return next;
     },
 
+    // Visits ---------------------------------------------------------------
+    recordVisit(v) {
+      const next: VisitRecord = { ...v, ts: Date.now() };
+      // unshift so trafficSnapshot's slice walks newest-first cheaply
+      state.visits.unshift(next);
+      if (state.visits.length > MAX_VISITS) state.visits.length = MAX_VISITS;
+      flush();
+      return next;
+    },
+    trafficSnapshot(now = Date.now()) {
+      const day = 24 * 60 * 60 * 1000;
+      const since24h = now - day;
+      const since7d = now - 7 * day;
+      const since30d = now - 30 * day;
+
+      let visits24h = 0;
+      let visits7d = 0;
+      let visits30d = 0;
+      const refCounts7d = new Map<string, number>();
+      const sourceCounts7d = new Map<string, number>();
+
+      // Daily 7-day buckets, oldest first. Key on local YYYY-MM-DD so the
+      // operator's chart aligns to their wall clock.
+      const dayKey = (ms: number) => {
+        const d = new Date(ms);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      };
+      const dailyMap = new Map<string, number>();
+      // Pre-seed all 7 days so empty days appear as zero rather than gap.
+      for (let i = 6; i >= 0; i--) {
+        dailyMap.set(dayKey(now - i * day), 0);
+      }
+
+      for (const v of state.visits) {
+        if (v.ts < since30d) continue; // walked newest-first; can't break
+        // because store is ordered by insertion, but ts is monotonically
+        // increasing in practice. Continuing is robust against clock skew.
+        visits30d++;
+        if (v.ts >= since7d) {
+          visits7d++;
+          refCounts7d.set(v.refDomain, (refCounts7d.get(v.refDomain) ?? 0) + 1);
+          if (v.source) {
+            sourceCounts7d.set(v.source, (sourceCounts7d.get(v.source) ?? 0) + 1);
+          }
+          const k = dayKey(v.ts);
+          if (dailyMap.has(k)) dailyMap.set(k, (dailyMap.get(k) ?? 0) + 1);
+        }
+        if (v.ts >= since24h) visits24h++;
+      }
+
+      const topReferrers7d = [...refCounts7d.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([refDomain, visits]) => ({ refDomain, visits }));
+      const topSources7d = [...sourceCounts7d.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([source, visits]) => ({ source, visits }));
+      const daily7d = [...dailyMap.entries()].map(([date, visits]) => ({ date, visits }));
+
+      return {
+        totalVisits: state.visits.length,
+        visits24h,
+        visits7d,
+        visits30d,
+        topReferrers7d,
+        topSources7d,
+        daily7d,
+      };
+    },
+
     // Stream events --------------------------------------------------------
     insertEvent(e) {
       state.ids.eventId += 1;
@@ -369,6 +468,7 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       state.blocks = [];
       state.reports = [];
       state.events = [];
+      state.visits = [];
       state.ids = { reportId: 0, eventId: 0 };
       flush();
     },

@@ -132,6 +132,30 @@ export interface StreamEventRecord {
   createdAt: number;
 }
 
+// Site visit, recorded by the SPA's anonymous tracking beacon. Holds
+// only what's needed to do source attribution ("did traffic come from
+// my Twitter post?") — no IPs, no UAs, no PII. Bounded to N rows.
+export interface VisitRecord {
+  /** Server-stamped epoch ms. */
+  ts: number;
+  /** SPA pathname (e.g. "/", "/topic/agents"). Never the full URL. */
+  path: string;
+  /**
+   * Normalized referrer:
+   *   - "(direct)"   — no Referer header (bookmark, paste, app handoff)
+   *   - "(internal)" — same-origin nav inside the SPA
+   *   - bare host    — e.g. "twitter.com", "news.ycombinator.com"
+   */
+  refDomain: string;
+  /**
+   * Marketing source — first match of `?utm_source=`, `?ref=`, or
+   * `?from=`, lowercased + trimmed. null when none of those are
+   * present. This is the field that lets the operator tell "post X
+   * brought 12 visits" if they shared the URL with `?ref=ozs_blog`.
+   */
+  source: string | null;
+}
+
 export interface PlayerSnapshot {
   xpTotal: number;
   xpWeek: number;
