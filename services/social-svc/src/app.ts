@@ -31,6 +31,7 @@ import type {
 import { log, emailHash } from "./log.js";
 import { verifySessionJwt } from "./verify.js";
 import { DEFAULT_RULES, inMemoryBucket, type RateBucket, type RateRule } from "./rate-limit.js";
+import { sendEmail, smtpStatus } from "./email.js";
 
 interface AppOpts {
   store: Store;
@@ -652,6 +653,44 @@ export function createApp(opts: AppOpts) {
     const next = store.resolveReport(id, me.email, resolution);
     if (!next) return res.status(404).json({ error: "not_found" });
     res.json(next);
+  });
+
+  // -- Email --------------------------------------------------------------
+  // Server-side SMTP send. The SPA's Admin → Emails tab POSTs the
+  // already-rendered subject + HTML body here; the sidecar uses
+  // nodemailer to send via the SMTP env vars (host, user, password,
+  // from). Admin-only — only emails in SOCIAL_ADMIN_EMAILS can hit
+  // this endpoint, so it can't be used as an open relay even if a
+  // session JWT is leaked.
+  app.get("/v1/email/status", requireUser, requireAdmin, (_req, res) => {
+    res.json(smtpStatus());
+  });
+
+  app.post("/v1/email/send", requireUser, requireAdmin, async (req, res) => {
+    const me = (req as Request & { profile: ProfileRecord }).profile;
+    const { to, subject, html, fromName, replyTo } = req.body ?? {};
+    if (typeof to !== "string" || !to.includes("@")) {
+      return res.status(400).json({ error: "invalid_to" });
+    }
+    if (typeof subject !== "string" || !subject.length) {
+      return res.status(400).json({ error: "invalid_subject" });
+    }
+    if (typeof html !== "string" || !html.length) {
+      return res.status(400).json({ error: "invalid_html" });
+    }
+    log.info("email_attempt", {
+      sent_by_hash: emailHash(me.email),
+      to_domain: to.split("@")[1] ?? "?",
+    });
+    const r = await sendEmail({
+      to,
+      subject,
+      html,
+      fromName: typeof fromName === "string" ? fromName : undefined,
+      replyTo: typeof replyTo === "string" ? replyTo : undefined,
+    });
+    if (!r.ok) return res.status(503).json({ error: "send_failed", reason: r.reason });
+    res.json({ ok: true, messageId: r.messageId });
   });
 
   // -- Admin: telemetry ----------------------------------------------------

@@ -27,10 +27,47 @@ export interface SendResult {
  * Postmark / SendGrid / SES are accepted in the type but not yet wired
  * — they need backend mediation in production setups.
  */
-export async function sendEmail(cfg: EmailConfig, q: QueuedEmail): Promise<SendResult> {
+export async function sendEmail(
+  cfg: EmailConfig,
+  q: QueuedEmail,
+  /** Session JWT for admin auth on the smtp-our-server path. */
+  bearerToken?: string,
+): Promise<SendResult> {
   switch (cfg.provider) {
     case "none":
       return { ok: false, error: "No provider configured." };
+
+    case "smtp-our-server": {
+      // POST to our own social-svc sidecar's /v1/email/send. The
+      // sidecar uses nodemailer with SMTP creds from env vars
+      // (SMTP_HOST, SMTP_USER, SMTP_PASSWORD, etc.) — never sent from
+      // the browser. Admin-only on the server side, so this requires
+      // a session JWT bearer with an email in SOCIAL_ADMIN_EMAILS.
+      if (!bearerToken) {
+        return { ok: false, error: "Sign-in required (admin session JWT)." };
+      }
+      try {
+        const r = await fetch("/v1/email/send", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${bearerToken}`,
+          },
+          body: JSON.stringify({
+            to: q.to,
+            subject: q.subjectRendered,
+            html: q.bodyRendered,
+            fromName: cfg.fromName,
+            replyTo: cfg.replyTo,
+          }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) return { ok: false, error: data?.reason ?? data?.error ?? `HTTP ${r.status}` };
+        return { ok: true, providerMessageId: data?.messageId };
+      } catch (e) {
+        return { ok: false, error: (e as Error).message };
+      }
+    }
 
     case "resend": {
       if (!cfg.apiKey) return { ok: false, error: "Resend API key missing." };
