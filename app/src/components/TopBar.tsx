@@ -1,7 +1,7 @@
 import { usePlayer } from "../store/PlayerContext";
 import { useMemory } from "../memory/MemoryContext";
 import { useAdmin } from "../admin/AdminContext";
-import { tierForXP } from "../store/game";
+import { maxFocus, tierForXP } from "../store/game";
 import type { View } from "../App";
 
 export function TopBar({ onNav }: { onNav: (v: View) => void }) {
@@ -9,6 +9,17 @@ export function TopBar({ onNav }: { onNav: (v: View) => void }) {
   const { backend, status } = useMemory();
   const { config: adminCfg } = useAdmin();
   const tier = tierForXP(state.xp);
+  const focusMax = maxFocus();
+  // Color-grade the focus pill by remaining ratio so a full bar reads as
+  // "good" and a depleted bar reads as "warn/bad". Was previously hardcoded
+  // red, which looks alarming when the player has full focus.
+  const focusRatio = focusMax > 0 ? Math.max(0, Math.min(1, state.focus / focusMax)) : 0;
+  const focusClasses =
+    focusRatio >= 0.66
+      ? "bg-good/10 text-good border-good/30"
+      : focusRatio >= 0.33
+        ? "bg-warn/10 text-warn border-warn/30"
+        : "bg-bad/10 text-bad border-bad/30";
   const memoryBadge =
     backend === "offline"
       ? { emoji: "📴", label: "Offline mode", classes: "bg-white/5 text-white/70 border-white/10" }
@@ -49,8 +60,8 @@ export function TopBar({ onNav }: { onNav: (v: View) => void }) {
           <div className="pill bg-accent/10 text-accent border border-accent/30" title={`${adminCfg.branding.xpUnit} (XP)`}>
             ⚡ <span className="tabular-nums">{state.xp}</span>
           </div>
-          <div className="pill bg-bad/10 text-bad border border-bad/30" title="Focus">
-            🧠 <span className="tabular-nums">{state.focus}/5</span>
+          <div className={`pill border ${focusClasses}`} title="Focus">
+            🧠 <span className="tabular-nums">{state.focus}/{focusMax}</span>
           </div>
           <div className="hidden md:block pill bg-good/10 text-good border border-good/30" title="Guild Tier">
             🏅 {tier}
