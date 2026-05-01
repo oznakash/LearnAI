@@ -243,6 +243,34 @@ export interface SparkFeedback {
   ts: number;
 }
 
+/**
+ * Two state-of-mind signals the user can fire on any Spark. **Distinct
+ * from `SparkVote`**, which is a quality rating about the Spark itself.
+ * Signals carry information about the user's *moment* — not about the
+ * Spark's quality.
+ *
+ * - `zoom`: "I want to go deeper on this." Captures intent for the
+ *   cognition layer to surface deeper Sparks later. Optionally carries
+ *   a free-text reason ("what specifically did you want more on?") —
+ *   high-quality signal for future content authoring.
+ * - `skip-not-now`: "Not relevant in this moment, but don't filter
+ *   forever." Soft-skip — distinct from `SparkVote: "down"` (permanent).
+ *   The current session moves on; the Spark may resurface later.
+ *
+ * See `docs/content-model.md` §2.3 for the full contract.
+ */
+export type SparkSignal = "zoom" | "skip-not-now";
+
+export interface SparkSignalRecord {
+  sparkId: string;
+  signal: SparkSignal;
+  /** Optional free-text — most useful on `zoom` ("what did you want more on?"). */
+  reason?: string;
+  topicId?: TopicId;
+  levelId?: string;
+  ts: number;
+}
+
 export type TaskKind = "watch" | "read" | "build" | "explore" | "custom";
 export type TaskStatus = "todo" | "doing" | "done";
 
@@ -307,6 +335,14 @@ export interface PlayerState {
    * `preference` memory write on every 👎.
    */
   feedback?: SparkFeedback[];
+  /**
+   * State-of-mind signals — "I want to go deeper on this" / "not now".
+   * Stored per-player; consumed by the cognition layer to bias future
+   * recommendations. Multiple signals per Spark are allowed (e.g. a
+   * user can zoom in on different sessions, leaving multiple records).
+   * See {@link SparkSignal}.
+   */
+  signals?: SparkSignalRecord[];
   apiKey?: string;     // optional
   apiProvider?: "anthropic" | "openai";
   googleClientId?: string;

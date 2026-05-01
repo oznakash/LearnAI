@@ -5,6 +5,8 @@ import type {
   SessionRecord,
   Spark,
   SparkFeedback,
+  SparkSignal,
+  SparkSignalRecord,
   SparkVote,
   TopicId,
 } from "../types";
@@ -46,6 +48,7 @@ export function defaultState(): PlayerState {
     history: [],
     tasks: [],
     feedback: [],
+    signals: [],
     prefs: { sound: true, haptics: true },
   };
 }
@@ -260,6 +263,47 @@ export function dislikedSparkIds(s: PlayerState): Set<string> {
 export function getSparkVote(s: PlayerState, sparkId: string): SparkVote | null {
   const f = (s.feedback ?? []).find((x) => x.sparkId === sparkId);
   return f ? f.vote : null;
+}
+
+/**
+ * Set of Spark IDs the user has soft-skipped (`skip-not-now`) within the
+ * given timestamp window. Used to filter the *current session's* queue
+ * without permanently filtering the Spark — calling code typically
+ * passes `Date.now() - <session_start>` as the window.
+ *
+ * Distinct from {@link dislikedSparkIds}: 👎 is permanent, ⏭ is per-session.
+ */
+export function softSkippedSparkIds(s: PlayerState, sinceTs = 0): Set<string> {
+  const out = new Set<string>();
+  for (const sig of s.signals ?? []) {
+    if (sig.signal === "skip-not-now" && sig.ts >= sinceTs) {
+      out.add(sig.sparkId);
+    }
+  }
+  return out;
+}
+
+/**
+ * Append a state-of-mind signal record. Multiple records per Spark are
+ * allowed (e.g. user zooms in across multiple sessions). Idempotent
+ * within the same call only — repeat-callers add a fresh row.
+ */
+export function recordSparkSignal(
+  s: PlayerState,
+  sparkId: string,
+  signal: SparkSignal,
+  opts: { reason?: string; topicId?: TopicId; levelId?: string; ts?: number } = {}
+): PlayerState {
+  const ts = opts.ts ?? Date.now();
+  const next: SparkSignalRecord = {
+    sparkId,
+    signal,
+    reason: opts.reason,
+    topicId: opts.topicId,
+    levelId: opts.levelId,
+    ts,
+  };
+  return { ...s, signals: [next, ...(s.signals ?? [])] };
 }
 
 /**
