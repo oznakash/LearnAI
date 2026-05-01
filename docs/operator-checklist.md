@@ -167,6 +167,26 @@ Two endpoints; cloud-claude can probe either or both:
 - `GET /` — nginx + static SPA (existing). 200 = SPA serves.
 - `GET /health-social` — proxies to the sidecar's `/health`. 200 = sidecar is alive. Distinguishes "nginx up but sidecar dead" from "all good".
 
+The `/health-social` body now also surfaces startup state — useful for monitoring + alerting:
+
+```json
+{
+  "status": "ok",
+  "version": "0.1.0",
+  "jwt_configured": true,
+  "demo_trust_header": false,
+  "admins": 1,
+  "backend": "memory+jsonfile",
+  "misconfig": false
+}
+```
+
+Alert if `misconfig: true` or `demo_trust_header: true` in production — both are operator footguns.
+
+### Telemetry endpoint
+
+`GET /v1/social/admin/analytics` returns aggregate counts (profiles, follow edges, events 24h, by-kind, signals-by-Topic, reports). Admin-only. The `Admin → Analytics` tab in the SPA renders a "Social telemetry" card off this endpoint when the social flag is on.
+
 ### Rollback
 
 Flip `flags.socialEnabled = false` in `/admin → Config`. The Network / Stream / Boards / Moderation tabs disappear within 30 s. The sidecar keeps running (no harm); the SPA falls back to `OfflineSocialService`.

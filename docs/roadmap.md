@@ -60,16 +60,21 @@ What landed (9 PRs, 287 tests):
 | `docs/operator-checklist.md` — Social MVP section (deploy / env vars / monitoring / rollback) | ✅ PR #11 |
 | Dockerfile bundling nginx + Node sidecar with signal-forwarding entrypoint | ✅ PR #11 |
 
-### Still open (Sprint 2.5 close-out — small follow-up PR)
+### ✅ Closed in Sprint 2.5 PR 12
 
-| Item | Why |
+| Item | Status |
 |---|---|
-| Postgres-2 migration on `social-svc` (replace the in-memory + JSON-file store) | Production durability beyond a single host. The `Store` interface is already the seam. |
-| Telemetry dashboards in admin (per engineering plan §10) | Follow-rate, follow-graph density, stream cards/day, % Closed profiles. |
-| `ALLOW_DEMO_HEADER` startup guard that surfaces in `/health` | Operator footgun if accidentally enabled in prod. |
-| Server-side stream Signal-overlap path + spotlight cron | PRD §4.5 — the Stream feels sparse without it. |
+| Telemetry dashboards in admin | ✅ `/v1/social/admin/analytics` endpoint + AdminAnalytics social panel |
+| `ALLOW_DEMO_HEADER` / startup state visible on `/health` | ✅ `/health` now returns `jwt_configured`, `demo_trust_header`, `admins`, `backend`, `misconfig` |
+| Server-side stream Signal-overlap path + spotlight cron | ✅ Stream now blends approved-follows + Signal-overlap + spotlight (PRD §4.5 paths 1, 2, 3) |
 
-**Done when:** social flags can be flipped on in production with no remaining P0/P1 from the Sprint-2 review. Container rebuilds pick up the latest /dist/. CI green across both packages.
+### Postponed (revisit when we need to scale)
+
+| Item | Why deferred |
+|---|---|
+| Postgres-2 migration on `social-svc` | Founder call: avoid building another service / DB until scale demands it. Current path (in-memory + JSON-file on the mounted `/data` volume) is durable across container rebuilds and fine for the first ~10k profiles. The `Store` interface remains the seam — flipping in a Postgres-backed implementation later is a single-module change. |
+
+**Done when:** social flags are flipped on in production. The remaining items in `social-mvp-status.md` are P2/P3 (logging hygiene, mock-filler sort, etc.) — none block the flip.
 
 ---
 

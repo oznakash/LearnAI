@@ -1,10 +1,65 @@
+import { useEffect, useState } from "react";
 import { useAdmin, useAnalytics } from "./AdminContext";
 import { Bars, Ring, Sparkline } from "../visuals/Charts";
 import { TOPIC_MAP } from "../content";
+import { usePlayer } from "../store/PlayerContext";
+
+interface SocialStats {
+  profileCount: number;
+  openProfiles: number;
+  closedProfiles: number;
+  kidProfiles: number;
+  followCount: number;
+  approvedFollows: number;
+  pendingFollows: number;
+  blockCount: number;
+  reportCount: number;
+  openReports: number;
+  resolvedReports: number;
+  eventCount: number;
+  events24h: number;
+  eventsByKind: Record<string, number>;
+  signalsByTopic: Record<string, number>;
+  generatedAt: number;
+}
 
 export function AdminAnalytics() {
   const a = useAnalytics();
   const { mockUsers, config } = useAdmin();
+  const { state: player } = usePlayer();
+  const [social, setSocial] = useState<SocialStats | null>(null);
+  const [socialErr, setSocialErr] = useState<string | null>(null);
+
+  // Pull social telemetry when the social flag is on.
+  useEffect(() => {
+    if (!config.flags.socialEnabled) {
+      setSocial(null);
+      return;
+    }
+    let cancelled = false;
+    const url = (config.socialConfig.serverUrl || "") + "/v1/social/admin/analytics";
+    fetch(url, {
+      headers: {
+        "x-user-email": player.identity?.email ?? "",
+        ...(player.serverSession?.token
+          ? { authorization: `Bearer ${player.serverSession.token}` }
+          : {}),
+      },
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (!cancelled) setSocial(data as SocialStats);
+      })
+      .catch((e) => {
+        if (!cancelled) setSocialErr((e as Error).message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [config.flags.socialEnabled, config.socialConfig.serverUrl, player.identity?.email, player.serverSession?.token]);
 
   // The cohort either has only the real signed-in user (the production
   // default) or the real user plus the seeded demo cohort. With one or
@@ -163,6 +218,82 @@ export function AdminAnalytics() {
           ))}
         </ul>
       </section>
+
+      {config.flags.socialEnabled && (
+        <section className="card p-5 space-y-4">
+          <header className="flex items-end justify-between gap-3 flex-wrap">
+            <div>
+              <h2 className="h2">Social telemetry</h2>
+              <p className="muted text-xs">
+                Live from <code className="text-white/70">/v1/social/admin/analytics</code>. Refreshes on tab open.
+              </p>
+            </div>
+            {social && (
+              <span className="text-[11px] text-white/40">
+                generated {new Date(social.generatedAt).toLocaleTimeString()}
+              </span>
+            )}
+          </header>
+
+          {socialErr ? (
+            <div className="text-xs text-bad">Couldn't reach social-svc analytics: {socialErr}</div>
+          ) : !social ? (
+            <div className="text-xs text-white/50">Loading…</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Stat label="Profiles" value={social.profileCount} hint={`${social.openProfiles} open · ${social.closedProfiles} closed`} />
+                <Stat label="Follow edges" value={social.followCount} hint={`${social.approvedFollows} approved · ${social.pendingFollows} pending`} />
+                <Stat label="Stream events (24h)" value={social.events24h} hint={`${social.eventCount} total in store`} />
+                <Stat label="Open reports" value={social.openReports} hint={`${social.resolvedReports} resolved`} />
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="label mb-2">Stream events by kind</div>
+                  {Object.keys(social.eventsByKind).length === 0 ? (
+                    <div className="text-xs text-white/40 italic">No events yet.</div>
+                  ) : (
+                    <Bars
+                      data={Object.entries(social.eventsByKind).map(([k, v]) => ({
+                        label: k.replace("_", " "),
+                        value: v,
+                      }))}
+                      width={400}
+                      height={120}
+                    />
+                  )}
+                </div>
+                <div>
+                  <div className="label mb-2">Signals distribution (top 8 Topics)</div>
+                  {Object.keys(social.signalsByTopic).length === 0 ? (
+                    <div className="text-xs text-white/40 italic">No Signals set yet.</div>
+                  ) : (
+                    <Bars
+                      data={Object.entries(social.signalsByTopic)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 8)
+                        .map(([k, v]) => ({
+                          label: TOPIC_MAP[k as keyof typeof TOPIC_MAP]?.emoji ?? "?",
+                          value: v,
+                        }))}
+                      width={400}
+                      height={120}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <Stat label="Kid profiles" value={social.kidProfiles} hint="auto-Closed" />
+                <Stat label="Blocks" value={social.blockCount} />
+                <Stat label="Total reports" value={social.reportCount} />
+                <Stat label="Stream events total" value={social.eventCount} />
+              </div>
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }

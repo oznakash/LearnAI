@@ -229,8 +229,21 @@ export function createApp(opts: AppOpts) {
   }
 
   // -- Health --------------------------------------------------------------
+  // Returns startup-state so cloud-claude / operators can detect
+  // misconfiguration before users see 401s in the wild.
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", version: "0.1.0" });
+    res.json({
+      status: "ok",
+      version: "0.1.0",
+      jwt_configured: !!jwtSecret,
+      demo_trust_header: demoTrustHeader,
+      admins: admins.length,
+      backend: opts.store.backendName?.() ?? "memory",
+      // Booleans below are surfaced so monitoring can alert on them.
+      // demo_trust_header should NEVER be true in production; if it is,
+      // someone enabled the impersonation footgun.
+      misconfig: !jwtSecret && !demoTrustHeader,
+    });
   });
 
   // -- /me -----------------------------------------------------------------
@@ -552,30 +565,60 @@ export function createApp(opts: AppOpts) {
   });
 
   // -- Stream --------------------------------------------------------------
+  // Per PRD §4.5 the Stream is a blend of three visibility paths:
+  //   1. Approved follows (you actively follow this author)
+  //   2. Signal overlap (you both have ≥1 Topic Signal in common AND
+  //      the author has profileMode=open)
+  //   3. Spotlight (server-emitted top-mover cards for Topics in your
+  //      Signals — produced by the spotlight cron in index.ts)
+  // Filtered by: blocked-either-way, banned, banned_social, kid-vs-adult,
+  // muted authors, and self.
   app.get("/v1/social/stream", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10) || 50));
     const since = Date.now() - 14 * 24 * 60 * 60 * 1000;
 
-    const myFollows = new Set(
-      store
-        .listFollowing(me.email)
+    const myFollowEdges = store.listFollowing(me.email);
+    const myFollowsApproved = new Set(
+      myFollowEdges
         .filter((e) => e.status === "approved" && !e.muted)
         .map((e) => e.target.toLowerCase()),
     );
+    const mutedAuthors = new Set(
+      myFollowEdges.filter((e) => e.muted).map((e) => e.target.toLowerCase()),
+    );
     const blocked = new Set(store.listBlocked(me.email).map((s) => s.toLowerCase()));
+    const mySignals = new Set(me.signals);
+    const meIsKid = me.ageBand === "kid";
 
     const cards = store
-      .listEventsSince(since, 200)
+      .listEventsSince(since, 500)
       .filter((e) => {
-        if (e.email.toLowerCase() === me.email.toLowerCase()) return false;
-        if (blocked.has(e.email.toLowerCase())) return false;
-        return myFollows.has(e.email.toLowerCase());
+        const lc = e.email.toLowerCase();
+        if (lc === me.email.toLowerCase()) return false;
+        if (blocked.has(lc)) return false;
+        if (mutedAuthors.has(lc)) return false;
+        const author = store.getProfileByEmail(e.email);
+        if (!author || author.banned || author.bannedSocial) return false;
+        // Kid isolation: adult viewers never see kid authors; kid viewers
+        // never see adult authors. Symmetric.
+        if (meIsKid !== (author.ageBand === "kid")) return false;
+        // Visibility paths:
+        if (myFollowsApproved.has(lc)) return true;
+        if (e.kind === "spotlight" && e.topicId && mySignals.has(e.topicId)) return true;
+        // Signal overlap (Open profiles only).
+        if (
+          author.profileMode === "open" &&
+          author.signals.some((s) => mySignals.has(s))
+        ) return true;
+        return false;
       })
       .slice(0, limit)
       .map((e) => {
         const author = store.getProfileByEmail(e.email);
         if (!author) return null;
+        const lc = e.email.toLowerCase();
+        const iAmFollowing = myFollowsApproved.has(lc);
         return {
           id: `e-${e.id}`,
           authorHandle: author.handle,
@@ -588,8 +631,8 @@ export function createApp(opts: AppOpts) {
           kind: e.kind,
           detail: e.detail,
           createdAt: e.createdAt,
-          iAmFollowing: true,
-          iCanFollow: false,
+          iAmFollowing,
+          iCanFollow: !iAmFollowing && author.profileMode === "open",
         };
       })
       .filter(Boolean);
@@ -609,6 +652,18 @@ export function createApp(opts: AppOpts) {
     const next = store.resolveReport(id, me.email, resolution);
     if (!next) return res.status(404).json({ error: "not_found" });
     res.json(next);
+  });
+
+  // -- Admin: telemetry ----------------------------------------------------
+  // One JSON blob the AdminAnalytics social panel polls. Cheap to compute
+  // since the in-memory store walks once. Postgres adapter provides the
+  // same shape via SQL aggregates.
+  app.get("/v1/social/admin/analytics", requireUser, requireAdmin, (_req, res) => {
+    const stats = store.statsSnapshot();
+    res.json({
+      ...stats,
+      generatedAt: Date.now(),
+    });
   });
 
   return app;
