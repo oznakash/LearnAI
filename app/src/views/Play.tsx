@@ -13,6 +13,7 @@ import {
   nextRecommendedSpark,
   suggestSwitchTopic,
 } from "../store/game";
+import { pickNextSparkIdx } from "../store/sequencer";
 import type { Exercise, Spark, TopicId } from "../types";
 import { Mascot, type MascotMood } from "../visuals/Mascot";
 import { Confetti } from "../visuals/Confetti";
@@ -202,16 +203,18 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const onContinue = () => {
     setFeedback(null);
     if (!activeLevel) return;
-    // Skip past disliked sparks (👎 = permanent skip for this user).
-    let nextIdx = idx + 1;
+    // Sequencer picks the next idx — skips disliked Sparks (👎 = permanent
+    // skip), and avoids two passive Sparks back-to-back so the session
+    // doesn't fatigue. See `store/sequencer.ts`.
     const dislikedNow = dislikedSparkIds(state);
-    while (
-      nextIdx < activeLevel.sparks.length &&
-      dislikedNow.has(activeLevel.sparks[nextIdx].id)
-    ) {
-      nextIdx += 1;
-    }
-    if (nextIdx < activeLevel.sparks.length) {
+    const lastShownType = spark?.exercise.type ?? null;
+    const nextIdx = pickNextSparkIdx(
+      activeLevel.sparks,
+      idx,
+      dislikedNow,
+      lastShownType,
+    );
+    if (nextIdx >= 0) {
       setIdx(nextIdx);
       return;
     }
@@ -312,9 +315,23 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         <div style={{ width: `${((idx + 1) / activeLevel.sparks.length) * 100}%` }} />
       </div>
 
-      <div className="card p-5 sm:p-6 relative overflow-hidden">
-        <div className="absolute -right-6 -top-6 w-32 h-32 opacity-20 pointer-events-none">
-          <Illustration k={topic.visual ?? "spark"} />
+      <div className="card p-4 sm:p-6 relative overflow-hidden">
+        {/* Decorative corner illustration. Prefer the Spark's own visual
+            (concept-tied) over the Topic-level fallback so a `rocket` Spark
+            shows a rocket and a `tokens` Spark shows tokens — the box is
+            content, not chrome. Mobile-first sizing keeps the badge from
+            crowding small viewports. */}
+        <div
+          aria-hidden="true"
+          className="absolute -right-4 -top-4 sm:-right-6 sm:-top-6 w-20 h-20 sm:w-32 sm:h-32 opacity-20 pointer-events-none"
+        >
+          <Illustration
+            k={
+              ("visual" in spark.exercise && spark.exercise.visual)
+                ? spark.exercise.visual
+                : (topic.visual ?? "spark")
+            }
+          />
         </div>
         {alreadyDone ? (
           <ReviewSparkView
