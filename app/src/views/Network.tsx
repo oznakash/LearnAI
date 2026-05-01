@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSocial } from "../social/SocialContext";
+import { baseHandleFromEmail } from "../social/handles";
 import { useAdmin } from "../admin/AdminContext";
 import { TOPICS } from "../content";
 import type { FollowEdge, PublicProfile, ProfileMode } from "../social/types";
@@ -398,13 +399,13 @@ function PeopleSection({
         <PeopleList
           empty="No one's following you yet. Share your profile link."
           rows={followers.map((e) => ({
-            label: `@${e.follower.split("@")[0]}`,
+            label: `@${baseHandleFromEmail(e.follower)}`,
             sublabel: undefined,
             actions: [
               {
                 label: "Profile",
                 onClick: () =>
-                  onNav({ name: "profile", handle: e.follower.split("@")[0] }),
+                  onNav({ name: "profile", handle: baseHandleFromEmail(e.follower) }),
               },
             ],
           }))}
@@ -418,7 +419,7 @@ function PeopleSection({
             <PeopleList
               empty="No incoming requests."
               rows={pendingIn.map((e) => ({
-                label: `@${e.follower.split("@")[0]}`,
+                label: `@${baseHandleFromEmail(e.follower)}`,
                 actions: [
                   {
                     label: "Approve",

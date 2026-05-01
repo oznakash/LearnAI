@@ -10,9 +10,18 @@ const admins = (process.env.SOCIAL_ADMIN_EMAILS ?? "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+const upstreamKey = process.env.UPSTREAM_KEY_SOCIAL || "";
+const allowedOrigins = process.env.SOCIAL_ALLOWED_ORIGINS || "*";
+
+if (process.env.NODE_ENV === "production" && !upstreamKey) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    "[social-svc] WARNING — running in production without UPSTREAM_KEY_SOCIAL. The proxy is bypassable; set this env var so social-svc rejects direct calls.",
+  );
+}
 
 const store = createStore({ dbPath });
-const app = createApp({ store, admins });
+const app = createApp({ store, admins, upstreamKey, allowedOrigins });
 
 app.listen(port, () => {
   // eslint-disable-next-line no-console

@@ -31,18 +31,47 @@ interface AppOpts {
    * /v1/social/admin require X-User-Email ∈ this set.
    */
   admins?: string[];
+  /**
+   * If set, every request must carry `Authorization: Bearer ${upstreamKey}`.
+   * The auth-verifying proxy sets this; direct callers without the
+   * shared secret are rejected with 401. Closes the P0-2 issue from
+   * docs/social-mvp-status.md.
+   *
+   * If unset (e.g. local dev / fork without a proxy), the service runs
+   * in trusted-network mode — no bearer required. Operators must
+   * either set this OR put the service on a private network.
+   */
+  upstreamKey?: string;
+  /**
+   * CORS allowed origins. Comma-separated list, or "*" for any. Default
+   * "*". In production set this to your SPA hostname (closes the P1-6
+   * issue: combined with upstreamKey, narrows the trust surface).
+   */
+  allowedOrigins?: string;
 }
 
 export function createApp(opts: AppOpts) {
   const app = express();
   const store = opts.store;
   const admins = (opts.admins ?? []).map((s) => s.toLowerCase());
+  const upstreamKey = opts.upstreamKey?.trim() || "";
+  const allowedOrigins = (opts.allowedOrigins ?? "*")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   app.use(express.json({ limit: "256kb" }));
 
-  // CORS — open in MVP; the auth proxy adds origin restrictions in prod.
+  // CORS — restricted by allowedOrigins. Default keeps "*" for backward
+  // compat with the offline / demo flow; production sets a real origin.
   app.use((req, res, next) => {
-    res.setHeader("access-control-allow-origin", "*");
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes("*")) {
+      res.setHeader("access-control-allow-origin", "*");
+    } else if (typeof origin === "string" && allowedOrigins.includes(origin)) {
+      res.setHeader("access-control-allow-origin", origin);
+      res.setHeader("vary", "origin");
+    }
     res.setHeader(
       "access-control-allow-methods",
       "GET,POST,PUT,DELETE,OPTIONS",
@@ -52,6 +81,20 @@ export function createApp(opts: AppOpts) {
       "content-type,authorization,x-user-email",
     );
     if (req.method === "OPTIONS") return res.sendStatus(204);
+    next();
+  });
+
+  // Upstream-bearer enforcement. Runs before requireUser so that direct
+  // /curl callers without the shared secret are rejected before the
+  // X-User-Email header is even read. Bypassed for /health.
+  app.use((req, res, next) => {
+    if (req.path === "/health" || req.method === "OPTIONS") return next();
+    if (!upstreamKey) return next(); // trusted-network mode
+    const auth = req.header("authorization") ?? "";
+    const m = auth.match(/^Bearer\s+(.+)$/);
+    if (!m || m[1] !== upstreamKey) {
+      return res.status(401).json({ error: "missing_upstream_bearer" });
+    }
     next();
   });
 
@@ -112,10 +155,28 @@ export function createApp(opts: AppOpts) {
     const me = (req as Request & { profile: ProfileRecord }).profile;
     const patch = req.body ?? {};
     const next: ProfileRecord = { ...me };
-    if (typeof patch.fullName === "string") next.fullName = patch.fullName;
-    if (typeof patch.pictureUrl === "string") next.pictureUrl = patch.pictureUrl;
+    // P0-8 fix: ageBand is now patchable. Once set to "kid", subsequent
+    // patches cannot bump it back up — the SPA's onboarding is the
+    // single place this is set, and adult ↔ teen ↔ kid is one-way
+    // (kid → other is blocked here as a defense in depth).
+    if (
+      patch.ageBand === "kid" ||
+      patch.ageBand === "teen" ||
+      patch.ageBand === "adult"
+    ) {
+      if (me.ageBand === "kid" && patch.ageBand !== "kid") {
+        // Don't allow escape from kid mode.
+      } else {
+        next.ageBand = patch.ageBand;
+      }
+    }
+    // Length-bounded fullName (P2-2 hardening).
+    if (typeof patch.fullName === "string") next.fullName = patch.fullName.slice(0, 80);
+    if (typeof patch.pictureUrl === "string" && /^https:\/\//.test(patch.pictureUrl)) {
+      next.pictureUrl = patch.pictureUrl.slice(0, 1024);
+    }
     if (patch.profileMode === "open" || patch.profileMode === "closed") {
-      next.profileMode = me.ageBand === "kid" ? "closed" : patch.profileMode;
+      next.profileMode = next.ageBand === "kid" ? "closed" : patch.profileMode;
     }
     for (const k of [
       "showFullName",
@@ -127,6 +188,11 @@ export function createApp(opts: AppOpts) {
       "signalsGlobal",
     ] as const) {
       if (typeof patch[k] === "boolean") next[k] = patch[k];
+    }
+    // Kid hard-rules: forced Closed; never on the Global Leaderboard.
+    if (next.ageBand === "kid") {
+      next.profileMode = "closed";
+      next.signalsGlobal = false;
     }
     const saved = store.upsertProfile(next);
     const agg = store.getAggregate(me.email);
@@ -145,8 +211,33 @@ export function createApp(opts: AppOpts) {
 
   app.post("/v1/social/me/snapshot", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
-    const snap = req.body as PlayerSnapshot | undefined;
-    if (!snap) return res.status(400).json({ error: "invalid_snapshot" });
+    const snap = req.body as Partial<PlayerSnapshot> | undefined;
+
+    // P0-6 fix: validate the snapshot shape rather than hitting an
+    // uncaught TypeError on missing fields.
+    if (
+      !snap ||
+      typeof snap !== "object" ||
+      typeof snap.xpTotal !== "number" ||
+      typeof snap.streak !== "number" ||
+      typeof snap.guildTier !== "string" ||
+      !snap.clientWindow ||
+      typeof snap.clientWindow.to !== "number"
+    ) {
+      return res.status(400).json({ error: "invalid_snapshot" });
+    }
+
+    // P1-3 hardening: bound the obviously-impossible inputs. Real
+    // production tightening lives in Sprint 2.5.
+    if (snap.xpTotal > 1e9 || snap.xpTotal < 0) {
+      return res.status(400).json({ error: "xp_out_of_range" });
+    }
+    if (snap.streak > 10000 || snap.streak < 0) {
+      return res.status(400).json({ error: "streak_out_of_range" });
+    }
+    if (snap.currentLevel != null && (snap.currentLevel < 0 || snap.currentLevel > 100)) {
+      return res.status(400).json({ error: "level_out_of_range" });
+    }
 
     // Plausibility: xp must not regress more than 10%.
     const prev = store.getAggregate(me.email);
@@ -156,27 +247,43 @@ export function createApp(opts: AppOpts) {
     store.upsertAggregate({
       email: me.email,
       xpTotal: snap.xpTotal,
-      xpWeek: snap.xpWeek,
-      xpMonth: snap.xpMonth,
+      xpWeek: snap.xpWeek ?? 0,
+      xpMonth: snap.xpMonth ?? 0,
       streak: snap.streak,
-      guildTier: snap.guildTier,
+      guildTier: snap.guildTier as "Builder" | "Architect" | "Visionary" | "Founder" | "Singularity",
       currentTopicId: snap.currentTopicId,
       currentLevel: snap.currentLevel,
-      badges: snap.badges,
-      topicXp: snap.topicXp,
-      activity14d: (snap.activity14d ?? []).slice(0, 14),
+      badges: Array.isArray(snap.badges) ? snap.badges : [],
+      topicXp: typeof snap.topicXp === "object" && snap.topicXp ? snap.topicXp : {},
+      activity14d: Array.isArray(snap.activity14d) ? snap.activity14d.slice(0, 14) : [],
       lastEventAt: snap.clientWindow.to,
       updatedAt: Date.now(),
     });
-    // Insert events; cap at 50 per snapshot.
-    for (const ev of (snap.events ?? []).slice(0, 50)) {
-      store.insertEvent({
+    // P0-5 fix: events are inserted via insertEventIdempotent so the
+    // same clientId can't multiply rows on retry / StrictMode.
+    // P1-3 hardening: validate `kind` against the allowed set.
+    const allowedKinds = new Set<StreamCardKind>([
+      "level_up",
+      "boss_beaten",
+      "streak_milestone",
+      "spotlight",
+    ]);
+    const events = Array.isArray(snap.events) ? snap.events.slice(0, 50) : [];
+    const nowMs = Date.now();
+    for (const ev of events) {
+      if (!ev || typeof ev !== "object") continue;
+      const kind = ev.kind as StreamCardKind;
+      if (!allowedKinds.has(kind)) continue;
+      const cid = typeof ev.clientId === "string" ? ev.clientId : `${me.email}|${kind}|${ev.topicId ?? ""}|${ev.level ?? ""}|${snap.clientWindow.to}`;
+      store.insertEventIdempotent({
         email: me.email,
-        kind: ev.kind as StreamCardKind,
-        topicId: ev.topicId,
-        level: ev.level,
-        detail: ev.detail,
-        createdAt: snap.clientWindow.to,
+        kind,
+        topicId: typeof ev.topicId === "string" ? ev.topicId : undefined,
+        level: typeof ev.level === "number" ? ev.level : undefined,
+        detail: typeof ev.detail === "object" && ev.detail ? ev.detail : undefined,
+        // Reject future-dated clientWindow.to.
+        createdAt: Math.min(snap.clientWindow.to, nowMs),
+        clientId: cid,
       });
     }
     res.status(204).end();
@@ -194,20 +301,24 @@ export function createApp(opts: AppOpts) {
     if (target.profileMode === "closed" && me.email !== target.email) {
       const edge = store.getFollow(me.email, target.email);
       if (!edge || edge.status !== "approved") {
-        // Surface a stub so the UI can render the gate card.
+        // P1-5 fix: closed-mode stub no longer leaks email, pictureUrl,
+        // or ageBandIsKid. Visitors see only the bare minimum needed
+        // to render the gate card: handle, a generic display name, and
+        // the closed-mode flag. The age-band hint is revealed only
+        // after `approved` via the full projectProfile payload.
         return res.json({
-          email: target.email,
+          email: "",
           handle: target.handle,
-          displayName: target.fullName?.split(/\s+/)[0] ?? target.displayFirst,
-          pictureUrl: target.pictureUrl,
+          displayName: target.handle.charAt(0).toUpperCase() + target.handle.slice(1),
+          pictureUrl: undefined,
           guildTier: "Builder",
           streak: 0,
           xpTotal: 0,
           signals: [],
           badges: [],
-          ageBandIsKid: target.ageBand === "kid",
+          ageBandIsKid: false,
           profileMode: "closed" as const,
-          signupAt: target.createdAt,
+          signupAt: 0,
         } satisfies PublicProfile);
       }
     }

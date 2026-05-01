@@ -11,6 +11,8 @@ import {
 import { useAdmin } from "../admin/AdminContext";
 import { usePlayer } from "../store/PlayerContext";
 import { selectSocialService, withSocialGuard } from "./index";
+import { buildSnapshot } from "./snapshot";
+import type { PlayerState } from "../types";
 import type {
   BoardPeriod,
   BoardScope,
@@ -125,6 +127,21 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshHealth();
   }, [refreshHealth, service]);
+
+  // ---- snapshot pipeline (P0-1 fix) -------------------------------------
+  // Watch player state. After hydrate, every meaningful state change
+  // diffs prev → next via buildSnapshot and fires a fire-and-forget
+  // pushSnapshot. Wrapped in withSocialGuard so a network blip never
+  // throws into the UI; events carry stable clientIds so server-side
+  // upsert is idempotent across StrictMode double-fires.
+  const prevPlayerRef = useRef<PlayerState | null>(null);
+  useEffect(() => {
+    if (!player.identity?.email) return;
+    const snap = buildSnapshot({ prev: prevPlayerRef.current, next: player });
+    prevPlayerRef.current = player;
+    if (!snap) return;
+    void withSocialGuard(() => serviceRef.current.pushSnapshot(snap), undefined);
+  }, [player]);
 
   // ---- write helpers -----------------------------------------------------
   const follow = useCallback(

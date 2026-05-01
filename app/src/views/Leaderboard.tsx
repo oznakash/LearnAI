@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePlayer } from "../store/PlayerContext";
 import { useAdmin } from "../admin/AdminContext";
 import { useSocial } from "../social/SocialContext";
+import { baseHandleFromEmail } from "../social/handles";
 import { tierForXP } from "../store/game";
 import { TOPICS } from "../content";
 import { Mascot } from "../visuals/Mascot";
@@ -100,8 +101,11 @@ export function Leaderboard({ onNav }: Props = {}) {
 
   const me = useMemo(
     () => ({
-      handle: state.identity?.email?.split("@")[0]?.toLowerCase() ?? "you",
-      name: state.identity?.name ?? state.identity?.email?.split("@")[0] ?? "You",
+      // P0-4 fix: canonical handle (matches what the social-svc returns).
+      handle: state.identity?.email
+        ? baseHandleFromEmail(state.identity.email)
+        : "you",
+      name: state.identity?.name ?? state.identity?.email ?? "You",
       xp: state.xp,
     }),
     [state],

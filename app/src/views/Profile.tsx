@@ -7,6 +7,7 @@ import { tierForXP } from "../store/game";
 import { Mascot } from "../visuals/Mascot";
 import { Sparkline } from "../visuals/Charts";
 import type { PublicProfile, ReportReason } from "../social/types";
+import { baseHandleFromEmail } from "../social/handles";
 import type { TopicId } from "../types";
 import type { View } from "../App";
 
@@ -37,11 +38,15 @@ export function Profile({ handle, onNav }: Props) {
   const [loading, setLoading] = useState(true);
   const [previewing, setPreviewing] = useState(false);
 
-  const myHandle = useMemo(() => {
-    // Derived offline. Once the online service ships, /me handles this.
-    const local = (player.identity?.email ?? "").split("@")[0]?.toLowerCase() ?? "";
-    return local;
-  }, [player.identity?.email]);
+  const myHandle = useMemo(
+    // P0-4 fix: use baseHandleFromEmail so dots in the local-part collapse
+    // (Gmail dot-insensitivity). Previously `email.split("@")[0].toLowerCase()`
+    // produced `john.doe` for `john.doe@gmail.com` while the canonical
+    // handle is `johndoe` — own-profile detection broke for any email
+    // with dots.
+    () => baseHandleFromEmail(player.identity?.email ?? ""),
+    [player.identity?.email],
+  );
 
   const isOwner = !previewing && handle.toLowerCase() === myHandle.toLowerCase();
   const socialOff = !config.flags.socialEnabled;
