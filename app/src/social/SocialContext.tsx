@@ -11,7 +11,7 @@ import {
 import { useAdmin } from "../admin/AdminContext";
 import { usePlayer } from "../store/PlayerContext";
 import { selectSocialService, withSocialGuard } from "./index";
-import { buildSnapshot } from "./snapshot";
+import { buildSnapshot, snapshotSignature } from "./snapshot";
 import type { PlayerState } from "../types";
 import type {
   BoardPeriod,
@@ -134,12 +134,28 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   // pushSnapshot. Wrapped in withSocialGuard so a network blip never
   // throws into the UI; events carry stable clientIds so server-side
   // upsert is idempotent across StrictMode double-fires.
+  //
+  // P1 dedup: PlayerContext's 60s focus-regen tick produces a new state
+  // ref on every minute regardless of whether anything actually changed,
+  // which used to fire a no-op pushSnapshot every minute per signed-in
+  // tab. On the server side this generated a 1/min "req" log and — for
+  // any tab whose local XP had drifted below the server aggregate —
+  // a 409 "implausible_xp" response per minute. Skip pushes whose
+  // aggregate signature matches the last-pushed signature AND carry
+  // no new stream events. Events always force a send because each new
+  // event row is the entire reason that batch exists.
   const prevPlayerRef = useRef<PlayerState | null>(null);
+  const lastPushedSignatureRef = useRef<string | null>(null);
   useEffect(() => {
     if (!player.identity?.email) return;
     const snap = buildSnapshot({ prev: prevPlayerRef.current, next: player });
     prevPlayerRef.current = player;
     if (!snap) return;
+    const sig = snapshotSignature(snap);
+    if (sig === lastPushedSignatureRef.current && snap.events.length === 0) {
+      return;
+    }
+    lastPushedSignatureRef.current = sig;
     void withSocialGuard(() => serviceRef.current.pushSnapshot(snap), undefined);
   }, [player]);
 

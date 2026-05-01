@@ -186,3 +186,35 @@ function countBossPasses(state: PlayerState): number {
 export function tierFromXp(xp: number): GuildTier {
   return tierForXP(xp);
 }
+
+/**
+ * Stable, content-only signature of the aggregate fields a snapshot
+ * upserts on the server. Used by the push pipeline to skip redundant
+ * `pushSnapshot` calls when the player hasn't actually changed —
+ * e.g. when the 60s focus-regen tick produces a new state ref but the
+ * same XP/streak/tier/topic-XP. Excludes `clientWindow` and `activity14d`
+ * (both monotonic with wall-clock — would defeat dedup) and `events`
+ * (caller decides whether new events force a send).
+ *
+ * Privacy: derived from local fields only — never includes email, JWT,
+ * or any cross-user data. Safe to keep in a React ref between renders.
+ */
+export function snapshotSignature(snap: PlayerSnapshot): string {
+  // Sort topicXp keys so two snapshots with the same data but different
+  // insertion order produce the same signature.
+  const topicXpEntries = Object.entries(snap.topicXp ?? {})
+    .filter(([, v]) => typeof v === "number")
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, v]) => `${k}:${v}`)
+    .join(",");
+  const badges = [...(snap.badges ?? [])].sort().join(",");
+  return [
+    `xp:${snap.xpTotal}`,
+    `streak:${snap.streak}`,
+    `tier:${snap.guildTier}`,
+    `topic:${snap.currentTopicId ?? ""}`,
+    `lvl:${snap.currentLevel ?? ""}`,
+    `topicXp:${topicXpEntries}`,
+    `badges:${badges}`,
+  ].join("|");
+}
