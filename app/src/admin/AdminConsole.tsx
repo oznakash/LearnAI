@@ -9,14 +9,25 @@ import { AdminTuning } from "./AdminTuning";
 import { AdminContent } from "./AdminContent";
 import { AdminPromptStudio } from "./AdminPromptStudio";
 import { AdminMemory } from "./AdminMemory";
+import { AdminModeration } from "./AdminModeration";
 import { Mascot } from "../visuals/Mascot";
 
-type Tab = "users" | "analytics" | "emails" | "config" | "tuning" | "content" | "prompt" | "memory";
+type Tab =
+  | "users"
+  | "analytics"
+  | "emails"
+  | "config"
+  | "tuning"
+  | "content"
+  | "prompt"
+  | "memory"
+  | "moderation";
 
-const TABS: { id: Tab; label: string; emoji: string }[] = [
+const TABS: { id: Tab; label: string; emoji: string; gated?: "social" }[] = [
   { id: "users", label: "Users", emoji: "👥" },
   { id: "analytics", label: "Analytics", emoji: "📊" },
   { id: "memory", label: "Memory", emoji: "🧠" },
+  { id: "moderation", label: "Moderation", emoji: "⚖️", gated: "social" },
   { id: "emails", label: "Emails", emoji: "📧" },
   { id: "tuning", label: "Tuning", emoji: "🎮" },
   { id: "content", label: "Content", emoji: "📚" },
@@ -53,7 +64,9 @@ export function AdminConsole({ onExit }: { onExit: () => void }) {
       </header>
 
       <nav className="flex flex-wrap gap-2">
-        {TABS.map((t) => {
+        {TABS.filter(
+          (t) => t.gated !== "social" || adminCfg.flags.socialEnabled,
+        ).map((t) => {
           const active = t.id === tab;
           return (
             <button
@@ -80,6 +93,7 @@ export function AdminConsole({ onExit }: { onExit: () => void }) {
       {tab === "content" && <AdminContent />}
       {tab === "prompt" && <AdminPromptStudio apiKey={player.apiKey} apiProvider={player.apiProvider} />}
       {tab === "memory" && <AdminMemory />}
+      {tab === "moderation" && <AdminModeration />}
     </div>
   );
 }
