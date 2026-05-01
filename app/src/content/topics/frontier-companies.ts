@@ -19,6 +19,21 @@ export const frontierCompanies: Topic = {
         takeaway: "Six labs, six philosophies. Pick by fit, not hype.",
         visual: "rocket",
       }),
+      spark("Why alignment is a now problem", {
+        type: "podcastnugget",
+        quote:
+          "Once we get to superintelligence, it will be too late to align the models. My best granularity forecast for could we have an X-risk or extremely bad outcome is somewhere between 0 and 10%.",
+        takeaway:
+          "Alignment work is a now problem, not a future one. The window to bake values into a system closes the moment that system gets smarter than you. This shapes which lab you trust — and which one you join.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Benjamin Mann",
+          guestRole: "co-founder of Anthropic",
+          episodeTitle: "Inside Anthropic — alignment, scaling, AGI timelines",
+          timestamp: "00:00:32",
+        },
+      }),
     ]),
     level(T, 2, "Anthropic in depth", "Mission, models, products.", 4, [
       spark("Anthropic 101", {
@@ -31,6 +46,21 @@ export const frontierCompanies: Topic = {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "When pitching to enterprise, lead with safety: model cards, no-train-on-customer-data clause, audit logs. Anthropic + Claude is a great anchor for that conversation.",
+      }),
+      spark("Mission > offer", {
+        type: "podcastnugget",
+        quote:
+          "They get these offers and then they say, 'My best case scenario at Meta is that we make money, and my best case scenario at Anthropic is we affect the future of humanity.'",
+        takeaway:
+          "The strongest retention mechanism a frontier company has isn't comp — it's a mission so concrete that a $100M offer feels like a downgrade. Builders: pick employers whose mission you'd take a pay cut for.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Benjamin Mann",
+          guestRole: "co-founder of Anthropic",
+          episodeTitle: "Inside Anthropic — alignment, scaling, AGI timelines",
+          timestamp: "00:00:45",
+        },
       }),
     ]),
     level(T, 3, "OpenAI playbook", "Distribution + API breadth.", 4, [
@@ -84,6 +114,21 @@ export const frontierCompanies: Topic = {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Keep a 30-case 'house eval' you run on every new model release. You'll know in 20 min whether it's actually better for YOUR use case.",
+      }),
+      spark("The Challenger disaster of AI", {
+        type: "podcastnugget",
+        quote:
+          "Lots of people knew those little O-rings were unreliable, but every single time you get away with launching a space shuttle without the O-rings failing, you institutionally feel more confident in what you're doing. We've been using these systems in increasingly unsafe ways. My prediction is we're going to see a Challenger disaster.",
+        takeaway:
+          "Ship velocity is masking risk. Treat each AI agent run as if the worst-case prompt-injection has already happened — because the day it does, 'we always did it this way' won't save you.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Simon Willison",
+          guestRole: "co-creator of Django, coined 'prompt injection'",
+          episodeTitle: "The November inflection: AI coding crosses the threshold",
+          timestamp: "00:01:08",
+        },
       }),
     ]),
     level(T, 9, "Talent + research signals", "Who to follow.", 4, [

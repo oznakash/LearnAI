@@ -241,6 +241,11 @@ export function defaultAdminConfig(): AdminConfig {
       streamEnabled: false,
       boardsEnabled: false,
       defaultProfileMode: "open",
+      // Lenny's Podcast content seam ships ON by default — the curated
+      // nuggets are part of the seed content. Operators can flip this
+      // off with one toggle if Lenny ever asks us to. See
+      // docs/lenny-archive.md.
+      lennyContentEnabled: true,
     },
     defaultDailyMinutes: 10,
     perUserDailyTokenCap: 0,

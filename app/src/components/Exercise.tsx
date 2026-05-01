@@ -29,6 +29,8 @@ export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswe
       return <BuildCardView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "boss":
       return <BossView ex={exercise} title={title} onAnswer={onAnswer} />;
+    case "podcastnugget":
+      return <PodcastNuggetView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
   }
 }
 
@@ -399,6 +401,76 @@ function BuildCardView({
         <button className="btn-ghost" disabled={isLocked} onClick={finish}>
           Save for later
         </button>
+      </div>
+    </div>
+  );
+}
+
+function PodcastNuggetView({
+  ex,
+  title,
+  locked,
+  onAnswer,
+}: {
+  ex: Extract<Exercise, { type: "podcastnugget" }>;
+  title: string;
+  locked?: boolean;
+  onAnswer: (correct: boolean, explain?: string) => void;
+}) {
+  const [taken, setTaken] = useState(false);
+  const click = () => {
+    if (taken || locked) return;
+    setTaken(true);
+    onAnswer(true);
+  };
+  const guestLine = ex.source.guestRole
+    ? `${ex.source.guest} · ${ex.source.guestRole}`
+    : ex.source.guest;
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <a
+          href={ex.source.podcastUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="chip bg-warn/10 border-warn/30 text-warn hover:bg-warn/20 transition"
+          aria-label={`Open ${ex.source.podcast}`}
+        >
+          🎙️ {ex.source.podcast}
+        </a>
+      </div>
+      <div className="text-[11px] uppercase tracking-wider text-white/50 mb-1">
+        {guestLine}
+      </div>
+      <h2 className="h2 mb-3 leading-snug">{title}</h2>
+      <blockquote className="border-l-4 border-warn/60 pl-3 sm:pl-4 italic text-white/90 text-[15px] leading-relaxed break-words">
+        “{ex.quote}”
+      </blockquote>
+      {ex.source.episodeTitle && (
+        <div className="mt-2 text-xs text-white/50 italic break-words">
+          {ex.source.episodeTitle}
+        </div>
+      )}
+      <div className="mt-4 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
+        💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
+      </div>
+      {ex.ctaPrompt && (
+        <div className="mt-3 p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white/85">
+          <span className="text-accent2 font-semibold">Try this →</span> {ex.ctaPrompt}
+        </div>
+      )}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button className="btn-primary" disabled={taken || locked} onClick={click}>
+          {taken || locked ? "✓ Logged" : "Got it ⚡"}
+        </button>
+        <a
+          href={ex.source.podcastUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-warn hover:underline"
+        >
+          Listen on {ex.source.podcast} →
+        </a>
       </div>
     </div>
   );

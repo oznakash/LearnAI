@@ -94,6 +94,11 @@ export function xpForExercise(ex: Exercise, correct: boolean): number {
       return t.microread;
     case "tip":
       return ex.bonusXP ?? t.tip;
+    case "podcastnugget":
+      // Same passive-read shape as Tip — a single, attributed quote +
+      // takeaway. Reuse tip-tier XP so we don't bloat GameTuning with
+      // a new knob. Per-nugget bonusXP override stays available.
+      return ex.bonusXP ?? t.tip;
     case "buildcard":
       return t.buildcard;
     case "quickpick":

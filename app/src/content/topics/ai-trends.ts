@@ -18,6 +18,21 @@ export const aiTrends: Topic = {
         body: "Through 2025-2026, every frontier lab shipped 'thinking' modes. Claude with extended thinking, o-series from OpenAI, Gemini Thinking, DeepSeek-R1 open weights. The pattern: same base model, but allowed to generate hidden reasoning before the answer. Effect: huge gains on math, code, planning. Cost: more tokens, more latency. Builders learn to route — fast model for chat, reasoning for hard.",
         takeaway: "Reasoning is now an option, not a feature. Route per task.",
       }),
+      spark("50/50 odds on superintelligence by 2028", {
+        type: "podcastnugget",
+        quote:
+          "I think 50th-percentile chance of hitting some kind of superintelligence is now like 2028.",
+        takeaway:
+          "One of the people who built GPT-3 thinks superintelligence has 50/50 odds inside three years. You don't have to agree — but if you don't have a position on this, your career strategy is borrowed.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Benjamin Mann",
+          guestRole: "co-founder of Anthropic, GPT-3 architect at OpenAI",
+          episodeTitle: "Inside Anthropic — alignment, scaling, AGI timelines",
+          timestamp: "00:00:06",
+        },
+      }),
     ]),
     level(T, 2, "Agents go mainstream", "From demos to production.", 4, [
       spark("Beyond toy demos", {
@@ -30,6 +45,21 @@ export const aiTrends: Topic = {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "When pitching an agent, name the 5 specific tasks it handles. Vague 'AI assistant' pitches lose to specific 'AI that drafts your weekly report from these 4 dashboards'.",
+      }),
+      spark("November 2025: agents crossed the threshold", {
+        type: "podcastnugget",
+        quote:
+          "In November we had what I call the inflection point where GPT 5.1 and Claude Opus 4.5 came along. Previously you had to pay very close attention. Suddenly we went from that to almost all of the time it does what you told it to do, which makes all of the difference in the world.",
+        takeaway:
+          "Late-2025 is the year coding agents crossed the threshold from experimental to reliable. If you tried agents in summer '25 and bounced — you owe yourself another look.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Simon Willison",
+          guestRole: "co-creator of Django, coined 'prompt injection'",
+          episodeTitle: "The November inflection: AI coding crosses the threshold",
+          timestamp: "00:04:23",
+        },
       }),
     ]),
     level(T, 3, "Multimodal as default", "Text, image, audio, video.", 4, [
@@ -78,6 +108,21 @@ export const aiTrends: Topic = {
         title: "Co-workers, not copilots",
         body: "The shift from 'copilot helping with one task' to 'co-worker owning a workflow end-to-end' is the next wave. Companies wire agents into Slack, Linear, Salesforce — they take a thread, run the steps, post results, pause for approval. The product surface: not a chat box, but a teammate inside your existing tools.",
         takeaway: "Embed agents where work already happens.",
+      }),
+      spark("Productivity per engineer is up 200%", {
+        type: "podcastnugget",
+        quote:
+          "I have never enjoyed coding as much as I do today, because I don't have to deal with all the minutia. Productivity per engineer has increased 200%.",
+        takeaway:
+          "The ceiling on what one person can ship has just doubled. The engineers winning right now aren't the ones writing more code — they're the ones giving better instructions to agents.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Boris Cherny",
+          guestRole: "head of Claude Code, Anthropic",
+          episodeTitle: "How Claude Code rewrites the job of an engineer",
+          timestamp: "00:00:21",
+        },
       }),
     ]),
     level(T, 9, "Regulation & policy", "EU AI Act, US executive orders.", 4, [

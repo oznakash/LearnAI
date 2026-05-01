@@ -43,7 +43,8 @@ export type ExerciseType =
   | "scenario"
   | "buildcard"
   | "tip"
-  | "boss";
+  | "boss"
+  | "podcastnugget";
 
 export type VisualKey =
   | "neural"
@@ -130,6 +131,47 @@ export interface Tip {
   visual?: VisualKey;
 }
 
+/**
+ * A short, attributed nugget from an external podcast / interview source.
+ *
+ * - The nugget's `quote` is always ≤ 60 words. Always shown verbatim, in
+ *   quotation marks, attributed to the named guest.
+ * - The `source.podcastUrl` always points at the podcast root (we do not
+ *   deep-link to specific episode pages — see `docs/lenny-archive.md`).
+ * - The chip + "Listen" link both open `source.podcastUrl` in a new tab.
+ *
+ * Render passively (like MicroRead / Tip) — read, takeaway, "Got it ⚡".
+ * If `flags.lennyContentEnabled` is OFF, the topic loader strips every
+ * PodcastNugget Spark before topics reach the player UI.
+ */
+export interface PodcastNugget {
+  type: "podcastnugget";
+  /** ≤ 60 words. Direct quote or close paraphrase. Wrapped in “…” at render. */
+  quote: string;
+  /** One sentence. The takeaway the user walks away with. */
+  takeaway: string;
+  /** Source attribution — never empty. */
+  source: {
+    /** Display name of the podcast, e.g. "Lenny's Podcast". */
+    podcast: string;
+    /** Always the podcast root URL — we do NOT deep-link to episodes. */
+    podcastUrl: string;
+    /** Guest as printed on the episode page. */
+    guest: string;
+    /** Guest's role / company at recording time. Optional but recommended. */
+    guestRole?: string;
+    /** Episode title (for the credit line — not used as a link). */
+    episodeTitle?: string;
+    /** Approximate timestamp inside the source, kept for our verification. */
+    timestamp?: string;
+  };
+  /** Optional follow-up the user can do — keeps Build-Don't-Just-Read alive. */
+  ctaPrompt?: string;
+  /** Optional XP override for this specific nugget (defaults to tip-tier XP). */
+  bonusXP?: number;
+  visual?: VisualKey;
+}
+
 export type Exercise =
   | MicroRead
   | QuickPick
@@ -138,7 +180,8 @@ export type Exercise =
   | Scenario
   | BuildCard
   | Tip
-  | Boss;
+  | Boss
+  | PodcastNugget;
 
 export interface Spark {
   id: string;
