@@ -64,6 +64,21 @@ export function isServerAuthProduction(): boolean {
   return getRuntimeServerAuth().mode === "production";
 }
 
+/**
+ * Whether the Lenny's Podcast content seam is enabled. Default `true` (the
+ * seed nuggets ship as part of the curriculum). Operators flip this off in
+ * Admin → Config → Feature flags. The topic loader (`content/index.ts`)
+ * checks this and strips every PodcastNugget Spark when false.
+ */
+export function isLennyContentEnabled(): boolean {
+  const cfg = readAdminConfig();
+  // No saved config = default behaviour = ON.
+  if (!cfg?.flags) return true;
+  // Explicit false flips it off; anything else (true / undefined / missing)
+  // keeps the default-ON behaviour.
+  return cfg.flags.lennyContentEnabled !== false;
+}
+
 /** For tests: clear the in-memory cache so localStorage changes are visible. */
 export function _resetRuntimeCache() {
   cachedRaw = null;

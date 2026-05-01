@@ -154,7 +154,16 @@ export function AdminConfigTab() {
             value={config.flags.buildCardVerification}
             onChange={(v) => setConfig((cfg) => ({ ...cfg, flags: { ...cfg.flags, buildCardVerification: v } }))}
           />
+          <Toggle
+            label="🎙️ Lenny's Podcast nuggets (curated quotes inside Sparks)"
+            value={config.flags.lennyContentEnabled}
+            onChange={(v) => setConfig((cfg) => ({ ...cfg, flags: { ...cfg.flags, lennyContentEnabled: v } }))}
+          />
         </div>
+        <p className="muted text-xs">
+          When the Lenny's Podcast toggle is off, the topic loader strips every PodcastNugget Spark
+          before topics reach the player. See <code className="text-white/70">docs/lenny-archive.md</code>.
+        </p>
       </section>
 
       <section className="card p-4 space-y-3">

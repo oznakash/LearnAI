@@ -31,6 +31,23 @@ export const aiPm: Topic = {
         answer: 1,
         explain: "Quality + usage + correctness, not just one.",
       }),
+      spark("PM and engineer collapse into builder", {
+        type: "podcastnugget",
+        quote:
+          "By the end of the year everyone is going to be a product manager, and everyone codes. The title software engineer is going to start to go away. It's just going to be replaced by builder.",
+        takeaway:
+          "The roles aren't disappearing — they're collapsing into one. The premium goes to people who can think and ship in the same hour.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Boris Cherny",
+          guestRole: "head of Claude Code, Anthropic",
+          episodeTitle: "How Claude Code rewrites the job of an engineer",
+          timestamp: "00:00:44",
+        },
+        ctaPrompt:
+          "Write your next project description from a builder's voice, not a PM's. State the user, the unmet need, and what 'done' looks like — in under 100 words.",
+      }),
     ]),
     level(T, 2, "Picking the right problem", "Where AI is unfair advantage.", 4, [
       spark("Repeat + boring + judgment", {
@@ -49,6 +66,23 @@ export const aiPm: Topic = {
           { left: "Approving million-dollar wires", right: "Weak fit" },
         ],
         explain: "Stakes + tolerance for error decide it.",
+      }),
+      spark("Sometimes it's positioning, not the product", {
+        type: "podcastnugget",
+        quote:
+          "If your product isn't doing well, there's a chance that it may not be the product that's the problem — it may be your positioning.",
+        takeaway:
+          "Before you rebuild the feature, rewrite the sentence. 'What is this and who is it for?' — answered in one line, in the prospect's words — is a higher-leverage edit than three sprints of new code.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "April Dunford",
+          guestRole: "author of Obviously Awesome",
+          episodeTitle: "Why positioning is your highest-leverage PM lever",
+          timestamp: "00:00:00",
+        },
+        ctaPrompt:
+          "Write your product's one-sentence positioning today. Then ask three users to tell you what your product is. Compare. The gap is your homework.",
       }),
     ]),
     level(T, 3, "UX patterns for AI", "Design for uncertainty.", 5, [
@@ -130,6 +164,21 @@ export const aiPm: Topic = {
           { left: "Self-healing infra responder", right: "Autonomous + audited" },
         ],
         explain: "Each step = more autonomy, more guardrails.",
+      }),
+      spark("AI raises ambition, not free time", {
+        type: "podcastnugget",
+        quote:
+          "AI's supposed to make us more productive. It feels like the people that are most AI-pilled are working harder than they've ever worked. I can fire up four agents in parallel and have them work on four different problems. By 11am, I am wiped out.",
+        takeaway:
+          "AI doesn't reduce hours — it raises ambition. The right comparison isn't 'less work' vs. 'same work.' It's 'the project I'd never have attempted' vs. 'the project I would've taken three months on.'",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Simon Willison",
+          guestRole: "co-creator of Django, coined 'prompt injection'",
+          episodeTitle: "The November inflection: AI coding crosses the threshold",
+          timestamp: "00:00:43",
+        },
       }),
     ]),
     level(T, 8, "Measuring AI quality", "Beyond accuracy.", 4, [

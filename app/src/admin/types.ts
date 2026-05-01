@@ -104,6 +104,15 @@ export interface FeatureFlags {
   boardsEnabled: boolean;
   /** Default privacy mode for newly-onboarded profiles. */
   defaultProfileMode: "open" | "closed";
+  /**
+   * Master switch for the Lenny's Podcast content seam (PodcastNugget Sparks).
+   * When true (default), curated ≤ 60-word nuggets from Lenny's Podcast guests
+   * are surfaced inside the relevant Constellations. When false, the topic
+   * loader strips every PodcastNugget Spark before topics reach the UI — so
+   * the operator can turn the seam off with one toggle if Lenny ever asks
+   * us to. See `docs/lenny-archive.md` for the curation + attribution policy.
+   */
+  lennyContentEnabled: boolean;
 }
 
 /**

@@ -24,6 +24,24 @@ export const aiBuilder: Topic = {
         title: "💡 Tip & Trick",
         body: "Start every project with a Loom video of the experience you want, even before code. If you can't make the Loom, the idea isn't crisp enough.",
       }),
+      spark("Coding is virtually solved", {
+        type: "podcastnugget",
+        quote:
+          "In a year or two, it's not going to matter. Coding is virtually solved. I imagine a world where everyone is able to program, anyone can just build software any time.",
+        takeaway:
+          "The bottleneck on building is shifting from typing code to knowing what to build. Practice describing what you want clearly — that becomes the new programming language.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Boris Cherny",
+          guestRole: "head of Claude Code, Anthropic",
+          episodeTitle: "How Claude Code rewrites the job of an engineer",
+          timestamp: "00:00:22",
+        },
+        ctaPrompt:
+          "Open Claude Code. Pick the dumbest tiny tool you've wished existed. Describe it in three sentences. Ship the result somewhere a friend can click.",
+        visual: "rocket",
+      }),
     ]),
     level(T, 2, "The modern stack", "Where to start.", 4, [
       spark("Default starter kit", {
@@ -60,6 +78,21 @@ export const aiBuilder: Topic = {
         promptToCopy:
           "We're building a one-screen web app: paste in a long article, click button, get back a 3-bullet summary plus a single 'so what?' line. Use Vite + React + Tailwind. Use the Anthropic SDK with claude-sonnet-4-6. Show loading + error states.",
         successCriteria: "Working in 15 minutes. You learn pacing, not the code.",
+      }),
+      spark("Agents take the test step for you", {
+        type: "podcastnugget",
+        quote:
+          "It used to be you'd ask ChatGPT for some code and it would spit out some code, and you have to run it and test it. The coding agents — they take that step for you.",
+        takeaway:
+          "The leap from autocomplete to agent is the leap from 'I write, the AI helps' to 'the AI ships, I review.' Practice that posture: stop typing into the editor; start describing into the agent.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Simon Willison",
+          guestRole: "co-creator of Django, coined 'prompt injection'",
+          episodeTitle: "The November inflection: AI coding crosses the threshold",
+          timestamp: "00:00:00",
+        },
       }),
     ]),
     level(T, 4, "From prototype to product", "What changes after 'it works'.", 4, [
@@ -121,6 +154,21 @@ export const aiBuilder: Topic = {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Record a 30-second Loom for every shipped feature. Auto-post to one channel (X, LinkedIn, Discord). The bar for 'ship' becomes one video, not a launch.",
+      }),
+      spark("95% of my code I didn't type", {
+        type: "podcastnugget",
+        quote:
+          "Today probably 95% of the code that I produce I didn't type it myself. I write so much of my code on my phone, it's wild. I can get good work done walking the dog along the beach.",
+        takeaway:
+          "'Sitting at a desk to code' is becoming optional. The new skill is having a clear specification loaded in your head — when you have that, the input device hardly matters.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Simon Willison",
+          guestRole: "software engineer of 25 years",
+          episodeTitle: "The November inflection: AI coding crosses the threshold",
+          timestamp: "00:00:23",
+        },
       }),
     ]),
     level(T, 9, "AI builder antipatterns", "What sinks projects.", 4, [
