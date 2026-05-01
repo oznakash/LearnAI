@@ -366,6 +366,7 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 | [`pitch-deck.md`](./docs/pitch-deck.md) — 12 slides | | |
 | [`mvp.md`](./docs/mvp.md) — what's shipped | | |
 | [`roadmap.md`](./docs/roadmap.md) — what's next | | |
+| [`metrics.md`](./docs/metrics.md) — North Star + KPIs + guardrails | | |
 
 ### Social layer (Sprint 2 ✅)
 

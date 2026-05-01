@@ -16,6 +16,7 @@
 | [`pitch-deck.md`](./pitch-deck.md) | 12 text-only slides — the partner / investor pitch | Strategic conversations. |
 | [`roadmap.md`](./roadmap.md) | 7 sprints in detail · Sprint 2 ✅ shipped · Sprint 2.5 closes the social punch list · what we will *not* do | Planning the next PR. |
 | [`mvp.md`](./mvp.md) | What's shipped today · what's half-shipped · what's not yet shipped (auditable) | Anyone asking "does it actually work?" |
+| [`metrics.md`](./metrics.md) | North Star (Weekly Active Builders) · supporting KPIs across acquisition, onboarding, engagement, content, network, cognition, talent, forks · guardrails · competitor watch | Reviewing a launch. Tuning a feature. Calling out when WAB is lying to us. |
 | [`social-mvp-product.md`](./social-mvp-product.md) | Sprint-2 social MVP from a product-exec lens · Follow / Spark Stream / Topic Leaderboards / Signals · privacy posture · UI surface map · success metrics | Reviewing or building the social network layer. |
 | [`social-mvp-engineering.md`](./social-mvp-engineering.md) | Sister doc to the social PRD · Postgres-2 schema · `SocialService` contract · auth-verifying proxy · tests · rollout · risk register | Implementing the social MVP in a single PR. |
 | [`social-mvp-status.md`](./social-mvp-status.md) | Sprint-2 changelog (9 PRs) · open P0/P1 punch list from the post-merge review · what Sprint 2.5 closes | Anyone shipping Sprint 2.5 or asking "is the social layer production-ready?" |
@@ -70,7 +71,7 @@ These pre-date the structured wiki but contain useful detail. Read them when the
 → [`architecture.md`](./architecture.md) → [`technical.md`](./technical.md) → [`mem0.md`](./mem0.md) → [`social-mvp-engineering.md`](./social-mvp-engineering.md) → run `npm test` (265 SPA + 35 social-svc = 300).
 
 **"I'm an investor / partner — show me the case."**
-→ [`pitch-deck.md`](./pitch-deck.md) → [`vision.md`](./vision.md) → [`competitors.md`](./competitors.md) → [`mvp.md`](./mvp.md).
+→ [`pitch-deck.md`](./pitch-deck.md) → [`vision.md`](./vision.md) → [`competitors.md`](./competitors.md) → [`mvp.md`](./mvp.md) → [`metrics.md`](./metrics.md).
 
 **"I'm an educator — I want to fork this for my domain."**
 → [`fork-recipe.md`](./fork-recipe.md) → [`vision.md`](./vision.md) → fork the repo on GitHub.
