@@ -5,7 +5,16 @@ import type { EmailTemplateId, MockUser } from "./types";
 type SortKey = "lastSeen" | "xp" | "streak" | "signup";
 
 export function AdminUsers() {
-  const { mockUsers, banUser, resetUserProgress, sendTemplateToUser, config } = useAdmin();
+  const {
+    mockUsers,
+    banUser,
+    resetUserProgress,
+    wipeRealUserState,
+    sendTemplateToUser,
+    config,
+  } = useAdmin();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [acting, setActing] = useState(false);
   const [q, setQ] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("lastSeen");
   const [tierFilter, setTierFilter] = useState<string>("all");
@@ -203,25 +212,63 @@ export function AdminUsers() {
               <div className="label">Actions</div>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  className={`btn-ghost ${selected.banned ? "text-good" : "text-bad"}`}
+                  className={`btn-ghost ${selected.banned ? "text-good" : "text-bad"} ${
+                    selected.id.startsWith("mem0:") ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={selected.id.startsWith("mem0:")}
+                  title={
+                    selected.id.startsWith("mem0:")
+                      ? "Banning real users isn't wired through to /auth/google yet — coming once the alembic migration lands."
+                      : undefined
+                  }
                   onClick={() => {
+                    if (selected.id.startsWith("mem0:")) return;
                     banUser(selected.id, !selected.banned);
                     setSelected({ ...selected, banned: !selected.banned });
                   }}
                 >
                   {selected.banned ? "Unban" : "Ban"}
+                  {selected.id.startsWith("mem0:") ? " (soon)" : ""}
                 </button>
                 <button
                   className="btn-ghost text-warn"
-                  onClick={() => {
-                    if (!confirm("Reset this user's progress?")) return;
-                    resetUserProgress(selected.id);
-                    setSelected({ ...selected, xp: 0, streak: 0, totalSparks: 0, totalMinutes: 0, daysActive: 0 });
+                  disabled={acting || selected.isCurrentUser === true}
+                  title={
+                    selected.isCurrentUser
+                      ? "Refusing to wipe the currently signed-in admin."
+                      : undefined
+                  }
+                  onClick={async () => {
+                    const isReal = selected.id.startsWith("mem0:");
+                    const prompt = isReal
+                      ? `Wipe ${selected.email}'s server-side state on mem0?\n\nThis deletes their user_state row. They re-onboard on next sign-in. Cannot be undone.`
+                      : "Reset this user's progress?";
+                    if (!confirm(prompt)) return;
+                    setActionError(null);
+                    if (!isReal) {
+                      resetUserProgress(selected.id);
+                      setSelected({ ...selected, xp: 0, streak: 0, totalSparks: 0, totalMinutes: 0, daysActive: 0 });
+                      return;
+                    }
+                    setActing(true);
+                    try {
+                      await wipeRealUserState(selected.id);
+                      setSelected(null);
+                    } catch (e) {
+                      setActionError((e as Error).message);
+                    } finally {
+                      setActing(false);
+                    }
                   }}
                 >
-                  Reset progress
+                  {acting ? "Wiping…" : selected.id.startsWith("mem0:") ? "Wipe server state" : "Reset progress"}
                 </button>
               </div>
+              {actionError && (
+                <div className="text-xs text-bad mt-1">
+                  {actionError}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

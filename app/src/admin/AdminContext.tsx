@@ -24,12 +24,25 @@ import { tierForXP } from "../store/game";
 
 /** Real signed-up user as returned by mem0's `/v1/state/admin/users`.
  *  user_state is the canonical "who has signed in" table — every Google
- *  sign-in that mutates SPA state writes a row via PUT /v1/state. */
+ *  sign-in that mutates SPA state writes a row via PUT /v1/state.
+ *  Older mem0 builds returned only `email`/`updated_at`/`xp`/`streak`;
+ *  the optional fields below are populated by mem0#14 onwards. */
 interface RealUserSummary {
   email: string;
+  /** ISO timestamps from the Postgres row. */
+  created_at?: string | null;
   updated_at: string | null;
+  /** Epoch ms derived from the opaque blob. Both may be null when the
+   *  blob is empty (very fresh user) or missing those keys. */
+  signup_at?: number | null;
+  last_seen_at?: number | null;
   xp: number;
   streak: number;
+  total_sparks?: number;
+  total_minutes?: number;
+  /** 14 ints, sparks/day, oldest-first. Mirrors the SPA's own
+   *  computeActivity14d so admin charts agree with player Dashboard. */
+  activity_14d?: number[];
 }
 interface RealUsersResponse {
   count: number;
@@ -63,6 +76,18 @@ interface Ctx {
    */
   realUserCount: number | null;
   realUsersError: string | null;
+  /**
+   * Server-side wipe of a real user's user_state row on mem0. Resolves
+   * `true` when the row was wiped, `false` when the user wasn't in
+   * mem0 (id wasn't a `mem0:*` real user). Refetches the real-users
+   * list on success so the UI stays consistent. Throws on network /
+   * permission errors so callers can surface them.
+   *
+   * The local `resetUserProgress` is intentionally kept for the
+   * mock-cohort rows — calling it on a real user would silently
+   * rebound on the next refetch.
+   */
+  wipeRealUserState: (id: string) => Promise<boolean>;
   setConfig: (mutate: (cfg: AdminConfig) => AdminConfig) => void;
   bootstrapAdmin: (email: string) => void;
   addAdmin: (email: string) => boolean;
@@ -89,6 +114,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [mockUsers, setMockUsers] = useState<MockUser[]>([]);
   const [realUsers, setRealUsers] = useState<RealUsersResponse | null>(null);
   const [realUsersError, setRealUsersError] = useState<string | null>(null);
+  // Bumped to force a refetch of /v1/state/admin/users — used after
+  // wipeRealUserState so the table updates without a full page reload.
+  const [realUsersRefreshKey, setRealUsersRefreshKey] = useState(0);
   // Mirror of PlayerContext's hydration flag. Without this, the first
   // mount runs the persist effect with the still-default config and
   // clobbers the saved admin config (mem0 server URL, API keys,
@@ -146,7 +174,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [config.serverAuth.mem0Url, player.serverSession?.token]);
+  }, [config.serverAuth.mem0Url, player.serverSession?.token, realUsersRefreshKey]);
 
   // Build the cohort displayed across Users / Analytics / etc.:
   // 1. Demo cohort (~30 fake rows) only when `flags.showDemoData` is on.
@@ -171,26 +199,36 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         // (added below) so we skip the mem0 copy here to avoid a stale
         // double.
         if (isSelf) continue;
-        const seenAt = u.updated_at ? Date.parse(u.updated_at) : Date.now();
+        // Prefer the richer fields exposed by mem0#14 onwards. Fall back
+        // to row timestamps + xp-derived approximations when the older
+        // shape is in flight (helps during a deploy where front and back
+        // are momentarily out of sync).
+        const updatedMs = u.updated_at ? Date.parse(u.updated_at) : Date.now();
+        const createdMs = u.created_at ? Date.parse(u.created_at) : updatedMs;
+        const signupAt = u.signup_at ?? createdMs;
+        const lastSeenAt = u.last_seen_at ?? updatedMs;
+        const totalSparks =
+          typeof u.total_sparks === "number" ? u.total_sparks : Math.max(1, Math.floor(u.xp / 10));
+        const totalMinutes =
+          typeof u.total_minutes === "number" ? u.total_minutes : Math.max(1, Math.floor(u.xp / 8));
+        const activity = Array.isArray(u.activity_14d) ? u.activity_14d : [];
+        const daysActive = activity.length
+          ? activity.filter((n) => n > 0).length
+          : Math.max(1, Math.min(30, Math.floor(u.xp / 30)));
         merged.unshift({
           id: `mem0:${u.email}`,
           email: u.email,
           name: u.email.split("@")[0],
           ageBand: "adult",
           skillLevel: "builder",
-          // user_state.created_at isn't exposed yet — last-seen is the
-          // best signupAt approximation we have. Worst case the user
-          // appears as a recent signup; better than missing entirely.
-          signupAt: seenAt,
-          lastSeenAt: seenAt,
+          signupAt,
+          lastSeenAt,
           xp: u.xp,
           streak: u.streak,
           tier: tierForXP(u.xp),
-          // Coarse approximations from xp; the opaque blob has the real
-          // numbers, but exposing them requires a richer admin endpoint.
-          daysActive: Math.max(1, Math.min(30, Math.floor(u.xp / 30))),
-          totalSparks: Math.max(1, Math.floor(u.xp / 10)),
-          totalMinutes: Math.max(1, Math.floor(u.xp / 8)),
+          daysActive,
+          totalSparks,
+          totalMinutes,
           banned: false,
         });
       }
@@ -315,6 +353,42 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       )
     );
   }, []);
+
+  const wipeRealUserState = useCallback(
+    async (id: string): Promise<boolean> => {
+      // Real users have id = `mem0:<email>` (set in the merge effect
+      // above). Mock-cohort + the local "self" row don't — for those,
+      // fall through to the local resetUserProgress UI behavior.
+      if (!id.startsWith("mem0:")) return false;
+      const email = id.slice("mem0:".length);
+      const token = player.serverSession?.token;
+      const base = config.serverAuth.mem0Url;
+      if (!token || !base) {
+        throw new Error(
+          "wipe requires a session JWT and serverAuth.mem0Url — neither is set."
+        );
+      }
+      // Defense-in-depth: never wipe yourself this way. The UI also
+      // disables the action on the current admin row, but a stray
+      // programmatic call should still bail.
+      if (player.identity?.email?.toLowerCase() === email.toLowerCase()) {
+        throw new Error("Refusing to wipe the currently signed-in admin.");
+      }
+      const url = `${base}/v1/state/admin/users/${encodeURIComponent(email)}`;
+      const r = await fetch(url, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        throw new Error(`HTTP ${r.status}${txt ? ` — ${txt.slice(0, 200)}` : ""}`);
+      }
+      // Trigger a refetch of the real-user list so the table updates.
+      setRealUsersRefreshKey((k) => k + 1);
+      return true;
+    },
+    [config.serverAuth.mem0Url, player.serverSession?.token, player.identity?.email]
+  );
 
   const sendTemplateToUser = useCallback(
     (userId: string, templateId: EmailTemplateId, extraVars: Record<string, string | number> = {}) => {
@@ -442,6 +516,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       mockUsers,
       realUserCount,
       realUsersError,
+      wipeRealUserState,
       setConfig,
       bootstrapAdmin,
       addAdmin,
@@ -461,6 +536,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       mockUsers,
       realUserCount,
       realUsersError,
+      wipeRealUserState,
       setConfig,
       bootstrapAdmin,
       addAdmin,

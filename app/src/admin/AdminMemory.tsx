@@ -29,9 +29,14 @@ export function AdminMemory() {
 
   const isProduction = config.serverAuth.mode === "production";
   // Effective values — what the SPA actually uses for memory calls right now.
+  // Production: always serverAuth.mem0Url (built-in). Demo: prefer the
+  // operator-edited memoryConfig URL, but fall back to serverAuth.mem0Url
+  // when it's blank — that way local dev / forks running in demo mode
+  // against the prod backend stop reading "📴 Offline / not configured"
+  // when they're actually wired up via the build-time mem0Url default.
   const effectiveUrl = isProduction
     ? config.serverAuth.mem0Url
-    : config.memoryConfig.serverUrl;
+    : config.memoryConfig.serverUrl || config.serverAuth.mem0Url;
   const effectiveBearerLabel = isProduction
     ? player.serverSession?.token
       ? "Player session JWT (signed by mem0 with JWT_SECRET)"
