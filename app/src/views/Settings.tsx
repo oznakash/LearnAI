@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePlayer } from "../store/PlayerContext";
 import { useAdmin } from "../admin/AdminContext";
 import { TOPICS } from "../content";
 import type { TopicId } from "../types";
 import { eraseAllLocalData } from "../store/reset";
 import type { View } from "../App";
+
+/** Window in which a second "Erase" click commits. After this, the prompt resets. */
+const ERASE_CONFIRM_WINDOW_MS = 5000;
 
 export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
   const { state, signOut, setState, setApiKey, setGoogleClientId, setProfile } = usePlayer();
@@ -14,6 +17,18 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
   const [clientIdDraft, setClientIdDraft] = useState(state.googleClientId ?? "");
   const [interestsDraft, setInterestsDraft] = useState<TopicId[]>(state.profile?.interests ?? []);
   const [dailyMins, setDailyMins] = useState(state.profile?.dailyMinutes ?? 10);
+  const [eraseArmed, setEraseArmed] = useState(false);
+  const eraseTimerRef = useRef<number | null>(null);
+
+  // Cancel the "click again to erase" prompt if the user navigates away
+  // before the window elapses.
+  useEffect(() => {
+    return () => {
+      if (eraseTimerRef.current !== null) {
+        window.clearTimeout(eraseTimerRef.current);
+      }
+    };
+  }, []);
 
   const toggle = (id: TopicId) =>
     setInterestsDraft((arr) => (arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]));
@@ -23,10 +38,28 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
     setProfile({ ...state.profile, interests: interestsDraft, dailyMinutes: dailyMins });
   };
 
-  const reset = () => {
-    if (!confirm("Erase all local progress? This cannot be undone.")) return;
-    eraseAllLocalData();
-    location.reload();
+  const onErase = () => {
+    if (eraseArmed) {
+      // Second click within the window — commit.
+      if (eraseTimerRef.current !== null) {
+        window.clearTimeout(eraseTimerRef.current);
+        eraseTimerRef.current = null;
+      }
+      eraseAllLocalData();
+      window.location.reload();
+      return;
+    }
+    // First click — arm the action and auto-disarm after the window.
+    setEraseArmed(true);
+    eraseTimerRef.current = window.setTimeout(() => {
+      setEraseArmed(false);
+      eraseTimerRef.current = null;
+    }, ERASE_CONFIRM_WINDOW_MS);
+  };
+
+  const onSignOut = () => {
+    signOut();
+    onNav?.({ name: "home" });
   };
 
   const onBootstrap = () => {
@@ -242,6 +275,13 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
             </button>
             <p className="text-[11px] text-white/50">Allowlist: {adminCfg.admins.length} admin{adminCfg.admins.length === 1 ? "" : "s"}.</p>
           </>
+        ) : adminCfg.serverAuth.mode === "production" ? (
+          // Production sign-in: admin is server-side only (mem0's
+          // ADMIN_EMAILS env var via the JWT `is_admin` claim). Any local
+          // bootstrap is a no-op, so we don't expose the affordance.
+          <p className="text-xs text-white/60">
+            Admins are managed server-side on this deployment. Ask an existing admin if you need access.
+          </p>
         ) : adminCfg.bootstrapped ? (
           <p className="text-xs text-white/60">Admin allowlist already initialized. Ask an existing admin to add your Gmail.</p>
         ) : (
@@ -254,11 +294,25 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
         )}
       </section>
 
-      <section className="card p-5 space-y-3 border-bad/30">
-        <h2 className="h2 text-bad">Account</h2>
-        <div className="flex flex-wrap gap-2">
-          <button className="btn-ghost" onClick={signOut}>Sign out</button>
-          <button className="btn-bad" onClick={reset}>Erase all local data</button>
+      <section className="card p-5 space-y-3">
+        <h2 className="h2">Account</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <button className="btn-ghost" onClick={onSignOut}>Sign out</button>
+          <button
+            type="button"
+            onClick={onErase}
+            aria-pressed={eraseArmed}
+            className={`text-xs underline-offset-2 hover:underline transition ${
+              eraseArmed ? "text-bad font-semibold" : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            {eraseArmed ? "🗑 Click again to erase" : "Erase all local data"}
+          </button>
+          {eraseArmed && (
+            <span className="text-[11px] text-white/40">
+              wipes XP, streak, sparks, tasks, feedback, and memory on this device
+            </span>
+          )}
         </div>
       </section>
     </div>

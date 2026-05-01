@@ -20,6 +20,7 @@ import type {
 } from "../types";
 import {
   applySparkResult,
+  clearForNewIdentity,
   defaultState,
   loadState,
   passBoss,
@@ -192,24 +193,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn: Ctx["signIn"] = useCallback((identity) => {
-    setState((s) => ({
-      ...s,
-      identity: { ...identity, provider: "google" },
-    }));
+    const newEmail = identity.email.trim().toLowerCase();
+    setState((s) => {
+      // Identity swap: a *different* email is signing in on this device.
+      // Wipe progress before applying the new identity so the new user
+      // doesn't inherit the prior user's XP / streak / sparks / tasks.
+      // See `clearForNewIdentity` in game.ts.
+      const prevEmail = s.identity?.email?.trim().toLowerCase();
+      const base = prevEmail && prevEmail !== newEmail ? clearForNewIdentity(s) : s;
+      return {
+        ...base,
+        identity: { ...identity, provider: "google" },
+      };
+    });
   }, [setState]);
 
   const signInWithSession: Ctx["signInWithSession"] = useCallback(
     (session) => {
-      setState((s) => ({
-        ...s,
-        identity: {
-          email: session.email,
-          name: session.name,
-          picture: session.picture,
-          provider: "google",
-        },
-        serverSession: session,
-      }));
+      const newEmail = session.email.trim().toLowerCase();
+      setState((s) => {
+        const prevEmail = s.identity?.email?.trim().toLowerCase();
+        const base = prevEmail && prevEmail !== newEmail ? clearForNewIdentity(s) : s;
+        return {
+          ...base,
+          identity: {
+            email: session.email,
+            name: session.name,
+            picture: session.picture,
+            provider: "google",
+          },
+          serverSession: session,
+        };
+      });
     },
     [setState]
   );

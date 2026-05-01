@@ -50,6 +50,36 @@ export function defaultState(): PlayerState {
   };
 }
 
+/**
+ * Reset every progress / personal field on an identity change. Used when
+ * a *different* user signs in on a device that already has another user's
+ * localStorage from a prior session — without this, the new user would
+ * inherit the prior user's XP / streak / sparks / feedback / tasks
+ * because the cross-device sync's "server has nothing yet → preserve
+ * local" early-return takes effect for first-time signers (see
+ * `PlayerContext` hydrate effect).
+ *
+ * **What we keep:** per-device fields the new user inherits from the
+ * device, not from the prior account — `apiKey`, `apiProvider`,
+ * `googleClientId`, and `prefs`. Everything else (profile, xp, streak,
+ * focus, badges, guildTier, progress, history, tasks, feedback,
+ * memoryOptOut) is reset to defaults.
+ *
+ * The new identity itself is set by the caller; this helper just clears
+ * the slate.
+ */
+export function clearForNewIdentity(prev: PlayerState): PlayerState {
+  const fresh = defaultState();
+  return {
+    ...fresh,
+    // Per-device carry-overs:
+    apiKey: prev.apiKey,
+    apiProvider: prev.apiProvider,
+    googleClientId: prev.googleClientId,
+    prefs: prev.prefs,
+  };
+}
+
 export function loadState(): PlayerState {
   if (typeof window === "undefined") return defaultState();
   try {
