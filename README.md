@@ -10,7 +10,7 @@ LearnAI turns the AI firehose into personalized 5-minute Sparks, practical chall
 
 **Learn what matters. Build what sticks. Share what helps others.**
 
-[![Tests](https://img.shields.io/badge/tests-122%2F122-success)](./app/src/__tests__) [![Build](https://img.shields.io/badge/build-passing-success)](./.github/workflows/build-and-publish-dist.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](#license) [![Stack](https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20mem0-7c5cff)](#-tech) [![Vibe](https://img.shields.io/badge/vibe-shipping-ff5d8f)](./docs/vision.md)
+[![Tests](https://img.shields.io/badge/tests-287%2F287-success)](./app/src/__tests__) [![Build](https://img.shields.io/badge/build-passing-success)](./.github/workflows/build-and-publish-dist.yml) [![License](https://img.shields.io/badge/license-MIT-blue)](#license) [![Stack](https://img.shields.io/badge/stack-React%20%C2%B7%20Vite%20%C2%B7%20mem0%20%C2%B7%20social--svc-7c5cff)](#-tech) [![Vibe](https://img.shields.io/badge/vibe-shipping-ff5d8f)](./docs/vision.md)
 
 **Live demo →** [`learnai-b94d78.cloud-claude.com`](https://learnai-b94d78.cloud-claude.com) · **Wiki →** [`docs/INDEX.md`](./docs/INDEX.md) · **Pitch →** [`docs/pitch-deck.md`](./docs/pitch-deck.md)
 
@@ -185,21 +185,22 @@ You can see, edit, forget, wipe, and export what the system remembers. Privacy p
 
 ## ✨ What's in the MVP
 
-- 🌌 **12 Constellations × 10 Levels** — ~480 hand-authored micro-lessons across AI Foundations, LLMs & Cognition, Memory & Safety, AI PM, AI Builder mindset, Cybersecurity, Cloud, AI Dev Tools, AI Trends, Frontier Companies, AI News, Open Source AI.
+- 🌌 **12 Topics × 10 Levels** — ~480 hand-authored micro-lessons across AI Foundations, LLMs & Cognition, Memory & Safety, AI PM, AI Builder mindset, Cybersecurity, Cloud, AI Dev Tools, AI Trends, Frontier Companies, AI News, Open Source AI.
 - ⚡ **8 Spark formats** — MicroRead · Tip & Trick · Quick Pick · Pattern Match · Fill the Stack · Field Scenario · Build Card · Boss Cell.
 - 🎯 **Personalized onboarding** — age band, skill level, interests, daily minutes, goals.
 - 🔥 **Game mechanics that serve practice** — XP, Focus, Build Streak, Guild Tiers, 14 Badges.
 - 🧠 **Cognition layer (mem0)** — opt-in, self-hosted, inspectable.
+- 👥 **Social layer (NEW)** — Public Profile (`/u/<handle>`), Follow / Unfollow / Block / Mute / Report, per-Topic Leaderboards + Signals, Spark Stream feed, Settings → Network with Profile mode (Open / Closed) + field-level visibility, AdminModeration tab. **Plain-English vocabulary** (Follow, Followers, Following) with a behavioral-résumé profile (no bio, no employer, no email exposed). Ships behind feature flags so a fork pulling main today sees zero behavior change.
 - 📚 **"Your Memory" tab** — see, edit, forget, wipe, export.
 - 📊 **Per-topic + global dashboards** — sparkline, radar, ring, bars, 12-week heatmap.
 - ✅ **Tasks tab** — capture YouTube watches, articles, Build Cards.
-- 🛠 **Admin Console (7 tabs)** — Users · Analytics · Memory · Emails · Tuning · Content · Prompt Studio · Config.
+- 🛠 **Admin Console (8 tabs)** — Users · Analytics · Memory · **Moderation** · Emails · Tuning · Content · Prompt Studio · Config.
 - 🔐 **Gmail-only sign-in** via Google Identity Services. Demo mode runs locally; production mode verifies the Google ID token on the mem0 server and returns a 7-day session JWT that works across devices.
 - 📦 **Static SPA** that auto-rebuilds on every push to `main`. Deploys anywhere with zero config.
 
 > The in-app experience is called **BuilderQuest** — the gamified, mascot-led learning shell that runs on top of the LearnAI network.
 
-Honest list of what's shipped vs. coming: [`docs/mvp.md`](./docs/mvp.md).
+Honest list of what's shipped vs. coming: [`docs/mvp.md`](./docs/mvp.md). Sprint 2 (the social layer) is complete — see [`docs/social-mvp-product.md`](./docs/social-mvp-product.md), [`docs/social-mvp-engineering.md`](./docs/social-mvp-engineering.md), and the per-PR changelog in [`docs/social-mvp-status.md`](./docs/social-mvp-status.md).
 
 ---
 
@@ -293,7 +294,7 @@ npm run smoke:memory -- https://learnai-mem0.fly.dev <bearerKey>
 
 ## 🏗️ Architecture at a glance
 
-Two services, one database. The SPA is static and stateless; everything stateful lives in Postgres so a container rebuild loses nothing.
+Three services, two databases. The SPA stays static and stateless; cognition lives in mem0 + Postgres-pgvector, the social graph lives in `social-svc` (in-memory + JSON file in MVP, Postgres-2 in production). A small Cloudflare Worker fronts both backends, verifying Google ID tokens and rate-limiting per email.
 
 ```mermaid
 flowchart LR
@@ -303,29 +304,39 @@ flowchart LR
         SPA <--> LS
     end
 
+    Google["🔐 Google Identity Services"]
+    PROXY["⚖️ auth-proxy<br/>Cloudflare Worker<br/>verify · rate-limit · forward"]
+
     subgraph Cloud["☁️ Cloud-Claude (or any host)"]
         MEM0["mem0 server<br/>FastAPI + Python<br/>oznakash/mem0 fork"]
         PG[("Postgres + pgvector<br/>memories · user_states ·<br/>history · sessions")]
+        SOCIAL["social-svc<br/>Node + Express<br/>profiles · follows ·<br/>blocks · reports · stream"]
+        SDB[("social store<br/>(JSON-file MVP →<br/>Postgres-2)")]
         MEM0 <--> PG
+        SOCIAL <--> SDB
     end
-
-    Google["🔐 Google Identity Services"]
 
     SPA -->|"1. ID token"| Google
     Google -.->|"2. JWT"| SPA
     SPA -->|"3. POST /auth/google"| MEM0
     MEM0 -->|"4. session JWT (7-day)"| SPA
-    SPA <-->|"5. /v1/state, /v1/memories<br/>(bearer = session JWT)"| MEM0
+    SPA <-->|"5. all calls go<br/>through proxy"| PROXY
+    PROXY <-->|"/v1/memories/*"| MEM0
+    PROXY <-->|"/v1/social/*"| SOCIAL
     MEM0 -->|"fact extraction"| OpenAI["OpenAI / Anthropic API"]
 ```
 
 **What flows where:**
 
-- **Identity** — sign-in is server-verified. The SPA hands a Google ID token to mem0; mem0 verifies it against Google's JWKS, mints a 7-day session JWT signed with `JWT_SECRET`, and tags `is_admin` from the operator's `ADMIN_EMAILS` allowlist. Every subsequent call uses that session JWT as the bearer.
+- **Identity** — sign-in is server-verified. The SPA hands a Google ID token to mem0; mem0 verifies it against Google's JWKS, mints a 7-day session JWT signed with `JWT_SECRET`, and tags `is_admin` from the operator's `ADMIN_EMAILS` allowlist. Every subsequent call uses that session JWT as the bearer through the proxy.
 - **Cross-device state** — every Spark write debounce-PUTs the player's progress (XP, streak, profile, history, badges, prefs) to `/v1/state`. Sign in on a phone, then on a laptop — same account, same XP, same memory. Per-device fields (the JWT itself, demo-mode keys) never leave the device.
-- **Cognition** — every Spark completion fires a `remember()` call to `/v1/memories`. mem0 extracts facts via OpenAI, stores them in pgvector, and writes the audit trail to `mem0_history` (a Postgres table — no SQLite-on-disk, no persistent volume needed).
+- **Cognition** — every Spark completion fires a `remember()` call to `/v1/memories`. mem0 extracts facts via OpenAI, stores them in pgvector, and writes the audit trail to `mem0_history`.
+- **Social graph (NEW)** — every state change fires a fire-and-forget `pushSnapshot` to `/v1/social/me/snapshot` (XP / streak / events). Profile views, follow / unfollow / block / mute / report, Topic Leaderboards, and the Spark Stream feed all run through `services/social-svc/`. Public-shaped data only — no cognition / memory contents ever cross over.
+- **Auth proxy** — `services/auth-proxy/` is a ~250-LOC Cloudflare Worker that verifies the SPA's ID token, injects `X-User-Email` server-side, rate-limits per email, swaps in upstream API keys (kept out of the browser), and forwards. Closes the bearer-in-browser issue.
 
 → Full deep-dive (sequence diagrams, failure modes, data classification): [`docs/architecture.md`](./docs/architecture.md).
+→ Social layer: [`docs/social-mvp-product.md`](./docs/social-mvp-product.md) (PRD) · [`docs/social-mvp-engineering.md`](./docs/social-mvp-engineering.md) (engineering plan) · [`docs/social-mvp-status.md`](./docs/social-mvp-status.md) (sprint changelog).
+→ Standalone READMEs: [`services/social-svc/README.md`](./services/social-svc/README.md) · [`services/auth-proxy/README.md`](./services/auth-proxy/README.md).
 
 ---
 
@@ -344,6 +355,13 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 | [`mvp.md`](./docs/mvp.md) — what's shipped | | |
 | [`roadmap.md`](./docs/roadmap.md) — what's next | | |
 
+### Social layer (Sprint 2 ✅)
+
+| 🧭 PRD | 🛠 Engineering | 📦 Status |
+|---|---|---|
+| [`social-mvp-product.md`](./docs/social-mvp-product.md) — capabilities, vocabulary, UI map | [`social-mvp-engineering.md`](./docs/social-mvp-engineering.md) — schema, REST, rollout | [`social-mvp-status.md`](./docs/social-mvp-status.md) — per-PR changelog + open punch list |
+| [`services/social-svc/README.md`](./services/social-svc/README.md) — backend deploy | [`services/auth-proxy/README.md`](./services/auth-proxy/README.md) — Cloudflare Worker | |
+
 → Full index: [`docs/INDEX.md`](./docs/INDEX.md)
 
 ---
@@ -352,11 +370,13 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 
 **React 19 · Vite 8 · TypeScript · Tailwind 3 · Vitest** for the SPA.
 **FastAPI · Python · Postgres + pgvector · Cloud-Claude** for the mem0 server (auth, cognition, cross-device state).
+**Node + Express + TypeScript** for `services/social-svc/` (profiles, follows, blocks, reports, signals, stream events).
+**Cloudflare Workers + jose** for `services/auth-proxy/` (Google ID-token verification, per-email rate limits, header injection, upstream forwarding).
 **Google Identity Services** for sign-in — ID tokens are server-verified by mem0, which mints 7-day session JWTs signed with `JWT_SECRET`.
 
-The SPA stays static; everything stateful lives in Postgres (memories · user_states · audit history · sessions). Container rebuilds lose nothing.
+The SPA stays static; cognition lives in mem0 + Postgres-pgvector; the social graph lives in `social-svc` (in-memory + JSON-file in MVP, Postgres-2 swap is one module). Container rebuilds lose nothing.
 
-~488 KB JS / ~29 KB CSS gzipped, ~78 modules. **165 / 165 vitest** + **4 mem0 build tests** + **5 deploy smoke checks**, all sub-second.
+~556 KB JS / ~30 KB CSS gzipped, ~83 modules. **256 / 256 SPA vitest** + **21 / 21 social-svc tests** + **10 / 10 auth-proxy tests** = **287 total**, all sub-second.
 
 ---
 
@@ -388,33 +408,35 @@ learnai/
 ├── CLAUDE.md                       ← operator manual for AI agents
 ├── docs/                           ← the wiki (strategy + technical)
 │   ├── INDEX.md                    ← documentation table of contents
-│   ├── hero.svg                    ← README hero banner
-│   ├── vision.md
-│   ├── problem.md
-│   ├── use-cases.md
-│   ├── competitors.md
-│   ├── pitch-deck.md
-│   ├── architecture.md
-│   ├── mvp.md
-│   ├── roadmap.md
-│   ├── contributing.md
-│   ├── fork-recipe.md
-│   ├── ux.md                       (cognition-layer UX)
-│   ├── technical.md                (engineer's view)
-│   └── mem0.md                     (cognition layer in depth)
+│   ├── vision.md · problem.md · use-cases.md · competitors.md · pitch-deck.md
+│   ├── architecture.md · technical.md · mem0.md · ux.md · design-language.md
+│   ├── mvp.md · roadmap.md · contributing.md · fork-recipe.md
+│   ├── social-mvp-product.md       ← Sprint-2 PRD
+│   ├── social-mvp-engineering.md   ← Sprint-2 engineering plan
+│   └── social-mvp-status.md        ← Sprint-2 changelog + open issues
 ├── app/                            ← the SPA (BuilderQuest experience)
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── auth/                   ← Gmail-only sign-in
 │   │   ├── content/                ← 12 topic seed files + prompt builder
-│   │   ├── store/                  ← PlayerContext, game logic, badges
+│   │   ├── store/                  ← PlayerContext, game logic, badges, router
 │   │   ├── memory/                 ← MemoryService (offline + mem0 client)
-│   │   ├── admin/                  ← Admin Console (7 tabs)
-│   │   ├── views/                  ← Home, TopicView, Play, Tasks, Memory, …
+│   │   ├── social/                 ← SocialService (offline + online client) ← NEW
+│   │   ├── admin/                  ← Admin Console (8 tabs incl. Moderation)
+│   │   ├── views/                  ← Home, Profile, Network, SparkStream, Boards, …
 │   │   ├── components/             ← TopBar, TabBar, Exercise renderer
 │   │   ├── visuals/                ← Mascot, Illustrations, Charts, Confetti
-│   │   └── __tests__/              ← Vitest
+│   │   └── __tests__/              ← Vitest (256 tests)
 │   └── package.json
+├── services/                       ← self-hostable backends ← NEW
+│   ├── social-svc/                 ← Node + Express social-graph service
+│   │   ├── src/{app,store,project,handles,types}.ts
+│   │   ├── __tests__/              ← supertest + vitest (21 tests)
+│   │   └── README.md
+│   └── auth-proxy/                 ← Cloudflare Worker auth proxy
+│       ├── src/{worker,verify,rate-limit,types}.ts
+│       ├── __tests__/              ← vitest (10 tests)
+│       └── README.md
 ├── dist/                           ← auto-built static SPA (GitHub Actions)
 ├── docker-compose.mem0.yml         ← self-host the cognition layer
 ├── fly.toml                        ← one-command Fly deploy

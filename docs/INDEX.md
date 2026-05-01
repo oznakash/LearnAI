@@ -14,10 +14,11 @@
 | [`use-cases.md`](./use-cases.md) | Seven personas walking through real journeys (PM, kid, retiree, researcher, hiring manager, educator-fork-er) | Designing a feature. Writing a Spark. Empathy check. |
 | [`competitors.md`](./competitors.md) | Quadrant chart · why no one's done it · what gives us defensibility · what we should be paranoid about | Strategy reviews. Investor deep-dive. |
 | [`pitch-deck.md`](./pitch-deck.md) | 12 text-only slides — the partner / investor pitch | Strategic conversations. |
-| [`roadmap.md`](./roadmap.md) | 5 sprints in detail · what we will *not* do · how sprints get committed | Planning the next PR. |
+| [`roadmap.md`](./roadmap.md) | 7 sprints in detail · Sprint 2 ✅ shipped · Sprint 2.5 closes the social punch list · what we will *not* do | Planning the next PR. |
 | [`mvp.md`](./mvp.md) | What's shipped today · what's half-shipped · what's not yet shipped (auditable) | Anyone asking "does it actually work?" |
-| [`social-mvp-product.md`](./social-mvp-product.md) | Sprint-2 social MVP from a product-exec lens · Tune-in / Spark Stream / Topic Boards / Signals · privacy posture · UI surface map · success metrics | Reviewing or building the social network layer. |
+| [`social-mvp-product.md`](./social-mvp-product.md) | Sprint-2 social MVP from a product-exec lens · Follow / Spark Stream / Topic Leaderboards / Signals · privacy posture · UI surface map · success metrics | Reviewing or building the social network layer. |
 | [`social-mvp-engineering.md`](./social-mvp-engineering.md) | Sister doc to the social PRD · Postgres-2 schema · `SocialService` contract · auth-verifying proxy · tests · rollout · risk register | Implementing the social MVP in a single PR. |
+| [`social-mvp-status.md`](./social-mvp-status.md) | Sprint-2 changelog (9 PRs) · open P0/P1 punch list from the post-merge review · what Sprint 2.5 closes | Anyone shipping Sprint 2.5 or asking "is the social layer production-ready?" |
 
 ## Technical & operator
 
@@ -29,6 +30,8 @@
 | [`mem0.md`](./mem0.md) | Why mem0 · what we store + don't · self-host (docker-compose, Fly) · SHA-pinning · backups · GDPR | Running mem0 in any environment. |
 | [`ux.md`](./ux.md) | UX of the cognition layer: where memory shows up, the privacy ethic, edge cases | Designing or reviewing memory-touching UX. |
 | [`mem0-fork-publish.workflow.yml`](./mem0-fork-publish.workflow.yml) | Drop-in GitHub workflow to publish your mem0 fork to GHCR | Before deploying mem0 self-hosted. |
+| [`../services/social-svc/README.md`](../services/social-svc/README.md) | Node + Express social-graph backend · 19 REST endpoints · in-memory + JSON-file MVP · Postgres-2 swap path | Running or extending `social-svc`. |
+| [`../services/auth-proxy/README.md`](../services/auth-proxy/README.md) | Cloudflare Worker that fronts both mem0 + social-svc · ID-token verification · per-email rate limits · deploy via `wrangler` | Standing up the proxy. |
 
 ## Community
 
@@ -56,7 +59,7 @@ These pre-date the structured wiki but contain useful detail. Read them when the
 → [`contributing.md`](./contributing.md) → [`mvp.md`](./mvp.md) → [`technical.md`](./technical.md) → ship a Spark.
 
 **"I'm an engineer — show me the system."**
-→ [`architecture.md`](./architecture.md) → [`technical.md`](./technical.md) → [`mem0.md`](./mem0.md) → run `npm test` (90 / 90).
+→ [`architecture.md`](./architecture.md) → [`technical.md`](./technical.md) → [`mem0.md`](./mem0.md) → [`social-mvp-engineering.md`](./social-mvp-engineering.md) → run `npm test` (256 SPA + 21 social-svc + 10 auth-proxy = 287).
 
 **"I'm an investor / partner — show me the case."**
 → [`pitch-deck.md`](./pitch-deck.md) → [`vision.md`](./vision.md) → [`competitors.md`](./competitors.md) → [`mvp.md`](./mvp.md).
