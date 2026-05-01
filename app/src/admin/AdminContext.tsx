@@ -20,6 +20,21 @@ import { defaultAdminConfig } from "./defaults";
 import { buildAnalytics, buildMockUsers } from "./mockUsers";
 import { sendEmail } from "./sender";
 import { usePlayer } from "../store/PlayerContext";
+import { tierForXP } from "../store/game";
+
+/** Real signed-up user as returned by mem0's `/v1/state/admin/users`.
+ *  user_state is the canonical "who has signed in" table — every Google
+ *  sign-in that mutates SPA state writes a row via PUT /v1/state. */
+interface RealUserSummary {
+  email: string;
+  updated_at: string | null;
+  xp: number;
+  streak: number;
+}
+interface RealUsersResponse {
+  count: number;
+  recent: RealUserSummary[];
+}
 
 type Action =
   | { type: "init"; cfg: AdminConfig }
@@ -38,6 +53,16 @@ interface Ctx {
   config: AdminConfig;
   isAdmin: boolean;
   mockUsers: MockUser[];
+  /**
+   * Authoritative count of real signed-up users from mem0's `user_state`,
+   * or `null` when the endpoint isn't reachable (no session JWT, no
+   * mem0Url, non-admin caller, network error). Surfaced separately from
+   * `mockUsers.length` so the Analytics banner can distinguish "we have
+   * real numbers" from "we're falling back to local". Doesn't affect the
+   * social/memory pipelines — those live in their own contexts.
+   */
+  realUserCount: number | null;
+  realUsersError: string | null;
   setConfig: (mutate: (cfg: AdminConfig) => AdminConfig) => void;
   bootstrapAdmin: (email: string) => void;
   addAdmin: (email: string) => boolean;
@@ -62,6 +87,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const { state: player } = usePlayer();
   const [config, dispatch] = useReducer(reducer, defaultAdminConfig());
   const [mockUsers, setMockUsers] = useState<MockUser[]>([]);
+  const [realUsers, setRealUsers] = useState<RealUsersResponse | null>(null);
+  const [realUsersError, setRealUsersError] = useState<string | null>(null);
   // Mirror of PlayerContext's hydration flag. Without this, the first
   // mount runs the persist effect with the still-default config and
   // clobbers the saved admin config (mem0 server URL, API keys,
@@ -78,14 +105,97 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     saveAdminConfig(config);
   }, [config, hydrated]);
 
-  // Build the deterministic mock cohort once, then merge the current local user.
-  // The mock cohort is only included when the admin has flipped on
-  // `flags.showDemoData` — otherwise only the real signed-in player shows
-  // up in Users / Analytics / etc., which is the right default for a
-  // production deployment.
+  // Pull the authoritative real-user list from mem0's `user_state` when
+  // there's a session JWT + a configured mem0Url. Admin-only on the
+  // server (admin_api_key OR session JWT with `is_admin=true`); 401/403
+  // surface in `realUsersError` and the merged-cohort effect below
+  // falls back to "self only" behavior. Lives here (not in
+  // AdminAnalytics) so every consumer of `mockUsers` — Users table,
+  // Analytics, future per-user actions — sees the same source of truth.
+  // Memory and social contexts are intentionally untouched: they read
+  // their own per-user endpoints and never consume `mockUsers`.
+  useEffect(() => {
+    const token = player.serverSession?.token;
+    const base = config.serverAuth.mem0Url;
+    if (!token || !base) {
+      setRealUsers(null);
+      setRealUsersError(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`${base}/v1/state/admin/users?limit=200`, {
+      headers: { authorization: `Bearer ${token}` },
+    })
+      .then(async (r) => {
+        if (r.status === 403) throw new Error("not_admin");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setRealUsers(data as RealUsersResponse);
+          setRealUsersError(null);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setRealUsers(null);
+          setRealUsersError((e as Error).message);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [config.serverAuth.mem0Url, player.serverSession?.token]);
+
+  // Build the cohort displayed across Users / Analytics / etc.:
+  // 1. Demo cohort (~30 fake rows) only when `flags.showDemoData` is on.
+  // 2. Real signed-up users from mem0 (if reachable).
+  // 3. Current signed-in player (always, when identity is present).
+  // Self is deduped against (2) by email so the admin doesn't appear twice.
+  // The current player's row carries the live local progress (xp, history)
+  // — that's fresher than the snapshot mem0 has, since /v1/state writes
+  // are debounced ~1s.
   useEffect(() => {
     const base = config.flags.showDemoData ? buildMockUsers() : [];
     const merged: MockUser[] = base.slice();
+    const selfEmail = player.identity?.email?.toLowerCase();
+    const selfMatched = !!selfEmail && !!realUsers?.recent.some(
+      (u) => u.email.toLowerCase() === selfEmail
+    );
+
+    if (realUsers) {
+      for (const u of realUsers.recent) {
+        const isSelf = !!selfEmail && u.email.toLowerCase() === selfEmail;
+        // The current admin's row always sources from local PlayerState
+        // (added below) so we skip the mem0 copy here to avoid a stale
+        // double.
+        if (isSelf) continue;
+        const seenAt = u.updated_at ? Date.parse(u.updated_at) : Date.now();
+        merged.unshift({
+          id: `mem0:${u.email}`,
+          email: u.email,
+          name: u.email.split("@")[0],
+          ageBand: "adult",
+          skillLevel: "builder",
+          // user_state.created_at isn't exposed yet — last-seen is the
+          // best signupAt approximation we have. Worst case the user
+          // appears as a recent signup; better than missing entirely.
+          signupAt: seenAt,
+          lastSeenAt: seenAt,
+          xp: u.xp,
+          streak: u.streak,
+          tier: tierForXP(u.xp),
+          // Coarse approximations from xp; the opaque blob has the real
+          // numbers, but exposing them requires a richer admin endpoint.
+          daysActive: Math.max(1, Math.min(30, Math.floor(u.xp / 30))),
+          totalSparks: Math.max(1, Math.floor(u.xp / 10)),
+          totalMinutes: Math.max(1, Math.floor(u.xp / 8)),
+          banned: false,
+        });
+      }
+    }
+
     if (player.identity?.email) {
       const totalSparks = player.history.reduce((a, h) => a + h.sparkIds.length, 0);
       const totalMinutes = player.history.reduce((a, h) => a + h.minutes, 0);
@@ -109,8 +219,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         isCurrentUser: true,
       });
     }
+    void selfMatched;
     setMockUsers(merged);
   }, [
+    realUsers,
     config.flags.showDemoData,
     player.identity?.email,
     player.identity?.name,
@@ -321,11 +433,15 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     am = isAdmin(config, player.identity?.email);
   }
 
+  const realUserCount = realUsers?.count ?? null;
+
   const value = useMemo<Ctx>(
     () => ({
       config,
       isAdmin: am,
       mockUsers,
+      realUserCount,
+      realUsersError,
       setConfig,
       bootstrapAdmin,
       addAdmin,
@@ -343,6 +459,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       config,
       am,
       mockUsers,
+      realUserCount,
+      realUsersError,
       setConfig,
       bootstrapAdmin,
       addAdmin,

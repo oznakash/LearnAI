@@ -35,34 +35,12 @@ interface SocialStats {
   generatedAt: number;
 }
 
-/** Real signed-in users from mem0's user_state table — the canonical
- *  source of platform user count. Until #80, AdminAnalytics derived
- *  user counts from the social-svc projection (`profileCount`), but
- *  social-svc only sees users who hit the social pipeline (gated by
- *  per-device `flags.socialEnabled`, off by default). Concrete miss:
- *  on a 5-user platform, social-svc reported 1. The endpoint here is
- *  the missing source of truth — every Google sign-in that mutates
- *  SPA state writes a row in user_state via PUT /v1/state. */
-interface RealUserSummary {
-  email: string;
-  updated_at: string | null;
-  xp: number;
-  streak: number;
-}
-
-interface RealUsersResponse {
-  count: number;
-  recent: RealUserSummary[];
-}
-
 export function AdminAnalytics() {
   const a = useAnalytics();
-  const { mockUsers, config } = useAdmin();
+  const { mockUsers, config, realUserCount, realUsersError } = useAdmin();
   const { state: player } = usePlayer();
   const [social, setSocial] = useState<SocialStats | null>(null);
   const [socialErr, setSocialErr] = useState<string | null>(null);
-  const [realUsers, setRealUsers] = useState<RealUsersResponse | null>(null);
-  const [realUsersErr, setRealUsersErr] = useState<string | null>(null);
 
   // Pull social telemetry when the social flag is on.
   useEffect(() => {
@@ -95,43 +73,12 @@ export function AdminAnalytics() {
     };
   }, [config.flags.socialEnabled, config.socialConfig.serverUrl, player.identity?.email, player.serverSession?.token]);
 
-  // Pull the canonical user_state list from mem0 — the real platform
-  // signed-up count, regardless of whether socialEnabled is flipped on.
-  // Requires admin: either the operator's `admin_api_key` or a session
-  // JWT with `is_admin=true`. Without the JWT, the request 401s and we
-  // surface the error inline; the SPA never holds the admin key.
-  useEffect(() => {
-    const token = player.serverSession?.token;
-    const base = config.serverAuth.mem0Url;
-    if (!token || !base) {
-      setRealUsers(null);
-      return;
-    }
-    let cancelled = false;
-    fetch(`${base}/v1/state/admin/users?limit=50`, {
-      headers: { authorization: `Bearer ${token}` },
-    })
-      .then(async (r) => {
-        if (r.status === 403) throw new Error("not_admin");
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        if (!cancelled) setRealUsers(data as RealUsersResponse);
-      })
-      .catch((e) => {
-        if (!cancelled) setRealUsersErr((e as Error).message);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [config.serverAuth.mem0Url, player.serverSession?.token]);
-
-  // Use mem0's authoritative user count when available; otherwise fall
-  // back to mockUsers (demo cohort + signed-in self). Reported in the
-  // top "Total users" stat and the "Real-data only" hint.
-  const realUserCount = realUsers?.count ?? null;
-  const totalUsersDisplay = realUserCount ?? a.totalUsers;
+  // mem0-sourced real-user count is the authoritative "total users" when
+  // available. Now that AdminContext folds the same list into mockUsers,
+  // a.totalUsers below already reflects mem0 + demo + self too; we keep
+  // realUserCount for the "Showing N real users" hint card so the admin
+  // can tell at a glance whether the dashboard is live or fallback.
+  const totalUsersDisplay = a.totalUsers;
   const realUserOnly =
     realUserCount === null && mockUsers.length <= 1 && !config.flags.showDemoData;
 
@@ -189,38 +136,10 @@ export function AdminAnalytics() {
         <Stat label="MAU" value={a.mau} />
       </section>
 
-      {realUsers && realUsers.recent.length > 0 && (
-        <section className="card p-4">
-          <header className="flex items-center justify-between mb-2">
-            <h3 className="h2">Real signed-up users</h3>
-            <span className="text-xs text-white/50">
-              {realUsers.count} total · last {realUsers.recent.length} active
-            </span>
-          </header>
-          <ul className="text-sm space-y-1.5">
-            {realUsers.recent.slice(0, 10).map((u) => (
-              <li
-                key={u.email}
-                className="flex items-center justify-between border-b border-white/5 pb-1.5"
-              >
-                <span className="text-white">{u.email}</span>
-                <span className="text-white/60 tabular-nums text-xs">
-                  ⚡ {u.xp} · 🔥 {u.streak}
-                  {u.updated_at && (
-                    <span className="text-white/40 ml-2">
-                      {new Date(u.updated_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {!realUsers && realUsersErr && (
+      {realUsersError && realUserCount === null && (
         <div className="text-xs text-bad/80">
-          Couldn't load mem0 user list: {realUsersErr}.
-          {realUsersErr === "not_admin" && (
+          Couldn't load mem0 user list: {realUsersError}.
+          {realUsersError === "not_admin" && (
             <> Make sure your account is in mem0's <span className="font-mono">ADMIN_EMAILS</span>.</>
           )}
         </div>
