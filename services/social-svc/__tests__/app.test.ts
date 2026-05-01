@@ -272,6 +272,42 @@ describe("snapshot + stream", () => {
     expect(r.status).toBe(409);
   });
 
+  // Regression: a snapshot with xpTotal=0 is the textbook "fresh device"
+  // signal — local state was wiped (e.g. by the cross-account-leak fix in
+  // #72) and the SPA hasn't pulled the server snapshot back yet. Treat it
+  // as a no-op so the client stops retrying every focus-regen tick and
+  // the server's existing aggregate (the canonical record) is preserved.
+  it("snapshot with xpTotal=0 against a populated aggregate is a no-op, not 409", async () => {
+    const now = Date.now();
+    await request(app)
+      .post("/v1/social/me/snapshot")
+      .set(userHeaders("priya@gmail.com"))
+      .send({
+        xpTotal: 1000,
+        xpWeek: 0, xpMonth: 0, streak: 5, guildTier: "Architect",
+        badges: ["first-spark"], topicXp: { "ai-pm": 1000 }, activity14d: [],
+        events: [], clientWindow: { from: now - 1000, to: now },
+      });
+    const r = await request(app)
+      .post("/v1/social/me/snapshot")
+      .set(userHeaders("priya@gmail.com"))
+      .send({
+        xpTotal: 0,
+        xpWeek: 0, xpMonth: 0, streak: 0, guildTier: "Builder",
+        badges: [], topicXp: {}, activity14d: [], events: [],
+        clientWindow: { from: now - 500, to: now + 1000 },
+      });
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ ok: true, noop: "fresh_device" });
+    // Canonical aggregate survives untouched.
+    const me = await request(app)
+      .get("/v1/social/me")
+      .set(userHeaders("priya@gmail.com"));
+    expect(me.body.xpTotal).toBe(1000);
+    expect(me.body.streak).toBe(5);
+    expect(me.body.guildTier).toBe("Architect");
+  });
+
   it("stream returns events from approved follows only, with self/blocked filtered", async () => {
     const now = Date.now();
     // Priya posts a level_up event.
