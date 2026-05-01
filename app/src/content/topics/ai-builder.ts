@@ -50,6 +50,13 @@ export const aiBuilder: Topic = {
         body: "Frontend: Next.js or Vite. LLM: Anthropic Claude or OpenAI GPT. Vector DB: pgvector (Postgres) or Pinecone. Auth: Clerk or Supabase Auth. Hosting: Vercel/Render/Fly. Observability: Helicone or LangSmith. Eval: hand-rolled YAML + LLM-as-judge for now. This stack ships 80% of AI products today. Don't optimize before shipping.",
         takeaway: "Boring, well-documented defaults. Ship first.",
         visual: "stack",
+        vocab: [
+          { term: "pgvector", definition: "A Postgres extension that lets you store + search embedding vectors right inside your existing database. The simplest vector DB for most early-stage apps." },
+          { term: "Pinecone", definition: "A managed, hosted vector database. Pay per index; no infra to run. Trade-off vs pgvector: faster at scale, but yet-another-service." },
+          { term: "Helicone", definition: "A drop-in proxy for LLM API calls. Logs every request/response, costs, and latencies — so you can debug, audit, and tune without writing the plumbing yourself." },
+          { term: "LangSmith", definition: "LangChain's hosted observability + eval suite. Traces every agent step, lets you replay, score outputs against an eval set." },
+          { term: "LLM-as-judge", definition: "Use a stronger model to grade a weaker model's outputs against criteria you wrote in plain English. Cheap, scales, surprisingly good as a smoke test before you build real evals." },
+        ],
       }),
       spark("Quick check", {
         type: "quickpick",
@@ -109,6 +116,11 @@ export const aiBuilder: Topic = {
         title: "Cost levers that actually work",
         body: "Three real cost levers: (1) right-size — use a smaller model for easy steps, big model for hard ones (router pattern). (2) cache — Anthropic's prompt caching cuts costs ~90% on repeated system prompts. (3) batch — async batch APIs are 50% cheaper for non-realtime work. Apply all three before negotiating contracts.",
         takeaway: "Router + cache + batch ≈ 5x cost reduction.",
+        vocab: [
+          { term: "router pattern", definition: "Have a small, cheap classifier model decide whether a query is easy (fast model) or hard (smart model). Cuts cost dramatically without dropping average quality." },
+          { term: "prompt caching", definition: "Tell the API to remember the static prefix of your prompt (system instructions, long context). Subsequent calls reuse it — Anthropic charges ~10% for cached tokens." },
+          { term: "batch APIs", definition: "Submit a batch of requests together, get results within ~24h. Anthropic + OpenAI both offer ~50% off list pricing for batch work." },
+        ],
       }),
       spark("Tip & Trick", {
         type: "tip",

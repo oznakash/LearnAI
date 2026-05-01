@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Exercise, VisualKey } from "../types";
 import { Illustration } from "../visuals/Illustrations";
+import { VocabBody } from "./VocabBody";
 
 interface Props {
   exercise: Exercise;
@@ -9,14 +10,25 @@ interface Props {
   /** True once this Spark has been answered; the renderer disables further input. */
   locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
+  /**
+   * Fires when the user taps an inline vocabulary term in a Spark body.
+   * Lets the parent record a `vocabulary`-category memory.
+   */
+  onVocabTap?: (term: string, definition: string) => void;
+  /**
+   * Fires when the user taps "🔍 Zoom in on this →" inside the
+   * inline definition strip. The parent typically forwards to
+   * `signalSpark(spark.id, "zoom", { reason: \`Wants more on: ${term}\` })`.
+   */
+  onVocabZoom?: (term: string) => void;
 }
 
-export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswer }: Props) {
+export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswer, onVocabTap, onVocabZoom }: Props) {
   switch (exercise.type) {
     case "microread":
-      return <MicroReadView ex={exercise} title={title} topicVisual={topicVisual} locked={locked} onAnswer={onAnswer} />;
+      return <MicroReadView ex={exercise} title={title} topicVisual={topicVisual} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} />;
     case "tip":
-      return <TipView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
+      return <TipView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} />;
     case "quickpick":
       return <QuickPickView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "fillstack":
@@ -40,12 +52,16 @@ function MicroReadView({
   topicVisual,
   locked,
   onAnswer,
+  onVocabTap,
+  onVocabZoom,
 }: {
   ex: Extract<Exercise, { type: "microread" }>;
   title: string;
   topicVisual?: VisualKey;
   locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
+  onVocabTap?: (term: string, definition: string) => void;
+  onVocabZoom?: (term: string) => void;
 }) {
   const [taken, setTaken] = useState(false);
   const click = () => {
@@ -67,7 +83,7 @@ function MicroReadView({
           <Illustration k={ex.visual ?? topicVisual ?? "spark"} className="w-full h-full" />
         </div>
       </div>
-      <p className="text-white/85 leading-relaxed text-[15px]">{ex.body}</p>
+      <VocabBody body={ex.body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
       <div className="mt-4 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
         💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
       </div>
@@ -84,11 +100,15 @@ function TipView({
   title,
   locked,
   onAnswer,
+  onVocabTap,
+  onVocabZoom,
 }: {
   ex: Extract<Exercise, { type: "tip" }>;
   title: string;
   locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
+  onVocabTap?: (term: string, definition: string) => void;
+  onVocabZoom?: (term: string) => void;
 }) {
   const [taken, setTaken] = useState(false);
   const click = () => {
@@ -100,7 +120,7 @@ function TipView({
     <div>
       <div className="chip mb-2 bg-warn/10 border-warn/30 text-warn">💡 Tip & Trick</div>
       <h2 className="h2 mb-2">{ex.title}</h2>
-      <p className="text-white/85 text-[15px] leading-relaxed">{ex.body}</p>
+      <VocabBody body={ex.body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
       <button className="btn-primary mt-4" disabled={taken || locked} onClick={click}>
         {taken || locked ? "✓ Logged" : "Got the trick ⚡"}

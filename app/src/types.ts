@@ -84,12 +84,42 @@ export type VisualKey =
   | "key"
   | "memory";
 
+/**
+ * A vocabulary atom — a term that appears in a Spark's body, with the
+ * inline definition the user sees on tap. The smallest content unit
+ * in the corpus (smaller than a Spark itself).
+ *
+ * Per `docs/content-model.md` §2.4, atoms are how the just-in-time
+ * vocabulary loop closes: when a Spark uses a term the user hasn't
+ * met, they can tap to learn (popover with the inline `definition`)
+ * and optionally fire a `zoom` signal for a deeper Spark later. The
+ * cognition layer logs every tap as a `vocabulary`-category memory.
+ *
+ * Author rules:
+ *   - `term` should appear *as-is* somewhere in the spark's `body`
+ *     (case-insensitive). The renderer does a word-boundary match.
+ *   - `definition` ≤ 30 words; should land without context.
+ *   - Don't include synonyms or aliases; pick the canonical surface
+ *     form. The renderer doesn't infer plurals or stems.
+ */
+export interface VocabAtom {
+  term: string;
+  definition: string;
+}
+
 export interface MicroRead {
   type: "microread";
   title: string;
   body: string;       // 60-120 words
   takeaway: string;   // one sentence
   visual?: VisualKey;
+  /**
+   * Optional vocabulary atoms used in the body. The renderer wraps
+   * each occurrence as a tappable underline; tapping reveals the
+   * inline definition + an optional "Zoom in" affordance. Optional —
+   * Sparks without `vocab` render exactly as today.
+   */
+  vocab?: VocabAtom[];
 }
 
 export interface QuickPick {
@@ -144,6 +174,8 @@ export interface Tip {
   body: string;        // 30-60 words
   bonusXP?: number;    // small XP bump for reading
   visual?: VisualKey;
+  /** See {@link VocabAtom}. Optional. */
+  vocab?: VocabAtom[];
 }
 
 /**

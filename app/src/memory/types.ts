@@ -15,7 +15,17 @@ export type MemoryCategory =
   | "preference"
   | "history"
   | "calibration"
-  | "system";
+  | "system"
+  /**
+   * Vocabulary atoms the user has been exposed to and engaged with.
+   * Written when the user taps a term inline in a Spark body (see
+   * `docs/content-model.md` §2.4). The recommender reads this category
+   * to:
+   *   - skip inline-defining a term the user already engaged with,
+   *   - bias toward Sparks that use vocab the user is *learning* (mid-
+   *     mastery), away from vocab they've over-mastered.
+   */
+  | "vocabulary";
 
 export interface MemoryItem {
   id: string;

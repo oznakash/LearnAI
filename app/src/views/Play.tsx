@@ -380,7 +380,53 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
             onContinue={onContinue}
           />
         ) : (
-          <ExerciseSparkView spark={spark} topicVisual={topic.visual} locked={feedback !== null} onAnswer={onAnswer} />
+          <ExerciseSparkView
+            spark={spark}
+            topicVisual={topic.visual}
+            locked={feedback !== null}
+            onAnswer={onAnswer}
+            onVocabTap={(term, definition) => {
+              // The user tapped an inline vocab term to see its inline
+              // definition. Record a `vocabulary` memory so the
+              // recommender knows this user has been exposed to (and
+              // engaged with) the term — fuels both "skip the inline
+              // definition next time" and "bias toward Sparks that
+              // build on this concept" decisions.
+              void remember({
+                text: `Saw vocab term "${term}" in Spark "${spark.title}" (${topic.name} L${activeLevel.index}): ${definition}`,
+                category: "vocabulary",
+                metadata: {
+                  term,
+                  definition,
+                  sparkId: spark.id,
+                  topicId,
+                  levelId: activeLevel.id,
+                },
+              });
+            }}
+            onVocabZoom={(term) => {
+              // The user clicked "🔍 Zoom in on this →" inside the
+              // term's inline definition. Forwards to the standard
+              // zoom signal, with the term as the reason — the
+              // gold-standard signal for "build a deeper Spark on X."
+              signalSpark(spark.id, "zoom", {
+                reason: `Wants more on: ${term}`,
+                topicId,
+                levelId: activeLevel.id,
+              });
+              void remember({
+                text: `User wants to zoom in on vocab term "${term}" from Spark "${spark.title}".`,
+                category: "goal",
+                metadata: {
+                  signal: "zoom",
+                  vocabTerm: term,
+                  sparkId: spark.id,
+                  topicId,
+                  levelId: activeLevel.id,
+                },
+              });
+            }}
+          />
         )}
       </div>
 
@@ -516,11 +562,15 @@ function ExerciseSparkView({
   topicVisual,
   locked,
   onAnswer,
+  onVocabTap,
+  onVocabZoom,
 }: {
   spark: Spark;
   topicVisual?: import("../types").VisualKey;
   locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
+  onVocabTap?: (term: string, definition: string) => void;
+  onVocabZoom?: (term: string) => void;
 }) {
   return (
     <ExerciseRenderer
@@ -529,6 +579,8 @@ function ExerciseSparkView({
       topicVisual={topicVisual}
       locked={locked}
       onAnswer={onAnswer}
+      onVocabTap={onVocabTap}
+      onVocabZoom={onVocabZoom}
     />
   );
 }
