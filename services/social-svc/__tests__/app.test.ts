@@ -333,3 +333,205 @@ describe("reports + admin moderation", () => {
     expect(r.status).toBe(400);
   });
 });
+
+describe("Sprint 2.5 fixes", () => {
+  describe("upstream-bearer enforcement (P0-2)", () => {
+    it("rejects requests without the upstream bearer when configured", async () => {
+      const guarded = createApp({ store: createStore(), upstreamKey: "shh" });
+      const r = await request(guarded)
+        .get("/v1/social/me")
+        .set(userHeaders("maya@gmail.com"));
+      expect(r.status).toBe(401);
+      expect(r.body.error).toBe("missing_upstream_bearer");
+    });
+
+    it("accepts requests with the correct upstream bearer", async () => {
+      const guarded = createApp({ store: createStore(), upstreamKey: "shh" });
+      const r = await request(guarded)
+        .get("/v1/social/me")
+        .set("authorization", "Bearer shh")
+        .set(userHeaders("maya@gmail.com"));
+      expect(r.status).toBe(200);
+    });
+
+    it("/health bypasses upstream-bearer check", async () => {
+      const guarded = createApp({ store: createStore(), upstreamKey: "shh" });
+      const r = await request(guarded).get("/health");
+      expect(r.status).toBe(200);
+    });
+  });
+
+  describe("non-owner email leak fix (P0-3)", () => {
+    beforeEach(async () => {
+      await request(app).get("/v1/social/me").set(userHeaders("maya@gmail.com"));
+      await request(app).get("/v1/social/me").set(userHeaders("priya@gmail.com"));
+    });
+
+    it("returns empty email when the viewer is not the owner", async () => {
+      const r = await request(app)
+        .get("/v1/social/profiles/maya")
+        .set(userHeaders("priya@gmail.com"));
+      expect(r.status).toBe(200);
+      expect(r.body.email).toBe("");
+      expect(r.body.handle).toBe("maya");
+    });
+
+    it("returns the owner's email back to the owner", async () => {
+      const r = await request(app)
+        .get("/v1/social/me")
+        .set(userHeaders("maya@gmail.com"));
+      expect(r.body.email).toBe("maya@gmail.com");
+    });
+  });
+
+  describe("snapshot validation (P0-6)", () => {
+    beforeEach(async () => {
+      await request(app).get("/v1/social/me").set(userHeaders("maya@gmail.com"));
+    });
+
+    it("returns 400 (not 500) on a malformed body", async () => {
+      const r = await request(app)
+        .post("/v1/social/me/snapshot")
+        .set(userHeaders("maya@gmail.com"))
+        .send({});
+      expect(r.status).toBe(400);
+      expect(r.body.error).toBe("invalid_snapshot");
+    });
+
+    it("rejects out-of-range XP", async () => {
+      const r = await request(app)
+        .post("/v1/social/me/snapshot")
+        .set(userHeaders("maya@gmail.com"))
+        .send({
+          xpTotal: 1e10,
+          streak: 0,
+          guildTier: "Builder",
+          clientWindow: { from: 0, to: Date.now() },
+        });
+      expect(r.status).toBe(400);
+      expect(r.body.error).toBe("xp_out_of_range");
+    });
+  });
+
+  describe("snapshot clientId idempotency (P0-5)", () => {
+    beforeEach(async () => {
+      await request(app).get("/v1/social/me").set(userHeaders("priya@gmail.com"));
+      await request(app).get("/v1/social/me").set(userHeaders("maya@gmail.com"));
+      await request(app)
+        .post("/v1/social/follow/priya")
+        .set(userHeaders("maya@gmail.com"));
+    });
+
+    it("does not multiply stream events when the same snapshot is replayed", async () => {
+      const cw = { from: 0, to: Date.now() };
+      const body = {
+        xpTotal: 100,
+        streak: 1,
+        guildTier: "Builder",
+        clientWindow: cw,
+        events: [
+          { kind: "level_up", topicId: "ai-builder", level: 3, clientId: "evt-1" },
+        ],
+      };
+      const r1 = await request(app)
+        .post("/v1/social/me/snapshot")
+        .set(userHeaders("priya@gmail.com"))
+        .send(body);
+      expect(r1.status).toBe(204);
+      // Replay the same snapshot — server must dedupe by clientId.
+      const r2 = await request(app)
+        .post("/v1/social/me/snapshot")
+        .set(userHeaders("priya@gmail.com"))
+        .send({ ...body, xpTotal: 110 });
+      expect(r2.status).toBe(204);
+      // maya is following priya, so her stream contains priya's events only.
+      const stream = await request(app)
+        .get("/v1/social/stream")
+        .set(userHeaders("maya@gmail.com"));
+      const fromPriya = stream.body.filter(
+        (c: { authorHandle: string }) => c.authorHandle === "priya",
+      );
+      expect(fromPriya.length).toBe(1);
+    });
+
+    it("rejects events with an unknown kind", async () => {
+      await request(app).get("/v1/social/me").set(userHeaders("priya@gmail.com"));
+      const r = await request(app)
+        .post("/v1/social/me/snapshot")
+        .set(userHeaders("priya@gmail.com"))
+        .send({
+          xpTotal: 1,
+          streak: 0,
+          guildTier: "Builder",
+          clientWindow: { from: 0, to: Date.now() },
+          events: [
+            { kind: "totally-fake-kind", clientId: "x" },
+            { kind: "level_up", topicId: "ai-pm", level: 2, clientId: "y" },
+          ],
+        });
+      expect(r.status).toBe(204);
+      // The fake kind row is dropped; only the level_up survives. We
+      // can't read priya's stream directly, but a follow + read shows it.
+      await request(app)
+        .post("/v1/social/follow/priya")
+        .set(userHeaders("maya@gmail.com"));
+      const stream = await request(app)
+        .get("/v1/social/stream")
+        .set(userHeaders("maya@gmail.com"));
+      expect(stream.body.every((c: { kind: string }) => c.kind === "level_up")).toBe(true);
+    });
+  });
+
+  describe("ageBand acceptance + kid-safety (P0-8)", () => {
+    beforeEach(async () => {
+      await request(app).get("/v1/social/me").set(userHeaders("kid@gmail.com"));
+    });
+
+    it("PUT /me with ageBand=kid forces profileMode=closed and signalsGlobal=false", async () => {
+      const r = await request(app)
+        .put("/v1/social/me")
+        .set(userHeaders("kid@gmail.com"))
+        .send({ ageBand: "kid", profileMode: "open", signalsGlobal: true });
+      expect(r.status).toBe(200);
+      expect(r.body.profileMode).toBe("closed");
+      expect(r.body.ageBandIsKid).toBe(true);
+      expect(r.body.ownerPrefs.signalsGlobal).toBe(false);
+    });
+
+    it("kid → adult escape is blocked once set", async () => {
+      await request(app)
+        .put("/v1/social/me")
+        .set(userHeaders("kid@gmail.com"))
+        .send({ ageBand: "kid" });
+      const r = await request(app)
+        .put("/v1/social/me")
+        .set(userHeaders("kid@gmail.com"))
+        .send({ ageBand: "adult" });
+      expect(r.status).toBe(200);
+      expect(r.body.ageBandIsKid).toBe(true);
+    });
+  });
+
+  describe("closed-stub leak fix (P1-5)", () => {
+    beforeEach(async () => {
+      await request(app).get("/v1/social/me").set(userHeaders("priya@gmail.com"));
+      await request(app).get("/v1/social/me").set(userHeaders("maya@gmail.com"));
+      await request(app)
+        .put("/v1/social/me")
+        .set(userHeaders("priya@gmail.com"))
+        .send({ profileMode: "closed" });
+    });
+
+    it("returns the gated stub without email/picture/ageBand to non-followers", async () => {
+      const r = await request(app)
+        .get("/v1/social/profiles/priya")
+        .set(userHeaders("maya@gmail.com"));
+      expect(r.status).toBe(200);
+      expect(r.body.profileMode).toBe("closed");
+      expect(r.body.email).toBe("");
+      expect(r.body.pictureUrl).toBeUndefined();
+      expect(r.body.ageBandIsKid).toBe(false);
+      expect(r.body.signupAt).toBe(0);
+    });
+  });
+});

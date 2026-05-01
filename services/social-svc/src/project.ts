@@ -16,10 +16,17 @@ export function projectProfile(
   viewerEmail: string,
 ): PublicProfile {
   const isOwner = viewerEmail.toLowerCase() === profile.email.toLowerCase();
-  const showFullName = isOwner ? profile.showFullName : profile.showFullName;
+  // P0-3 fix: only the owner sees their own email back. Non-owners get
+  // an empty string so the wire shape stays stable but the gmail isn't
+  // leaked. PRD §4.2: email is "never displayed to viewers."
+  // P1-9 fix: dead `showFullName ? showFullName : showFullName` ternary
+  // — owner-side preview is meant to *always* show the full name when
+  // present (even if `showFullName=false`, so the owner can preview
+  // what they'll display when they flip the toggle on).
+  const showFullName = isOwner ? true : profile.showFullName;
 
   return {
-    email: profile.email,
+    email: isOwner ? profile.email : "",
     handle: profile.handle,
     displayName: resolveDisplayName({
       fullName: profile.fullName,

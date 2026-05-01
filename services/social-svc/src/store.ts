@@ -60,6 +60,14 @@ export interface Store {
 
   // Stream events
   insertEvent(e: Omit<StreamEventRecord, "id">): StreamEventRecord;
+  /**
+   * Insert if a row with the same `clientId` for this email doesn't
+   * already exist. Returns the (existing or newly inserted) row.
+   * Closes P0-5: StrictMode double-fires don't multiply rows.
+   */
+  insertEventIdempotent(
+    e: Omit<StreamEventRecord, "id"> & { clientId: string },
+  ): StreamEventRecord;
   listEventsSince(sinceMs: number, limit?: number): StreamEventRecord[];
 
   // Persistence
@@ -245,6 +253,36 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       if (state.events.length > 5000) state.events.length = 5000;
       flush();
       return next;
+    },
+    insertEventIdempotent(e) {
+      // Look up the most recent ~200 events for this email; if any row
+      // has the same clientId in metadata, return it. Else insert.
+      const cid = e.clientId;
+      const ownerLc = e.email.toLowerCase();
+      const recent = state.events.slice(0, 500);
+      for (const row of recent) {
+        if (
+          row.email.toLowerCase() === ownerLc &&
+          (row.detail as Record<string, unknown> | undefined)?.clientId === cid
+        ) {
+          return row;
+        }
+      }
+      // Persist clientId in detail so future calls find it.
+      const merged: Omit<StreamEventRecord, "id"> = {
+        email: e.email,
+        kind: e.kind,
+        topicId: e.topicId,
+        level: e.level,
+        detail: { ...(e.detail ?? {}), clientId: cid },
+        createdAt: e.createdAt,
+      };
+      state.ids.eventId += 1;
+      const inserted: StreamEventRecord = { ...merged, id: state.ids.eventId };
+      state.events.unshift(inserted);
+      if (state.events.length > 5000) state.events.length = 5000;
+      flush();
+      return inserted;
     },
     listEventsSince(sinceMs, limit = 50) {
       return state.events

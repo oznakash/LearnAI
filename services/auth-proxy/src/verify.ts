@@ -27,6 +27,15 @@ export async function verifyIdToken(
   env: Env,
 ): Promise<ClaimsLite> {
   if (env.TEST_BYPASS_VERIFY === "1") {
+    // P0-7 production guard: refuse to honor the test bypass when the
+    // Worker is also configured with a real OAuth client ID. This is
+    // the production-impersonation footgun; setting both is always a
+    // misconfiguration.
+    if (env.GOOGLE_OAUTH_CLIENT_ID && !/^test/i.test(env.GOOGLE_OAUTH_CLIENT_ID)) {
+      throw new Error(
+        "TEST_BYPASS_VERIFY is set with a non-test GOOGLE_OAUTH_CLIENT_ID — refusing.",
+      );
+    }
     // Decode the body without verification — for tests only.
     const parts = token.split(".");
     if (parts.length !== 3) throw new Error("invalid_token");

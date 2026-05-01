@@ -171,9 +171,12 @@ export class OfflineSocialService implements SocialService {
   // -- projection -----------------------------------------------------------
 
   private toPublic(state: OfflineState, viewerIsOwner: boolean): PublicProfile {
-    const showFull = state.profile.showFullName && viewerIsOwner ? true : state.profile.showFullName;
+    // P1-9 fix: owner always sees their full name (preview); non-owners
+    // see it only when the owner has opted to expose it.
+    const showFull = viewerIsOwner ? true : state.profile.showFullName;
     return {
-      email: state.profile.email,
+      // P0-3 fix: email is owner-only on the wire. Visitors see empty.
+      email: viewerIsOwner ? state.profile.email : "",
       handle: state.profile.handle,
       displayName: resolveDisplayName({
         fullName: state.profile.fullName,

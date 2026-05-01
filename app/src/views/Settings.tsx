@@ -160,7 +160,13 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
               <button
                 className="btn-ghost text-sm"
                 onClick={() => {
-                  const handle = state.identity!.email.split("@")[0]?.toLowerCase() ?? "";
+                  // P0-4 fix: use baseHandleFromEmail for the canonical handle.
+                  // (kept inline since this is the only Settings.tsx usage.)
+                  const local = state.identity!.email.toLowerCase().split("@")[0] ?? "";
+                  const handle = local
+                    .replace(/\./g, "")
+                    .replace(/[^a-z0-9_-]/g, "")
+                    .slice(0, 24) || "user";
                   onNav?.({ name: "profile", handle });
                 }}
               >
