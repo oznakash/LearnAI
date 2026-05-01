@@ -7,6 +7,8 @@
  * MVP — we may allow a one-time rename later.
  */
 
+import { isReservedHandle } from "./sanitize";
+
 const MAX_LEN = 24;
 const VALID = /^[a-z0-9_-]+$/;
 
@@ -39,16 +41,23 @@ export function baseHandleFromEmail(email: string): string {
 
 /**
  * Pick a free handle by trying `base`, `base2`, `base3`, ... up to 9999.
+ * Reserved handles (admin, claude_official, …) are skipped at every step.
+ * Suffixes are clamped so the candidate never exceeds MAX_LEN.
  * Returns null if everything is taken (caller can escalate).
  */
 export function disambiguateHandle(
   base: string,
   isTaken: (candidate: string) => boolean,
 ): string | null {
-  if (!isTaken(base)) return base;
+  if (!isTaken(base) && !isReservedHandle(base)) return base;
   for (let n = 2; n <= 9999; n++) {
-    const candidate = `${base}${n}`;
-    if (!isTaken(candidate)) return candidate;
+    const suffix = String(n);
+    const trimmedBase =
+      base.length + suffix.length > MAX_LEN
+        ? base.slice(0, MAX_LEN - suffix.length)
+        : base;
+    const candidate = `${trimmedBase}${suffix}`;
+    if (!isTaken(candidate) && !isReservedHandle(candidate)) return candidate;
   }
   return null;
 }
@@ -60,6 +69,7 @@ export function isValidHandle(h: string): boolean {
   if (!VALID.test(h)) return false;
   if (h.startsWith("-") || h.startsWith("_")) return false;
   if (h.endsWith("-") || h.endsWith("_")) return false;
+  if (isReservedHandle(h)) return false;
   return true;
 }
 

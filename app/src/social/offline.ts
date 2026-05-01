@@ -16,6 +16,7 @@ import {
   firstNameFrom,
   resolveDisplayName,
 } from "./handles";
+import { safeDisplayName, safePictureUrl } from "./sanitize";
 import type { GuildTier, TopicId } from "../types";
 
 /**
@@ -183,7 +184,7 @@ export class OfflineSocialService implements SocialService {
         showFullName: showFull,
         email: state.profile.email,
       }),
-      pictureUrl: state.profile.pictureUrl,
+      pictureUrl: safePictureUrl(state.profile.pictureUrl),
       guildTier: state.aggregate.guildTier,
       streak: state.aggregate.streak,
       xpTotal: state.aggregate.xpTotal,
@@ -276,14 +277,19 @@ export class OfflineSocialService implements SocialService {
 
   async updateProfile(patch: ProfilePatch): Promise<PublicProfile> {
     const state = this.read();
-    // Kid profiles cannot leave Closed mode.
-    if (state.profile.ageBandIsKid && patch.profileMode === "open") {
-      patch = { ...patch, profileMode: "closed" };
-    }
-    const next: OfflineState = {
-      ...state,
-      profile: { ...state.profile, ...patch },
-    };
+    // Sanitize hostile or layout-breaking owner input. We only touch fields
+    // that are present in the patch — `undefined` stays `undefined` so the
+    // existing value is kept.
+    const cleanPatch: ProfilePatch = { ...patch };
+    if ("pictureUrl" in patch) cleanPatch.pictureUrl = safePictureUrl(patch.pictureUrl);
+    if ("fullName" in patch) cleanPatch.fullName = safeDisplayName(patch.fullName);
+    const nextProfile = { ...state.profile, ...cleanPatch };
+    // Defense in depth: kid profiles can NEVER leave Closed mode regardless
+    // of what the patch tries to set. (The earlier check on `patch.profileMode`
+    // missed the case where the patch doesn't touch profileMode but a prior
+    // bug or hand-edited blob already left it as "open".)
+    if (nextProfile.ageBandIsKid) nextProfile.profileMode = "closed";
+    const next: OfflineState = { ...state, profile: nextProfile };
     this.write(next);
     return this.toPublic(next, true);
   }
@@ -318,7 +324,22 @@ export class OfflineSocialService implements SocialService {
 
   // -- write (graph) --------------------------------------------------------
 
+  /** True if the target is the signed-in player (by handle or email). */
+  private isSelf(target: string): boolean {
+    if (!target) return false;
+    const t = target.toLowerCase();
+    if (t === this.email.toLowerCase()) return true;
+    try {
+      return t === this.read().profile.handle.toLowerCase();
+    } catch {
+      return false;
+    }
+  }
+
   async follow(targetHandle: string): Promise<FollowEdge> {
+    if (this.isSelf(targetHandle)) {
+      throw new Error("Cannot follow yourself");
+    }
     const state = this.read();
     const existing = state.followingOut.find(
       (e) => e.target.toLowerCase() === targetHandle.toLowerCase(),
@@ -379,6 +400,7 @@ export class OfflineSocialService implements SocialService {
   }
 
   async setMuted(targetHandle: string, muted: boolean): Promise<void> {
+    if (this.isSelf(targetHandle)) return; // silent no-op
     const state = this.read();
     this.write({
       ...state,
@@ -389,6 +411,9 @@ export class OfflineSocialService implements SocialService {
   }
 
   async block(targetHandle: string): Promise<void> {
+    if (this.isSelf(targetHandle)) {
+      throw new Error("Cannot block yourself");
+    }
     const state = this.read();
     if (state.blocked.includes(targetHandle)) return;
     // Block precedence: also remove any pending or approved edges.
@@ -418,6 +443,9 @@ export class OfflineSocialService implements SocialService {
     note?: string,
     _context?: Record<string, unknown>,
   ): Promise<void> {
+    if (this.isSelf(targetHandle)) {
+      throw new Error("Cannot report yourself");
+    }
     const state = this.read();
     this.write({
       ...state,
