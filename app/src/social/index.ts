@@ -49,11 +49,16 @@ export interface SelectSocialOpts {
  */
 export function selectSocialService(opts: SelectSocialOpts): SocialService {
   const email = (opts.email ?? "").trim();
-  if (!email || !opts.socialEnabled || !opts.serverUrl) {
+  if (!email || !opts.socialEnabled) {
     return new OfflineSocialService({ email, ageBandIsKid: opts.ageBandIsKid });
   }
+  // Same-origin is the default in production: the social-svc sidecar
+  // runs in the same container as the SPA. Pass an empty serverUrl and
+  // OnlineSocialService makes relative-URL fetches that nginx proxies
+  // to localhost:8787. For fork / dev setups, an explicit serverUrl
+  // points at a remote sidecar.
   return new OnlineSocialService({
-    serverUrl: opts.serverUrl,
+    serverUrl: opts.serverUrl ?? "",
     apiKey: opts.bearerToken,
     userEmail: email,
   });

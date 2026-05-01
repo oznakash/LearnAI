@@ -294,7 +294,7 @@ npm run smoke:memory -- https://learnai-mem0.fly.dev <bearerKey>
 
 ## 🏗️ Architecture at a glance
 
-Three services, two databases. The SPA stays static and stateless; cognition lives in mem0 + Postgres-pgvector, the social graph lives in `social-svc` (in-memory + JSON file in MVP, Postgres-2 in production). A small Cloudflare Worker fronts both backends, verifying Google ID tokens and rate-limiting per email.
+**Two services on the deploy surface.** The SPA + the social-graph sidecar live in one container (single deploy unit on cloud-claude). mem0 stays its own service. No Cloudflare account, no separate proxy, no extra subdomain.
 
 ```mermaid
 flowchart LR
@@ -305,38 +305,40 @@ flowchart LR
     end
 
     Google["🔐 Google Identity Services"]
-    PROXY["⚖️ auth-proxy<br/>Cloudflare Worker<br/>verify · rate-limit · forward"]
 
-    subgraph Cloud["☁️ Cloud-Claude (or any host)"]
+    subgraph LearnAIContainer["📦 learnai container (cloud-claude)"]
+        NGINX["nginx · static SPA<br/>+ reverse-proxy /v1/social/*"]
+        SIDE["Node sidecar :8787<br/>verify session JWT ·<br/>rate-limit · social handlers"]
+        SDB[("social store<br/>JSON-file → Postgres-2")]
+        NGINX -->|"localhost:8787"| SIDE
+        SIDE <--> SDB
+    end
+
+    subgraph Mem0Container["📦 mem0 container (cloud-claude)"]
         MEM0["mem0 server<br/>FastAPI + Python<br/>oznakash/mem0 fork"]
-        PG[("Postgres + pgvector<br/>memories · user_states ·<br/>history · sessions")]
-        SOCIAL["social-svc<br/>Node + Express<br/>profiles · follows ·<br/>blocks · reports · stream"]
-        SDB[("social store<br/>(JSON-file MVP →<br/>Postgres-2)")]
+        PG[("Postgres + pgvector<br/>memories · user_states ·<br/>sessions")]
         MEM0 <--> PG
-        SOCIAL <--> SDB
     end
 
     SPA -->|"1. ID token"| Google
     Google -.->|"2. JWT"| SPA
     SPA -->|"3. POST /auth/google"| MEM0
-    MEM0 -->|"4. session JWT (7-day)"| SPA
-    SPA <-->|"5. all calls go<br/>through proxy"| PROXY
-    PROXY <-->|"/v1/memories/*"| MEM0
-    PROXY <-->|"/v1/social/*"| SOCIAL
+    MEM0 -->|"4. session JWT (7-day, HS256)"| SPA
+    SPA -->|"5a. /v1/social/* + Bearer JWT<br/>(same-origin)"| NGINX
+    SPA -->|"5b. /v1/memories/* + Bearer JWT"| MEM0
     MEM0 -->|"fact extraction"| OpenAI["OpenAI / Anthropic API"]
 ```
 
 **What flows where:**
 
-- **Identity** — sign-in is server-verified. The SPA hands a Google ID token to mem0; mem0 verifies it against Google's JWKS, mints a 7-day session JWT signed with `JWT_SECRET`, and tags `is_admin` from the operator's `ADMIN_EMAILS` allowlist. Every subsequent call uses that session JWT as the bearer through the proxy.
-- **Cross-device state** — every Spark write debounce-PUTs the player's progress (XP, streak, profile, history, badges, prefs) to `/v1/state`. Sign in on a phone, then on a laptop — same account, same XP, same memory. Per-device fields (the JWT itself, demo-mode keys) never leave the device.
-- **Cognition** — every Spark completion fires a `remember()` call to `/v1/memories`. mem0 extracts facts via OpenAI, stores them in pgvector, and writes the audit trail to `mem0_history`.
-- **Social graph (NEW)** — every state change fires a fire-and-forget `pushSnapshot` to `/v1/social/me/snapshot` (XP / streak / events). Profile views, follow / unfollow / block / mute / report, Topic Leaderboards, and the Spark Stream feed all run through `services/social-svc/`. Public-shaped data only — no cognition / memory contents ever cross over.
-- **Auth proxy** — `services/auth-proxy/` is a ~250-LOC Cloudflare Worker that verifies the SPA's ID token, injects `X-User-Email` server-side, rate-limits per email, swaps in upstream API keys (kept out of the browser), and forwards. Closes the bearer-in-browser issue.
+- **Identity** — sign-in is server-verified. The SPA hands a Google ID token to mem0; mem0 verifies against Google's JWKS, mints a 7-day session JWT signed with `JWT_SECRET`, tags `is_admin` from the `ADMIN_EMAILS` allowlist. The session JWT is the bearer for every call.
+- **Cross-device state** — every Spark write debounce-PUTs progress to `/v1/state` on mem0. Sign in on a phone then on a laptop — same account, same XP.
+- **Cognition** — every Spark completion fires `remember()` to `/v1/memories`. mem0 extracts facts via OpenAI, stores in pgvector.
+- **Social graph (Sprint 2)** — every state change fires a fire-and-forget `pushSnapshot` to `/v1/social/me/snapshot`. Profile views, Follow / Unfollow / Block / Mute / Report, Topic Leaderboards, and the Spark Stream all run through the **Node sidecar bundled in the SPA's own container**. nginx reverse-proxies `/v1/social/*` to `localhost:8787` inside the container. Sidecar verifies the same session JWT locally with the shared `JWT_SECRET`. Public-shaped data only; no cognition contents ever cross over.
 
-→ Full deep-dive (sequence diagrams, failure modes, data classification): [`docs/architecture.md`](./docs/architecture.md).
-→ Social layer: [`docs/social-mvp-product.md`](./docs/social-mvp-product.md) (PRD) · [`docs/social-mvp-engineering.md`](./docs/social-mvp-engineering.md) (engineering plan) · [`docs/social-mvp-status.md`](./docs/social-mvp-status.md) (sprint changelog).
-→ Standalone READMEs: [`services/social-svc/README.md`](./services/social-svc/README.md) · [`services/auth-proxy/README.md`](./services/auth-proxy/README.md).
+→ Full deep-dive: [`docs/architecture.md`](./docs/architecture.md).
+→ Social layer: [`docs/social-mvp-product.md`](./docs/social-mvp-product.md) (PRD) · [`docs/social-mvp-engineering.md`](./docs/social-mvp-engineering.md) (eng plan) · [`docs/social-mvp-status.md`](./docs/social-mvp-status.md) (changelog) · [`docs/operator-checklist.md`](./docs/operator-checklist.md) (deploy + monitor).
+→ Sidecar README: [`services/social-svc/README.md`](./services/social-svc/README.md).
 
 ---
 
@@ -360,7 +362,7 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 | 🧭 PRD | 🛠 Engineering | 📦 Status |
 |---|---|---|
 | [`social-mvp-product.md`](./docs/social-mvp-product.md) — capabilities, vocabulary, UI map | [`social-mvp-engineering.md`](./docs/social-mvp-engineering.md) — schema, REST, rollout | [`social-mvp-status.md`](./docs/social-mvp-status.md) — per-PR changelog + open punch list |
-| [`services/social-svc/README.md`](./services/social-svc/README.md) — backend deploy | [`services/auth-proxy/README.md`](./services/auth-proxy/README.md) — Cloudflare Worker | |
+| [`services/social-svc/README.md`](./services/social-svc/README.md) — sidecar (bundled in SPA container) | [`docs/operator-checklist.md`](./docs/operator-checklist.md) — deploy + env vars + monitoring | |
 
 → Full index: [`docs/INDEX.md`](./docs/INDEX.md)
 
@@ -370,13 +372,12 @@ Everything is Markdown in [`docs/`](./docs). Strategy, technical, operator. Noth
 
 **React 19 · Vite 8 · TypeScript · Tailwind 3 · Vitest** for the SPA.
 **FastAPI · Python · Postgres + pgvector · Cloud-Claude** for the mem0 server (auth, cognition, cross-device state).
-**Node + Express + TypeScript** for `services/social-svc/` (profiles, follows, blocks, reports, signals, stream events).
-**Cloudflare Workers + jose** for `services/auth-proxy/` (Google ID-token verification, per-email rate limits, header injection, upstream forwarding).
-**Google Identity Services** for sign-in — ID tokens are server-verified by mem0, which mints 7-day session JWTs signed with `JWT_SECRET`.
+**Node + Express + TypeScript + jose** for `services/social-svc/` (profiles, follows, blocks, reports, signals, stream events). Bundled into the SPA container as a sidecar — single deploy unit. nginx reverse-proxies `/v1/social/*` to `localhost:8787`.
+**Google Identity Services** for sign-in — ID tokens are server-verified by mem0, which mints 7-day session JWTs (HS256, `JWT_SECRET`). The same JWT verifies locally inside the social-svc sidecar — no separate proxy.
 
-The SPA stays static; cognition lives in mem0 + Postgres-pgvector; the social graph lives in `social-svc` (in-memory + JSON-file in MVP, Postgres-2 swap is one module). Container rebuilds lose nothing.
+The SPA stays static; cognition lives in mem0 + Postgres-pgvector; the social graph lives in the bundled sidecar (in-memory + JSON-file in MVP, Postgres-2 swap is one module). Container rebuilds lose nothing.
 
-~556 KB JS / ~30 KB CSS gzipped, ~83 modules. **256 / 256 SPA vitest** + **21 / 21 social-svc tests** + **10 / 10 auth-proxy tests** = **287 total**, all sub-second.
+~556 KB JS / ~30 KB CSS gzipped, ~83 modules. **265 / 265 SPA vitest** + **35 / 35 social-svc tests** = **300 total**, all sub-second.
 
 ---
 
@@ -428,15 +429,14 @@ learnai/
 │   │   ├── visuals/                ← Mascot, Illustrations, Charts, Confetti
 │   │   └── __tests__/              ← Vitest (256 tests)
 │   └── package.json
-├── services/                       ← self-hostable backends ← NEW
-│   ├── social-svc/                 ← Node + Express social-graph service
-│   │   ├── src/{app,store,project,handles,types}.ts
-│   │   ├── __tests__/              ← supertest + vitest (21 tests)
-│   │   └── README.md
-│   └── auth-proxy/                 ← Cloudflare Worker auth proxy
-│       ├── src/{worker,verify,rate-limit,types}.ts
-│       ├── __tests__/              ← vitest (10 tests)
+├── services/                       ← self-hostable backends
+│   └── social-svc/                 ← Node + Express social-graph sidecar
+│       ├── src/{app,store,project,handles,types,verify,rate-limit,log}.ts
+│       ├── __tests__/              ← supertest + vitest (35 tests)
+│       ├── Dockerfile              ← standalone build (used for tests/forks)
 │       └── README.md
+├── scripts/
+│   └── container-entrypoint.sh    ← boots nginx + social-svc sidecar in one container
 ├── dist/                           ← auto-built static SPA (GitHub Actions)
 ├── docker-compose.mem0.yml         ← self-host the cognition layer
 ├── fly.toml                        ← one-command Fly deploy

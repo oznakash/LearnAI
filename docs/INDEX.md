@@ -30,8 +30,8 @@
 | [`mem0.md`](./mem0.md) | Why mem0 · what we store + don't · self-host (docker-compose, Fly) · SHA-pinning · backups · GDPR | Running mem0 in any environment. |
 | [`ux.md`](./ux.md) | UX of the cognition layer: where memory shows up, the privacy ethic, edge cases | Designing or reviewing memory-touching UX. |
 | [`mem0-fork-publish.workflow.yml`](./mem0-fork-publish.workflow.yml) | Drop-in GitHub workflow to publish your mem0 fork to GHCR | Before deploying mem0 self-hosted. |
-| [`../services/social-svc/README.md`](../services/social-svc/README.md) | Node + Express social-graph backend · 19 REST endpoints · in-memory + JSON-file MVP · Postgres-2 swap path | Running or extending `social-svc`. |
-| [`../services/auth-proxy/README.md`](../services/auth-proxy/README.md) | Cloudflare Worker that fronts both mem0 + social-svc · ID-token verification · per-email rate limits · deploy via `wrangler` | Standing up the proxy. |
+| [`../services/social-svc/README.md`](../services/social-svc/README.md) | Node + Express social-graph sidecar (bundled in the SPA container) · 19 REST endpoints · session-JWT auth · in-memory + JSON-file MVP · Postgres-2 swap path | Running or extending `social-svc`. |
+| [`operator-checklist.md`](./operator-checklist.md) | Production deploy steps · env vars to set on cloud-claude · what logs to monitor · rollback · moderation SLA | Operating LearnAI in production. |
 
 ## Community
 
@@ -59,7 +59,7 @@ These pre-date the structured wiki but contain useful detail. Read them when the
 → [`contributing.md`](./contributing.md) → [`mvp.md`](./mvp.md) → [`technical.md`](./technical.md) → ship a Spark.
 
 **"I'm an engineer — show me the system."**
-→ [`architecture.md`](./architecture.md) → [`technical.md`](./technical.md) → [`mem0.md`](./mem0.md) → [`social-mvp-engineering.md`](./social-mvp-engineering.md) → run `npm test` (256 SPA + 21 social-svc + 10 auth-proxy = 287).
+→ [`architecture.md`](./architecture.md) → [`technical.md`](./technical.md) → [`mem0.md`](./mem0.md) → [`social-mvp-engineering.md`](./social-mvp-engineering.md) → run `npm test` (265 SPA + 35 social-svc = 300).
 
 **"I'm an investor / partner — show me the case."**
 → [`pitch-deck.md`](./pitch-deck.md) → [`vision.md`](./vision.md) → [`competitors.md`](./competitors.md) → [`mvp.md`](./mvp.md).

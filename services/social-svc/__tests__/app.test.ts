@@ -8,7 +8,10 @@ let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
   store = createStore();
-  app = createApp({ store, admins: ["admin@learnai.dev"] });
+  // Tests use the demo header path (X-User-Email) for simplicity. The
+  // production path (session-JWT verification) is exercised in the
+  // dedicated `__tests__/jwt.test.ts` suite.
+  app = createApp({ store, admins: ["admin@learnai.dev"], demoTrustHeader: true });
 });
 
 afterEach(() => {
@@ -335,29 +338,77 @@ describe("reports + admin moderation", () => {
 });
 
 describe("Sprint 2.5 fixes", () => {
-  describe("upstream-bearer enforcement (P0-2)", () => {
-    it("rejects requests without the upstream bearer when configured", async () => {
-      const guarded = createApp({ store: createStore(), upstreamKey: "shh" });
-      const r = await request(guarded)
-        .get("/v1/social/me")
-        .set(userHeaders("maya@gmail.com"));
+  describe("auth model — session JWT vs demo header (replaces P0-2 upstream-bearer)", () => {
+    it("rejects requests with no Authorization and no demo header path", async () => {
+      const strict = createApp({
+        store: createStore(),
+        jwtSecret: "test-secret",
+        demoTrustHeader: false,
+      });
+      const r = await request(strict).get("/v1/social/me");
       expect(r.status).toBe(401);
-      expect(r.body.error).toBe("missing_upstream_bearer");
+      expect(r.body.error).toBe("unauthenticated");
     });
 
-    it("accepts requests with the correct upstream bearer", async () => {
-      const guarded = createApp({ store: createStore(), upstreamKey: "shh" });
-      const r = await request(guarded)
+    it("accepts a valid session JWT signed with the configured secret", async () => {
+      const { SignJWT } = await import("jose");
+      const secret = new TextEncoder().encode("test-secret");
+      const token = await new SignJWT({ email: "maya@gmail.com" })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("1h")
+        .sign(secret);
+      const strict = createApp({
+        store: createStore(),
+        jwtSecret: "test-secret",
+        demoTrustHeader: false,
+      });
+      const r = await request(strict)
         .get("/v1/social/me")
-        .set("authorization", "Bearer shh")
-        .set(userHeaders("maya@gmail.com"));
+        .set("authorization", `Bearer ${token}`);
+      expect(r.status).toBe(200);
+      expect(r.body.email).toBe("maya@gmail.com");
+    });
+
+    it("rejects a JWT signed with the wrong secret", async () => {
+      const { SignJWT } = await import("jose");
+      const wrong = new TextEncoder().encode("wrong-secret");
+      const token = await new SignJWT({ email: "maya@gmail.com" })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("1h")
+        .sign(wrong);
+      const strict = createApp({
+        store: createStore(),
+        jwtSecret: "right-secret",
+        demoTrustHeader: false,
+      });
+      const r = await request(strict)
+        .get("/v1/social/me")
+        .set("authorization", `Bearer ${token}`);
+      expect(r.status).toBe(401);
+    });
+
+    it("/health requires no auth at all", async () => {
+      const strict = createApp({
+        store: createStore(),
+        jwtSecret: "test-secret",
+        demoTrustHeader: false,
+      });
+      const r = await request(strict).get("/health");
       expect(r.status).toBe(200);
     });
 
-    it("/health bypasses upstream-bearer check", async () => {
-      const guarded = createApp({ store: createStore(), upstreamKey: "shh" });
-      const r = await request(guarded).get("/health");
-      expect(r.status).toBe(200);
+    it("createApp({demoTrustHeader:true}) refuses under NODE_ENV=production", () => {
+      const orig = process.env.NODE_ENV;
+      process.env.NODE_ENV = "production";
+      try {
+        expect(() =>
+          createApp({ store: createStore(), demoTrustHeader: true }),
+        ).toThrow(/refused/i);
+      } finally {
+        process.env.NODE_ENV = orig;
+      }
     });
   });
 

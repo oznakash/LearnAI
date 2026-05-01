@@ -1,9 +1,17 @@
-// HTTP client implementation of SocialService. Talks to social-svc
-// via the auth-verifying proxy (or directly in demo mode).
+// HTTP client for the social-svc sidecar.
 //
-// Mirrors Mem0MemoryService — same shape, same retry / timeout policy,
-// same defensive parsing. Failure modes are surfaced as thrown errors;
-// callers wrap in withSocialGuard() to fail soft.
+// In production the sidecar is in the same container as the SPA, so
+// `serverUrl` is empty and we make same-origin calls (`/v1/social/...`).
+// nginx reverse-proxies them to localhost:8787 inside the container.
+//
+// In demo / fork mode (sidecar on a different host), pass the full
+// `serverUrl` and we use that as the base.
+//
+// Auth: the SPA sends the mem0-issued session JWT in `Authorization:
+// Bearer ...`. The sidecar verifies it locally with the same JWT_SECRET
+// mem0 uses. We also send `X-User-Email` for fork-mode compatibility
+// (sidecar refuses to honor it under NODE_ENV=production unless
+// SOCIAL_DEMO_TRUST_HEADER=1 is set).
 
 import type {
   BoardPeriod,
@@ -21,10 +29,16 @@ import type {
 import type { TopicId } from "../types";
 
 export interface OnlineOpts {
+  /**
+   * Sidecar base URL. Empty string ⇒ same-origin (production:
+   * `/v1/social/...` resolves to the SPA's own domain, nginx proxies to
+   * the in-container Node sidecar). For fork / dev setups where the
+   * sidecar runs elsewhere, pass `https://social.example.com`.
+   */
   serverUrl: string;
-  /** Bearer token (session JWT in production, admin key in demo). */
+  /** Bearer token — the mem0-issued session JWT. */
   apiKey?: string;
-  /** The viewer's email — sent as `X-User-Email` (proxy strips/replaces in prod). */
+  /** Used for the X-User-Email demo-mode fallback header. */
   userEmail: string;
   /** Per-call hard timeout, default 6000ms. */
   timeoutMs?: number;
@@ -37,7 +51,10 @@ export class OnlineSocialService implements SocialService {
   private readonly timeoutMs: number;
 
   constructor(opts: OnlineOpts) {
-    this.base = opts.serverUrl.replace(/\/+$/, "");
+    // Empty / "/" / blank → same-origin (no host prefix). Otherwise
+    // strip a trailing slash so we can concatenate paths cleanly.
+    const url = (opts.serverUrl ?? "").trim();
+    this.base = url && url !== "/" ? url.replace(/\/+$/, "") : "";
     this.apiKey = opts.apiKey;
     this.email = opts.userEmail;
     this.timeoutMs = opts.timeoutMs ?? 6000;

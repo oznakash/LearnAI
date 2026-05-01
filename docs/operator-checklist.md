@@ -96,6 +96,89 @@ Backup recipe for everything stateful: a nightly `pg_dump` of the Postgres servi
 
 ---
 
+---
+
+## 📡 Social MVP — deploy + env vars + monitoring
+
+The social layer (Sprint 2 + 2.5) is bundled into the SPA's container as a Node sidecar. **No separate cloud-claude service to register.** When you redeploy `learnai`, the social-svc sidecar comes with it.
+
+### Env vars to set on cloud-claude (LearnAI service)
+
+These go on the **same** service (`learnai`) you're already running, alongside the existing `VITE_*` build-time vars.
+
+| Env var | Required? | Purpose | Where it comes from |
+|---|---|---|---|
+| `JWT_SECRET` | **Yes** for production | HS256 secret used to verify the session JWT mem0 mints. **Must be the same value mem0 has** — the sidecar verifies tokens minted by mem0. | Same value already on the mem0 service. Copy it. |
+| `SOCIAL_ADMIN_EMAILS` | Yes for moderation tab access | Comma-separated emails granted access to `/v1/social/admin/*` (Admin → Moderation tab). | Your own gmail (e.g. `oznakash@gmail.com`). Same shape as mem0's `ADMIN_EMAILS`. |
+| `SOCIAL_DB_PATH` | Yes for persistence | File path where social-svc writes its JSON store. Mount a volume here so it survives restarts. | `/data/social.db.json` (the container declares `VOLUME ["/data"]`). |
+| `SOCIAL_ALLOWED_ORIGINS` | Optional | Comma-separated CORS origins. Default `*`. Same-origin deployments don't trigger CORS so this rarely matters in production. | Defaults are fine. |
+| `SOCIAL_DEMO_TRUST_HEADER` | **Don't set in prod** | When `1`, sidecar accepts `X-User-Email` directly — for local dev / forks. The sidecar refuses to start with this set under `NODE_ENV=production`. | Leave unset. |
+| `NODE_ENV` | Yes | Should be `production` on cloud-claude. Enables prod-mode startup checks and refuses `SOCIAL_DEMO_TRUST_HEADER`. | `production` |
+
+**Three new env vars total.** `JWT_SECRET` and `NODE_ENV` you almost certainly have set already.
+
+### Volume mount
+
+The container declares `VOLUME ["/data"]`. Tell cloud-claude to mount a persistent volume there (1 GB is overkill but cheap). Without it, the social store resets on every container rebuild.
+
+### After-deploy admin flips
+
+Once the container is up, sign into `/admin → Config` and toggle:
+
+- `flags.socialEnabled = true`
+- `flags.streamEnabled = true`
+- `flags.boardsEnabled = true`
+- `socialConfig.serverUrl = ""` (leave empty — same-origin is the production default)
+
+That's it. Refresh; the Network tab + Stream tab + Boards view + AdminModeration tab all appear.
+
+### Logs to monitor on cloud-claude
+
+The sidecar emits **structured JSON logs**, one line per event, to stdout. nginx access logs go to stdout too. cloud-claude captures both as part of the standard container log stream.
+
+**Set up alerts on these log shapes:**
+
+| Log message | Severity | What to do |
+|---|---|---|
+| `{"level":"error","svc":"social-svc","msg":"startup_misconfig"}` | P0 | `JWT_SECRET` is unset — every authenticated request will 401. Fix env vars + redeploy. |
+| `{"level":"warn","svc":"social-svc","msg":"jwt_verify_failed"}` (rate > ~10/min sustained) | P1 | Either someone is hitting the API with stolen / expired tokens, or `JWT_SECRET` drifted between mem0 and the sidecar. Confirm both env vars match. |
+| `{"level":"warn","svc":"social-svc","msg":"rate_limited"}` (rate > ~100/min) | P1 | Possible brute-force or runaway client loop. Inspect `email_hash`; if it's one user, ban them. |
+| `{"level":"warn","svc":"social-svc","msg":"banned_request"}` | P2 | A banned user is still trying. No action unless the count is high. |
+| `{"level":"info","svc":"social-svc","msg":"profile_created"}` | informational | New signup. Watch trends, not individual lines. |
+| nginx `502 Bad Gateway` on `/v1/social/*` | P0 | The sidecar process died. Container should auto-restart; if not, redeploy. |
+| `{"level":"error"...}` from any other source | P1 | Investigate. The sidecar's `log.error` only fires for invariant violations. |
+
+**Email privacy:** the sidecar logs `email_hash` (sha-256, first 8 chars), never raw email. Greppable for support cases without leaking PII.
+
+**Per-request log shape** (so you can build a dashboard):
+
+```json
+{"ts":"2026-05-01T...","level":"info","svc":"social-svc","msg":"req",
+ "req_id":"r-mzx-abc12","method":"POST","route":"/v1/social/follow/maya",
+ "status":201,"ms":12,"email_hash":"a1b2c3d4"}
+```
+
+`req_id` is also returned in the response's `x-req-id` header so support can trace from a user complaint to a log line.
+
+### Healthchecks
+
+Two endpoints; cloud-claude can probe either or both:
+
+- `GET /` — nginx + static SPA (existing). 200 = SPA serves.
+- `GET /health-social` — proxies to the sidecar's `/health`. 200 = sidecar is alive. Distinguishes "nginx up but sidecar dead" from "all good".
+
+### Rollback
+
+Flip `flags.socialEnabled = false` in `/admin → Config`. The Network / Stream / Boards / Moderation tabs disappear within 30 s. The sidecar keeps running (no harm); the SPA falls back to `OfflineSocialService`.
+
+To roll back the entire container: tell cloud-claude to redeploy the previous tag. The social JSON store on `/data` survives — re-enabling the flag later picks up where it left off.
+
+### Moderation SLA
+
+Reports queue lives in `/admin → Moderation`. Suggested SLA: **respond within 72 h**. Use the Resolve actions: ✓ No action / ⚠ Warn / 🚫 Ban from social / 🚷 Global ban. Audit trail is in `social.db.json`.
+
+---
+
 ## 🎯 Definition of "production-ready"
 
 You can call it shipped to real users when **all** of the following are true:

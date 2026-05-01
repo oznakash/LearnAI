@@ -21,12 +21,15 @@
 | [#46](https://github.com/oznakash/learnai/pull/46) | `060d19a` | 2026-04-30 | PR 7 — `services/social-svc/` Node backend + `OnlineSocialService` HTTP client |
 | [#47](https://github.com/oznakash/learnai/pull/47) | `ed6cead` | 2026-04-30 | PR 8 — `services/auth-proxy/` Cloudflare Worker proxy |
 | [#48](https://github.com/oznakash/learnai/pull/48) | `4ce6d14` | 2026-04-30 | PR 9 — AdminModeration tab |
+| [#49](https://github.com/oznakash/learnai/pull/49) | `6932f95` | 2026-04-30 | Doc PR — README, mvp, roadmap, INDEX, architecture, this status doc |
+| [#50](https://github.com/oznakash/learnai/pull/50) | `8d3aec5` | 2026-04-30 | Sprint 2.5 PR 10 — closed 8 P0s + 2 P1s (snapshot pipeline, upstream bearer, email leak, handle fix, clientId idempotency, snapshot validation, kid-safety, closed-stub leak) |
+| (this PR) | (pending) | 2026-05-01 | Sprint 2.5 PR 11 — **architecture consolidation**: deleted `services/auth-proxy/`; folded its logic into `services/social-svc/`; bundled the sidecar into the SPA container; switched auth from injected-X-User-Email to local session-JWT verification; same-origin defaults on the SPA; structured JSON logging; Dockerfile + entrypoint script. Three deploy units → two. No Cloudflare account needed. |
 
 ### By the numbers
 
-- Test count: 90 → **287** (256 SPA + 21 social-svc + 10 auth-proxy).
+- Test count: 90 → **300** (265 SPA + 35 social-svc).
 - Bundle delta: ~+50 KB JS gzipped.
-- New packages: 2 (`services/social-svc`, `services/auth-proxy`).
+- Deploy units on cloud-claude: **2** (the SPA container with social-svc sidecar bundled in + mem0). Was briefly 3 between PR 7 and PR 11.
 - Engagement-feedback ranking signals shipped: **0** (vision §4).
 
 ### Five capabilities — implementation map
