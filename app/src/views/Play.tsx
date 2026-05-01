@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getTopic, TOPICS } from "../content";
+import { getCreator } from "../admin/runtime";
 import { usePlayer } from "../store/PlayerContext";
 import { useMemory } from "../memory/MemoryContext";
 import { useAdmin } from "../admin/AdminContext";
@@ -455,12 +456,14 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
           currentVote={getSparkVote(state, spark.id)}
           sourceUrl={
             spark.exercise.type === "podcastnugget"
-              ? spark.exercise.source.podcastUrl
+              ? (getCreator(spark.exercise.creatorId)?.creditUrl ??
+                  spark.exercise.source.podcastUrl)
               : undefined
           }
           sourceLabel={
             spark.exercise.type === "podcastnugget"
-              ? `Listen on ${spark.exercise.source.podcast}`
+              ? (getCreator(spark.exercise.creatorId)?.creditLabel ??
+                  `Listen on ${spark.exercise.source.podcast}`)
               : undefined
           }
           onVote={(vote, reason) => {
@@ -616,29 +619,44 @@ function ReviewSparkView({
         <p className="text-white/85 leading-relaxed text-[15px]">{ex.body}</p>
       )}
 
-      {ex.type === "podcastnugget" && (
-        <>
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            <a
-              href={ex.source.podcastUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="chip bg-warn/10 border-warn/30 text-warn hover:bg-warn/20 transition"
-            >
-              🎙️ {ex.source.podcast}
-            </a>
-            <span className="text-[11px] uppercase tracking-wider text-white/50">
-              {ex.source.guestRole ? `${ex.source.guest} · ${ex.source.guestRole}` : ex.source.guest}
-            </span>
-          </div>
-          <blockquote className="border-l-4 border-warn/60 pl-3 italic text-white/90 text-[15px] leading-relaxed break-words">
-            “{ex.quote}”
-          </blockquote>
-          <div className="mt-3 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
-            💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
-          </div>
-        </>
-      )}
+      {ex.type === "podcastnugget" && (() => {
+        const creator = getCreator(ex.creatorId);
+        const creditName = creator?.name ?? ex.source.podcast;
+        const creditUrl = creator?.creditUrl ?? ex.source.podcastUrl;
+        const creditEmoji = creator?.avatarEmoji ?? "🎙️";
+        return (
+          <>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <a
+                href={creditUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chip bg-warn/10 border-warn/30 text-warn hover:bg-warn/20 transition"
+              >
+                {creator?.avatarUrl ? (
+                  <img
+                    src={creator.avatarUrl}
+                    alt=""
+                    className="w-4 h-4 rounded-full object-cover -ml-0.5 mr-1 inline-block"
+                  />
+                ) : (
+                  <span className="mr-1">{creditEmoji}</span>
+                )}
+                {creditName}
+              </a>
+              <span className="text-[11px] uppercase tracking-wider text-white/50">
+                {ex.source.guestRole ? `${ex.source.guest} · ${ex.source.guestRole}` : ex.source.guest}
+              </span>
+            </div>
+            <blockquote className="border-l-4 border-warn/60 pl-3 italic text-white/90 text-[15px] leading-relaxed break-words">
+              “{ex.quote}”
+            </blockquote>
+            <div className="mt-3 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
+              💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
+            </div>
+          </>
+        );
+      })()}
 
       {ex.type === "quickpick" && (
         <>

@@ -1,4 +1,5 @@
 import type { AdminConfig, EmailTemplate, EmailTemplateId, GameTuning, ServerAuthConfig } from "./types";
+import { SEED_CREATORS } from "../content/creators";
 
 /**
  * Build-time defaults for server-side sign-in. Two layers, in priority:
@@ -258,6 +259,7 @@ export function defaultAdminConfig(): AdminConfig {
     emailQueue: [],
     tuning: { ...DEFAULT_TUNING, xp: { ...DEFAULT_TUNING.xp }, focus: { ...DEFAULT_TUNING.focus }, tiers: { ...DEFAULT_TUNING.tiers } },
     contentOverrides: { topics: {}, extras: [] },
+    creators: { ...SEED_CREATORS },
     promptStudio: {
       audience: "Active AI builders + curious starters, mixed audience, plain English with concrete examples.",
       topicName: "AI Foundations",

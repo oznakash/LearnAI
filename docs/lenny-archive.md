@@ -43,7 +43,7 @@
 
 ## 3. The `PodcastNugget` Spark variant
 
-Spec only — this lands in `app/src/types.ts` as part of the upcoming PR (b). Not built yet.
+Lives in `app/src/types.ts`. The shape:
 
 ```ts
 export interface PodcastNugget {
@@ -52,6 +52,13 @@ export interface PodcastNugget {
   quote: string;
   /** One sentence. The takeaway you want the user to walk away with. */
   takeaway: string;
+  /**
+   * Creator registry id. The `name`, `creditUrl`, `creditLabel`, and avatar
+   * for the credit chip are looked up from the registry — change them once
+   * in Admin → Creators and every Spark updates. Optional only for back-
+   * compat with seeds authored before the registry shipped.
+   */
+  creatorId?: CreatorId;
   /** Source attribution (mandatory, never empty). */
   source: {
     podcast: "Lenny's Podcast";
@@ -71,6 +78,28 @@ export interface PodcastNugget {
   visual?: VisualKey;
 }
 ```
+
+### Where credit comes from: the **creator registry**
+
+The chip name, link URL, link label, and avatar do not live on the Spark
+itself anymore — they live in the **creator registry** (`app/src/content/creators.ts`,
+plus admin overrides under `AdminConfig.creators`). Every Spark sets a
+`creatorId` (`"lenny"` for the seed nuggets) and the player UI looks the
+chip up at render time.
+
+Why a registry?
+- **One change, every Spark updates.** If Lenny's URL ever changes, edit
+  it once in Admin → Creators and all 12+ nuggets update.
+- **Adding a new creator is a config change, not a code change.** Operators
+  can add Hard Fork, Stratechery, The Pragmatic Engineer, etc. from the
+  admin UI — the registry surfaces them as a category in the content admin
+  with per-creator Spark counts.
+- **Future-proof for the source-anchored variants.** `VideoNugget` /
+  `EssayNugget` / `NewsletterNugget` will reuse the same registry, so the
+  attribution UX stays uniform across content types.
+
+The seed registry ships with one creator (`lenny`). Operators add more
+under **Admin → Creators**.
 
 **Render contract** (UI requirements for the variant — informs PR (a) visual-box work too):
 

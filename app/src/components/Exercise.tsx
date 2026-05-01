@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import type { Exercise, VisualKey } from "../types";
+import type { Creator, Exercise, VisualKey } from "../types";
 import { Illustration } from "../visuals/Illustrations";
 import { VocabBody } from "./VocabBody";
+import { getCreator } from "../admin/runtime";
 
 interface Props {
   exercise: Exercise;
@@ -433,6 +434,21 @@ function BuildCardView({
   );
 }
 
+/**
+ * Resolves a podcast nugget's credit fields from the creator registry
+ * first (the modern path) and falls back to the inline `source` object
+ * for back-compat with seeds authored before the registry shipped.
+ */
+function resolveNuggetCredit(ex: Extract<Exercise, { type: "podcastnugget" }>) {
+  const creator: Creator | undefined = getCreator(ex.creatorId);
+  const name = creator?.name ?? ex.source.podcast;
+  const url = creator?.creditUrl ?? ex.source.podcastUrl;
+  const label = creator?.creditLabel ?? `Listen on ${ex.source.podcast}`;
+  const avatarUrl = creator?.avatarUrl;
+  const avatarEmoji = creator?.avatarEmoji ?? "🎙️";
+  return { name, url, label, avatarUrl, avatarEmoji };
+}
+
 function PodcastNuggetView({
   ex,
   title,
@@ -453,17 +469,27 @@ function PodcastNuggetView({
   const guestLine = ex.source.guestRole
     ? `${ex.source.guest} · ${ex.source.guestRole}`
     : ex.source.guest;
+  const credit = resolveNuggetCredit(ex);
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <a
-          href={ex.source.podcastUrl}
+          href={credit.url}
           target="_blank"
           rel="noopener noreferrer"
           className="chip bg-warn/10 border-warn/30 text-warn hover:bg-warn/20 transition"
-          aria-label={`Open ${ex.source.podcast}`}
+          aria-label={`Open ${credit.name}`}
         >
-          🎙️ {ex.source.podcast}
+          {credit.avatarUrl ? (
+            <img
+              src={credit.avatarUrl}
+              alt=""
+              className="w-4 h-4 rounded-full object-cover -ml-0.5 mr-1 inline-block"
+            />
+          ) : (
+            <span className="mr-1">{credit.avatarEmoji}</span>
+          )}
+          {credit.name}
         </a>
       </div>
       <div className="text-[11px] uppercase tracking-wider text-white/50 mb-1">
@@ -491,12 +517,12 @@ function PodcastNuggetView({
           {taken || locked ? "✓ Logged" : "Got it ⚡"}
         </button>
         <a
-          href={ex.source.podcastUrl}
+          href={credit.url}
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm text-warn hover:underline"
         >
-          Listen on {ex.source.podcast} →
+          {credit.label} →
         </a>
       </div>
     </div>

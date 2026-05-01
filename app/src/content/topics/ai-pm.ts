@@ -37,6 +37,7 @@ export const aiPm: Topic = {
       }),
       spark("PM and engineer collapse into builder", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "By the end of the year everyone is going to be a product manager, and everyone codes. The title software engineer is going to start to go away. It's just going to be replaced by builder.",
         takeaway:
@@ -73,6 +74,7 @@ export const aiPm: Topic = {
       }),
       spark("Sometimes it's positioning, not the product", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "If your product isn't doing well, there's a chance that it may not be the product that's the problem — it may be your positioning.",
         takeaway:
@@ -171,6 +173,7 @@ export const aiPm: Topic = {
       }),
       spark("AI raises ambition, not free time", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "AI's supposed to make us more productive. It feels like the people that are most AI-pilled are working harder than they've ever worked. I can fire up four agents in parallel and have them work on four different problems. By 11am, I am wiped out.",
         takeaway:

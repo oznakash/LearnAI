@@ -20,6 +20,7 @@ export const aiTrends: Topic = {
       }),
       spark("50/50 odds on superintelligence by 2028", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "I think 50th-percentile chance of hitting some kind of superintelligence is now like 2028.",
         takeaway:
@@ -48,6 +49,7 @@ export const aiTrends: Topic = {
       }),
       spark("November 2025: agents crossed the threshold", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "In November we had what I call the inflection point where GPT 5.1 and Claude Opus 4.5 came along. Previously you had to pay very close attention. Suddenly we went from that to almost all of the time it does what you told it to do, which makes all of the difference in the world.",
         takeaway:
@@ -111,6 +113,7 @@ export const aiTrends: Topic = {
       }),
       spark("Productivity per engineer is up 200%", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "I have never enjoyed coding as much as I do today, because I don't have to deal with all the minutia. Productivity per engineer has increased 200%.",
         takeaway:

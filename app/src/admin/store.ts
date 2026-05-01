@@ -91,6 +91,11 @@ export function loadAdminConfig(): AdminConfig {
         topics: parsed.contentOverrides?.topics ?? {},
         extras: parsed.contentOverrides?.extras ?? [],
       },
+      // Forward-compat: legacy saved configs predate the creator
+      // registry. Merge seed defaults under any saved overrides so the
+      // built-in creators (Lenny) always exist, and the operator's
+      // custom creators win on collisions.
+      creators: { ...base.creators, ...(parsed.creators ?? {}) },
       promptStudio: { ...base.promptStudio, ...(parsed.promptStudio ?? {}) },
       memoryConfig: { ...base.memoryConfig, ...(parsed.memoryConfig ?? {}) },
       socialConfig: {
