@@ -179,6 +179,7 @@ Concretely on every task:
 3. **Always update docs in the same PR.** Surface change → `docs/design-language.md`. Architecture change → `docs/architecture.md` and/or `docs/server-auth-plan.md`. Roadmap move → `docs/roadmap.md`. README badges or "Try it" copy if user-visible. CLAUDE.md if it's a workflow rule future you should inherit.
 4. **Always test before merging.** `npm test --prefix app` and `npm run build --prefix app` must both be green. Add a regression test for any user-reported bug — that's the single best forcing function against re-regressing.
 5. **Squash-merge yourself** once CI is green and there are no unresolved review threads.
+6. **Use the Cloud-Claude MCP for the deploy side of the loop.** When something needs platform-side action — set an env var, mount a volume, read container logs, force a redeploy, attach a domain, roll back — call the MCP tool directly instead of asking the operator to click in the dashboard or paste terminal output. The full playbook + safety rules + audit recipe are in [`docs/cloud-claude-mcp.md`](./docs/cloud-claude-mcp.md). Read it once. The fast path on any infra question is `describe_project(projectId)` followed by `get_logs` for the resource that's misbehaving.
 
 The standing scope is `oznakash/learnai` and `oznakash/mem0`. Do not write to other repos.
 
@@ -193,11 +194,11 @@ The standing scope is `oznakash/learnai` and `oznakash/mem0`. Do not write to ot
 
 You don't have credentials for:
 
-- The user's Fly.io account (so `fly deploy` requires the user's hands).
-- Other repositories (your GitHub MCP scope is `oznakash/learnai` only).
-- Cloud DNS / TLS / billing.
+- Other repositories (your GitHub MCP scope is `oznakash/learnai` and `oznakash/mem0` only).
+- Cloud DNS / TLS / billing flows that aren't surfaced through the Cloud-Claude MCP (e.g. registrar-side DNS edits — the platform handles verification + TLS once the record is in place, but the registrar update is operator-side).
+- Anything outside Cloud-Claude (Fly.io, AWS, Vercel, etc. for this project's deploys are not in scope).
 
-Be upfront about this. Don't pretend.
+What you **do** have when the Cloud-Claude MCP is loaded: full read + mutate access to projects / resources / env vars / volumes / domains / deploys. See [`docs/cloud-claude-mcp.md`](./docs/cloud-claude-mcp.md). Don't pretend the limit is wider than it is — but don't be falsely humble about what you can introspect either.
 
 ---
 
