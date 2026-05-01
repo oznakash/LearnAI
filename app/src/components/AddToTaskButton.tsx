@@ -1,11 +1,20 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Spark, TopicId, Task } from "../types";
 import { usePlayer } from "../store/PlayerContext";
 
 export function AddToTaskButton({ spark, topicId, levelId }: { spark: Spark; topicId: TopicId; levelId: string }) {
-  const { addTask } = usePlayer();
+  const { state, addTask } = usePlayer();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState<Task | null>(null);
+
+  // Dedup: if a task already exists for this Spark, the button becomes
+  // a non-actionable "✓ In Tasks" indicator. Defense-in-depth dedup
+  // also lives in PlayerContext.addTask so programmatic dupe attempts
+  // (rapid clicks, retries, etc.) become no-ops.
+  const existing = useMemo(
+    () => state.tasks.find((t) => t.source?.sparkId === spark.id),
+    [state.tasks, spark.id],
+  );
 
   const baseTask = (): Omit<Task, "id" | "createdAt" | "updatedAt" | "status"> => {
     if (spark.exercise.type === "buildcard") {
@@ -41,6 +50,7 @@ export function AddToTaskButton({ spark, topicId, levelId }: { spark: Spark; top
   };
 
   const onAdd = () => {
+    if (existing) return; // belt-and-braces — UI already disabled.
     const t = addTask(baseTask());
     setAdded(t);
     setOpen(false);
@@ -50,11 +60,13 @@ export function AddToTaskButton({ spark, topicId, levelId }: { spark: Spark; top
   return (
     <div className="relative">
       <button
-        title="Add to Tasks"
-        className="btn-ghost text-xs"
+        title={existing ? "Already in Tasks" : "Add to Tasks"}
+        className={`text-xs ${existing ? "btn-good" : "btn-ghost"}`}
         onClick={onAdd}
+        disabled={!!existing}
+        aria-pressed={!!existing}
       >
-        ＋ Task
+        {existing ? "✓ In Tasks" : "＋ Task"}
       </button>
       {added && (
         <div className="absolute right-0 top-10 z-30 card px-3 py-2 text-xs text-good whitespace-nowrap">

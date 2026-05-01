@@ -158,6 +158,67 @@ export function AdminConfigTab() {
       </section>
 
       <section className="card p-4 space-y-3">
+        <h3 className="h2">Social network</h3>
+        <p className="muted text-xs">
+          Three flags gate the social MVP — Profile, Network settings, Topic Leaderboards, Spark Stream, Admin → Moderation.
+          Backed by the social-svc sidecar bundled in this container.
+          See <code className="text-white/70">docs/operator-checklist.md</code> for the deploy + monitoring runbook.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          <Toggle
+            label="Social enabled (master switch — Profile, Network, Boards, Stream, Moderation)"
+            value={config.flags.socialEnabled}
+            onChange={(v) => setConfig((cfg) => ({ ...cfg, flags: { ...cfg.flags, socialEnabled: v } }))}
+          />
+          <Toggle
+            label="Spark Stream tab (requires Social enabled)"
+            value={config.flags.streamEnabled}
+            onChange={(v) => setConfig((cfg) => ({ ...cfg, flags: { ...cfg.flags, streamEnabled: v } }))}
+          />
+          <Toggle
+            label="Topic Leaderboards (Boards) view (requires Social enabled)"
+            value={config.flags.boardsEnabled}
+            onChange={(v) => setConfig((cfg) => ({ ...cfg, flags: { ...cfg.flags, boardsEnabled: v } }))}
+          />
+        </div>
+        <div>
+          <div className="label">Default profile mode for new players</div>
+          <div className="flex gap-2 mt-1">
+            {(["open", "closed"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() =>
+                  setConfig((cfg) => ({ ...cfg, flags: { ...cfg.flags, defaultProfileMode: mode } }))
+                }
+                className={`pill text-sm transition ${
+                  config.flags.defaultProfileMode === mode
+                    ? "bg-accent/20 border border-accent text-white"
+                    : "bg-white/5 border border-white/10 text-white/70 hover:text-white"
+                }`}
+              >
+                {mode === "open" ? "🌐 Open (discoverable)" : "🔒 Closed (approval required)"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="label">social-svc URL</div>
+          <input
+            className="input"
+            placeholder="leave empty for same-origin (production default)"
+            value={config.socialConfig.serverUrl}
+            onChange={(e) =>
+              setConfig((cfg) => ({ ...cfg, socialConfig: { ...cfg.socialConfig, serverUrl: e.target.value } }))
+            }
+          />
+          <p className="text-[11px] text-white/40 mt-1">
+            Empty = same-origin. The sidecar lives in this container and nginx proxies <code>/v1/social/*</code> to it on
+            <code> localhost:8787</code>. Only set this when running social-svc on a separate host (fork / dev).
+          </p>
+        </div>
+      </section>
+
+      <section className="card p-4 space-y-3">
         <h3 className="h2">Demo data</h3>
         <p className="muted text-xs">
           A deterministic cohort of ~30 fake users used for screenshots, demos, and UI-glitch hunting.
