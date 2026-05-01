@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PlayerProvider } from "../store/PlayerContext";
 import { AdminProvider } from "../admin/AdminContext";
 import { MemoryProvider } from "../memory/MemoryContext";
@@ -111,5 +111,45 @@ describe("Profile view", () => {
     const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
     cfg.flags = { ...(cfg.flags ?? {}), socialEnabled: true };
     localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
+  });
+
+  it("View as visitor: hides Follow / Block on own profile, keeps the toggle visible", async () => {
+    // Owner views their own profile.
+    mount("maya");
+    await settle();
+    expect(await screen.findByText(/This is your profile/i)).toBeTruthy();
+
+    // Click "View as visitor".
+    const toggle = screen.getByRole("button", { name: /View as visitor/i });
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    // The toggle stays visible so the owner can flip back. Without the
+    // strip showing, an owner who clicked through to preview was stuck
+    // until they reloaded the page.
+    expect(screen.getByRole("button", { name: /Back to owner view/i })).toBeTruthy();
+    expect(screen.getByText(/Visitor preview/i)).toBeTruthy();
+
+    // No follow / block / report cluster on one's own profile, even in
+    // visitor preview. The service-layer guards (PR #60) throw on
+    // self-follow; this is the matching UI guard.
+    expect(screen.queryByRole("button", { name: /\+ Follow/i })).toBeNull();
+  });
+
+  it("Back to owner view restores the action cluster", async () => {
+    mount("maya");
+    await settle();
+    const toVisitor = screen.getByRole("button", { name: /View as visitor/i });
+    await act(async () => {
+      fireEvent.click(toVisitor);
+    });
+    const back = screen.getByRole("button", { name: /Back to owner view/i });
+    await act(async () => {
+      fireEvent.click(back);
+    });
+    expect(screen.getByRole("button", { name: /View as visitor/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Copy share link/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Edit profile/i })).toBeTruthy();
   });
 });

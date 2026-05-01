@@ -48,7 +48,8 @@ export function Profile({ handle, onNav }: Props) {
     [player.identity?.email],
   );
 
-  const isOwner = !previewing && handle.toLowerCase() === myHandle.toLowerCase();
+  const isSelf = handle.toLowerCase() === myHandle.toLowerCase();
+  const isOwner = !previewing && isSelf;
   const socialOff = !config.flags.socialEnabled;
 
   useEffect(() => {
@@ -104,14 +105,16 @@ export function Profile({ handle, onNav }: Props) {
         ← Home
       </button>
 
-      {isOwner && (
+      {isSelf && (
         <div className="card p-3 sm:p-4 border-accent/30 bg-accent/5 flex flex-wrap items-center gap-2">
           <span className="text-xs text-accent uppercase tracking-wider font-semibold">
-            This is your profile
+            {previewing ? "Visitor preview" : "This is your profile"}
           </span>
-          <span className="text-xs text-white/60">
-            What others see when they open <code className="text-white/80">/u/{profile.handle}</code>.
-          </span>
+          {!previewing && (
+            <span className="text-xs text-white/60">
+              What others see when they open <code className="text-white/80">/u/{profile.handle}</code>.
+            </span>
+          )}
           <div className="flex-1" />
           <button
             className="btn-ghost text-xs"
@@ -119,15 +122,19 @@ export function Profile({ handle, onNav }: Props) {
           >
             {previewing ? "← Back to owner view" : "👁 View as visitor"}
           </button>
-          <button className="btn-ghost text-xs" onClick={copyShareLink(profile)}>
-            🔗 Copy share link
-          </button>
-          <button
-            className="btn-ghost text-xs"
-            onClick={() => onNav({ name: "settings" })}
-          >
-            ✎ Edit profile
-          </button>
+          {!previewing && (
+            <>
+              <button className="btn-ghost text-xs" onClick={copyShareLink(profile)}>
+                🔗 Copy share link
+              </button>
+              <button
+                className="btn-ghost text-xs"
+                onClick={() => onNav({ name: "settings" })}
+              >
+                ✎ Edit profile
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -141,7 +148,7 @@ export function Profile({ handle, onNav }: Props) {
 
       <ProfileHeader profile={profile} />
 
-      {!isOwner && <FollowActionCluster handle={profile.handle} />}
+      {!isSelf && <FollowActionCluster handle={profile.handle} />}
 
       {profile.signals.length > 0 && (
         <SignalsSection signals={profile.signals} />
