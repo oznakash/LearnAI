@@ -139,13 +139,39 @@ describe("selectSocialService", () => {
     expect(got).toBeInstanceOf(OnlineSocialService);
   });
 
-  it("returns OnlineSocialService with same-origin (empty serverUrl) when socialEnabled", () => {
+  it("returns OnlineSocialService with same-origin (empty serverUrl) when a bearer is present (production-mode sidecar signal)", () => {
     const got = selectSocialService({
       email: "maya@gmail.com",
       socialEnabled: true,
       serverUrl: "",
+      bearerToken: "session-jwt",
     });
     expect(got).toBeInstanceOf(OnlineSocialService);
+  });
+
+  it("falls back to OfflineSocialService when serverUrl AND bearer are both empty (no sidecar reachable)", () => {
+    // Reproduces the live SparkStream hang: socialEnabled=true but neither
+    // a configured serverUrl nor a session bearer means relative fetches
+    // hit the SPA fallback (index.html for /v1/social/*), the JSON client
+    // returns undefined, and callers crash on `result.map(...)`. Stay
+    // offline so mock cards render instead of hanging the view.
+    const got = selectSocialService({
+      email: "maya@gmail.com",
+      socialEnabled: true,
+      serverUrl: "",
+      bearerToken: "",
+    });
+    expect(got).not.toBeInstanceOf(OnlineSocialService);
+  });
+
+  it("treats whitespace-only serverUrl/bearer as empty for the fallback check", () => {
+    const got = selectSocialService({
+      email: "maya@gmail.com",
+      socialEnabled: true,
+      serverUrl: "   ",
+      bearerToken: "  ",
+    });
+    expect(got).not.toBeInstanceOf(OnlineSocialService);
   });
 });
 

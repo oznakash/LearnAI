@@ -57,8 +57,21 @@ export function selectSocialService(opts: SelectSocialOpts): SocialService {
   // OnlineSocialService makes relative-URL fetches that nginx proxies
   // to localhost:8787. For fork / dev setups, an explicit serverUrl
   // points at a remote sidecar.
+  //
+  // BUT: in dev or in a bare static deploy (no sidecar), an empty
+  // serverUrl means relative fetches that hit the SPA fallback (index.html
+  // for unknown routes). The JSON client returns `undefined` for those
+  // HTML responses, which then crashes callers like SparkStream that do
+  // `result.map(...)`. Without a bearer (production session JWT) AND
+  // without an explicit serverUrl, we can't be reaching a real sidecar —
+  // stay offline and let the UI render mock cards instead of hanging.
+  const serverUrl = (opts.serverUrl ?? "").trim();
+  const bearer = (opts.bearerToken ?? "").trim();
+  if (!serverUrl && !bearer) {
+    return new OfflineSocialService({ email, ageBandIsKid: opts.ageBandIsKid });
+  }
   return new OnlineSocialService({
-    serverUrl: opts.serverUrl ?? "",
+    serverUrl,
     apiKey: opts.bearerToken,
     userEmail: email,
   });

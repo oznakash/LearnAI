@@ -168,17 +168,33 @@ describe("selectSocialService", () => {
     expect(svc).toBeInstanceOf(OfflineSocialService);
   });
 
-  it("returns the online client even with an empty serverUrl (same-origin default)", async () => {
-    // Production deployment: SPA + sidecar in one container; the SPA
-    // calls /v1/social/* on its own origin and nginx proxies to localhost.
-    // An empty serverUrl is the *correct* production config.
+  it("returns the online client with empty serverUrl when a bearer is present (same-origin production sidecar)", async () => {
+    // Production deployment: SPA + sidecar in one container; the SPA calls
+    // /v1/social/* on its own origin and nginx proxies to localhost. Empty
+    // serverUrl is the correct production config — the bearer (session
+    // JWT) is the signal that a real sidecar is reachable.
     const { OnlineSocialService } = await import("../social/online");
     const svc = selectSocialService({
       email: "maya@gmail.com",
       socialEnabled: true,
       serverUrl: "",
+      bearerToken: "session-jwt",
     });
     expect(svc).toBeInstanceOf(OnlineSocialService);
+  });
+
+  it("falls back to offline when serverUrl AND bearer are both empty (no sidecar reachable)", () => {
+    // Without a configured serverUrl AND without a session bearer, relative
+    // /v1/social/* fetches hit the SPA fallback (index.html for unknown
+    // routes), the JSON client returns undefined, and callers crash on
+    // result.map(...). Stay offline so the UI renders cleanly.
+    const svc = selectSocialService({
+      email: "maya@gmail.com",
+      socialEnabled: true,
+      serverUrl: "",
+      bearerToken: "",
+    });
+    expect(svc).toBeInstanceOf(OfflineSocialService);
   });
 
   it("returns offline when no email (pre-signin)", () => {
