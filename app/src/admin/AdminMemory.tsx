@@ -327,6 +327,9 @@ export function AdminMemory() {
           <p className="text-xs text-white/60">
             Demo mode uses a per-deployment Bearer key entered here. (Production mode uses the player's session JWT and ignores these fields.)
           </p>
+          <p className="text-[11px] text-bad">
+            ⚠ The Bearer key is stored unencrypted in this browser's localStorage and ships in every mem0 request from the SPA. Use a dedicated key per deploy and rotate if you suspect leakage.
+          </p>
           <div className="grid sm:grid-cols-2 gap-2">
             <div>
               <div className="label">Server URL</div>

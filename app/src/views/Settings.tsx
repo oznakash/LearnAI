@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { usePlayer } from "../store/PlayerContext";
 import { useAdmin } from "../admin/AdminContext";
-import { ADMIN_STORAGE_KEY } from "../admin/store";
 import { TOPICS } from "../content";
 import type { TopicId } from "../types";
-import { STORAGE_KEY } from "../store/game";
+import { eraseAllLocalData } from "../store/reset";
 import type { View } from "../App";
 
 export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
@@ -26,8 +25,7 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
 
   const reset = () => {
     if (!confirm("Erase all local progress? This cannot be undone.")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(ADMIN_STORAGE_KEY);
+    eraseAllLocalData();
     location.reload();
   };
 
@@ -103,6 +101,9 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
         <p className="muted text-xs">
           Optional. With an Anthropic or OpenAI key, {adminCfg.branding.appName} can generate fresh Sparks + tips on demand.
           Your key is stored in this browser only and used to call the provider directly.
+        </p>
+        <p className="text-[11px] text-bad">
+          ⚠ Stored unencrypted in localStorage and used directly from this browser. Use a low-spend, scoped key. Any browser extension or XSS bug on this domain could read it. Erasing local data wipes it.
         </p>
         <div className="grid sm:grid-cols-3 gap-2">
           <select className="input" value={provider} onChange={(e) => setProvider(e.target.value as never)}>
