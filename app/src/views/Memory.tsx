@@ -4,6 +4,14 @@ import { useAdmin } from "../admin/AdminContext";
 import type { MemoryCategory, MemoryItem } from "../memory/types";
 import { Mascot } from "../visuals/Mascot";
 
+// Player-facing memory view. Read + forget + wipe only. Editing and
+// exporting are admin-only operations and live in Admin → Memory →
+// Per-user inspector. Players cannot rewrite what the cognition layer
+// has learned about them — that would let them launder the model into
+// saying things they didn't actually demonstrate. The privacy promise
+// stays intact via Forget (one) and Wipe (all): the player can always
+// remove anything the system thinks it knows.
+
 const CATS: { id: MemoryCategory | "all"; label: string; emoji: string }[] = [
   { id: "all", label: "All", emoji: "📚" },
   { id: "goal", label: "Goals", emoji: "🎯" },
@@ -16,13 +24,11 @@ const CATS: { id: MemoryCategory | "all"; label: string; emoji: string }[] = [
 ];
 
 export function Memory({ onExit }: { onExit: () => void }) {
-  const { backend, status, list, update, forget, wipe, refreshHealth } = useMemory();
+  const { backend, status, list, forget, wipe, refreshHealth } = useMemory();
   const { config: adminCfg } = useAdmin();
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [filter, setFilter] = useState<MemoryCategory | "all">("all");
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
 
   const reload = async () => {
     setLoading(true);
@@ -55,30 +61,6 @@ export function Memory({ onExit }: { onExit: () => void }) {
     setItems((arr) => arr.filter((x) => x.id !== id));
   };
 
-  const startEdit = (m: MemoryItem) => {
-    setEditingId(m.id);
-    setEditText(m.text);
-  };
-
-  const saveEdit = async (m: MemoryItem) => {
-    if (!editText.trim()) return;
-    const next = await update(m.id, { text: editText.trim() });
-    if (next) {
-      setItems((arr) => arr.map((x) => (x.id === m.id ? next : x)));
-    }
-    setEditingId(null);
-  };
-
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${adminCfg.branding.appName.toLowerCase().replace(/\s+/g, "-")}-my-memory.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="space-y-5">
       <header className="flex items-center justify-between gap-3 flex-wrap">
@@ -86,11 +68,11 @@ export function Memory({ onExit }: { onExit: () => void }) {
           <button onClick={onExit} className="text-xs text-white/50 hover:text-white">← Back</button>
           <h1 className="h1 mt-1">Your Memory</h1>
           <p className="muted text-sm">
-            What {adminCfg.branding.appName} remembers about you. You can edit, forget, export, or wipe everything.
+            What {adminCfg.branding.appName} remembers about you. Forget anything you don't want kept,
+            or wipe everything.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="btn-ghost text-sm" onClick={exportJson}>⬇ Export</button>
           <button className="btn-bad text-sm" onClick={onWipe} disabled={items.length === 0}>🗑 Wipe everything</button>
         </div>
       </header>
@@ -134,33 +116,14 @@ export function Memory({ onExit }: { onExit: () => void }) {
               <div className="flex items-start gap-3">
                 <span className="text-xl">{categoryEmoji(m.category)}</span>
                 <div className="flex-1">
-                  {editingId === m.id ? (
-                    <textarea
-                      className="input text-sm"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={3}
-                    />
-                  ) : (
-                    <div className="text-white text-sm">{m.text}</div>
-                  )}
+                  <div className="text-white text-sm">{m.text}</div>
                   <div className="text-[11px] text-white/40 mt-1">
                     {m.category ?? "other"} · created {timeAgo(m.createdAt)}
                     {m.updatedAt !== m.createdAt && <> · updated {timeAgo(m.updatedAt)}</>}
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 text-xs">
-                  {editingId === m.id ? (
-                    <>
-                      <button className="btn-primary text-xs" onClick={() => saveEdit(m)}>Save</button>
-                      <button className="btn-ghost text-xs" onClick={() => setEditingId(null)}>Cancel</button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="btn-ghost text-xs" onClick={() => startEdit(m)}>Edit</button>
-                      <button className="btn-bad text-xs" onClick={() => onForget(m.id)}>Forget</button>
-                    </>
-                  )}
+                  <button className="btn-bad text-xs" onClick={() => onForget(m.id)}>Forget</button>
                 </div>
               </div>
             </li>

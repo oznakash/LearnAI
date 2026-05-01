@@ -129,34 +129,85 @@ export function AdminMemory() {
   // Per-user inspector
   const [inspectEmail, setInspectEmail] = useState("");
   const [inspectResult, setInspectResult] = useState<string>("");
+  const [inspectItems, setInspectItems] = useState<Array<{ id: string; text: string; category?: string; createdAt: number; updatedAt: number; metadata?: Record<string, unknown> }>>([]);
   const [inspectBusy, setInspectBusy] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editStatus, setEditStatus] = useState<string>("");
+
+  // Reuse one mem0 client per inspect target to keep the bearer fresh.
+  const buildSvc = (forEmail: string) =>
+    new Mem0MemoryService({
+      serverUrl: effectiveUrl,
+      apiKey: isProduction ? sessionToken : config.memoryConfig.apiKey || undefined,
+      userId: forEmail,
+    });
+
   const inspect = async () => {
     if (!inspectEmail.trim()) return;
     setInspectBusy(true);
+    setEditStatus("");
     try {
-      const svc = new Mem0MemoryService({
-        serverUrl: effectiveUrl,
-        apiKey: isProduction ? sessionToken : config.memoryConfig.apiKey || undefined,
-        userId: inspectEmail.trim(),
-      });
-      const items = await svc.list({ limit: 200 });
+      const items = await buildSvc(inspectEmail.trim()).list({ limit: 200 });
+      setInspectItems(items);
       setInspectResult(JSON.stringify(items, null, 2));
     } catch (e) {
+      setInspectItems([]);
       setInspectResult(`/* ${(e as Error).message} */`);
     } finally {
       setInspectBusy(false);
     }
   };
+
   const wipeUser = async () => {
     if (!inspectEmail.trim()) return;
     if (!confirm(`Forget every memory for ${inspectEmail.trim()}? This cannot be undone.`)) return;
-    const svc = new Mem0MemoryService({
-      serverUrl: effectiveUrl,
-      apiKey: isProduction ? sessionToken : config.memoryConfig.apiKey || undefined,
-      userId: inspectEmail.trim(),
-    });
-    await svc.wipe();
+    await buildSvc(inspectEmail.trim()).wipe();
+    setInspectItems([]);
     setInspectResult(`/* wiped ${inspectEmail.trim()} */`);
+  };
+
+  const exportUser = () => {
+    if (!inspectItems.length) return;
+    const safe = inspectEmail.trim().replace(/[^a-z0-9@._-]/gi, "_");
+    const blob = new Blob([JSON.stringify(inspectItems, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `memory-export-${safe}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const startEdit = (id: string, currentText: string) => {
+    setEditingId(id);
+    setEditText(currentText);
+    setEditStatus("");
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editText.trim() || !inspectEmail.trim()) return;
+    setEditStatus("Saving…");
+    try {
+      const next = await buildSvc(inspectEmail.trim()).update(id, { text: editText.trim() });
+      setInspectItems((arr) => arr.map((m) => (m.id === id ? { ...m, ...next } : m)));
+      setEditingId(null);
+      setEditStatus("✓ Saved");
+    } catch (e) {
+      setEditStatus(`Save failed: ${(e as Error).message}`);
+    }
+  };
+
+  const forgetOne = async (id: string) => {
+    if (!inspectEmail.trim()) return;
+    if (!confirm("Forget this single memory? This cannot be undone.")) return;
+    try {
+      await buildSvc(inspectEmail.trim()).forget(id);
+      setInspectItems((arr) => arr.filter((m) => m.id !== id));
+      setEditStatus("✓ Forgot one memory");
+    } catch (e) {
+      setEditStatus(`Failed: ${(e as Error).message}`);
+    }
   };
 
   return (
@@ -389,8 +440,13 @@ export function AdminMemory() {
       {/* Per-user inspector */}
       <section className="card p-5 space-y-3">
         <h3 className="font-display font-semibold text-white">Per-user inspector</h3>
-        <p className="muted text-xs">View or wipe memories for a specific Gmail. Useful for debugging + GDPR.</p>
-        <div className="grid sm:grid-cols-[1fr_auto_auto] gap-2">
+        <p className="muted text-xs">
+          View, edit, forget-one, export, or wipe-all memories for a specific Gmail. Useful for debugging,
+          GDPR (data export / right-to-be-forgotten), and curating outliers. <strong className="text-white">Players
+          themselves can only forget or wipe</strong> — edit + export are admin-only operations to prevent users
+          laundering the model into saying things they didn't actually demonstrate.
+        </p>
+        <div className="grid sm:grid-cols-[1fr_auto_auto_auto] gap-2">
           <input
             className="input"
             placeholder="user@gmail.com"
@@ -400,15 +456,77 @@ export function AdminMemory() {
           <button className="btn-primary text-sm" onClick={inspect} disabled={!inspectEmail.trim() || inspectBusy}>
             {inspectBusy ? "Loading…" : "Inspect"}
           </button>
+          <button
+            className="btn-ghost text-sm"
+            onClick={exportUser}
+            disabled={inspectItems.length === 0}
+            title="Download as JSON"
+          >
+            ⬇ Export ({inspectItems.length})
+          </button>
           <button className="btn-bad text-sm" onClick={wipeUser} disabled={!inspectEmail.trim()}>
             Forget all
           </button>
         </div>
-        {inspectResult && (
-          <pre className="text-[11px] bg-black/40 border border-white/10 rounded-lg p-3 max-h-[60vh] overflow-y-auto whitespace-pre-wrap font-mono">
+
+        {editStatus && (
+          <div className="text-xs text-white/70">{editStatus}</div>
+        )}
+
+        {inspectItems.length > 0 ? (
+          <ol className="space-y-2">
+            {inspectItems.map((m) => (
+              <li
+                key={m.id}
+                className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-start gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  {editingId === m.id ? (
+                    <textarea
+                      className="input text-sm font-mono"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={3}
+                    />
+                  ) : (
+                    <div className="text-white text-sm break-words">{m.text}</div>
+                  )}
+                  <div className="text-[11px] text-white/40 mt-1 font-mono">
+                    {m.id} · {m.category ?? "other"} · created {new Date(m.createdAt).toLocaleString()}
+                    {m.updatedAt !== m.createdAt && (
+                      <> · edited {new Date(m.updatedAt).toLocaleString()}</>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 text-xs shrink-0">
+                  {editingId === m.id ? (
+                    <>
+                      <button className="btn-primary text-xs" onClick={() => saveEdit(m.id)}>
+                        Save
+                      </button>
+                      <button className="btn-ghost text-xs" onClick={() => setEditingId(null)}>
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn-ghost text-xs" onClick={() => startEdit(m.id, m.text)}>
+                        Edit
+                      </button>
+                      <button className="btn-bad text-xs" onClick={() => forgetOne(m.id)}>
+                        Forget
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : inspectResult ? (
+          <pre className="text-[11px] bg-black/40 border border-white/10 rounded-lg p-3 max-h-[40vh] overflow-y-auto whitespace-pre-wrap font-mono">
             {inspectResult}
           </pre>
-        )}
+        ) : null}
       </section>
 
       {/* Backend / runtime sanity at the bottom */}
