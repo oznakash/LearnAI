@@ -12,7 +12,11 @@
     "postinstall": "npm install --prefix app",
     "deploy:mem0": "./scripts/deploy-mem0.sh",
     "smoke:memory": "node ./scripts/smoke-memory.mjs",
-    "smoke:deploy": "./scripts/smoke-deploy.sh"
+    "smoke:deploy": "./scripts/smoke-deploy.sh",
+    "og:build": "node ./scripts/build-og-image.mjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
   },
   "engines": {
     "node": ">=20.0.0"
