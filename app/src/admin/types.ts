@@ -1,4 +1,4 @@
-import type { GuildTier, Topic, TopicId } from "../types";
+import type { Creator, CreatorId, GuildTier, Topic, TopicId } from "../types";
 
 export type EmailTemplateId =
   | "welcome"
@@ -240,6 +240,15 @@ export interface AdminConfig {
   emailQueue: QueuedEmail[];
   tuning: GameTuning;
   contentOverrides: ContentOverrides;
+  /**
+   * Creator registry — external content sources Sparks credit (podcasts,
+   * newsletters, channels, blogs). Merged on top of the seed registry in
+   * `app/src/content/creators.ts`. Sparks reference creators by id.
+   *
+   * Operators add / edit / remove creators in Admin → Creators. Removing a
+   * creator is blocked while any Spark still references it.
+   */
+  creators: Record<CreatorId, Creator>;
   promptStudio: PromptStudioState;
   memoryConfig: MemoryConfig;
   socialConfig: SocialConfig;

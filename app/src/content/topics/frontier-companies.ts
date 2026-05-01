@@ -21,6 +21,7 @@ export const frontierCompanies: Topic = {
       }),
       spark("Why alignment is a now problem", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "Once we get to superintelligence, it will be too late to align the models. My best granularity forecast for could we have an X-risk or extremely bad outcome is somewhere between 0 and 10%.",
         takeaway:
@@ -49,6 +50,7 @@ export const frontierCompanies: Topic = {
       }),
       spark("Mission > offer", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "They get these offers and then they say, 'My best case scenario at Meta is that we make money, and my best case scenario at Anthropic is we affect the future of humanity.'",
         takeaway:
@@ -117,6 +119,7 @@ export const frontierCompanies: Topic = {
       }),
       spark("The Challenger disaster of AI", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "Lots of people knew those little O-rings were unreliable, but every single time you get away with launching a space shuttle without the O-rings failing, you institutionally feel more confident in what you're doing. We've been using these systems in increasingly unsafe ways. My prediction is we're going to see a Challenger disaster.",
         takeaway:

@@ -26,6 +26,7 @@ export const aiBuilder: Topic = {
       }),
       spark("Coding is virtually solved", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "In a year or two, it's not going to matter. Coding is virtually solved. I imagine a world where everyone is able to program, anyone can just build software any time.",
         takeaway:
@@ -88,6 +89,7 @@ export const aiBuilder: Topic = {
       }),
       spark("Agents take the test step for you", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "It used to be you'd ask ChatGPT for some code and it would spit out some code, and you have to run it and test it. The coding agents — they take that step for you.",
         takeaway:
@@ -169,6 +171,7 @@ export const aiBuilder: Topic = {
       }),
       spark("95% of my code I didn't type", {
         type: "podcastnugget",
+        creatorId: "lenny",
         quote:
           "Today probably 95% of the code that I produce I didn't type it myself. I write so much of my code on my phone, it's wild. I can get good work done walking the dog along the beach.",
         takeaway:

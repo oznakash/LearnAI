@@ -1,5 +1,7 @@
 import type { GameTuning, ContentOverrides, AdminConfig, ServerAuthConfig } from "./types";
+import type { Creator, CreatorId } from "../types";
 import { DEFAULT_TUNING } from "./defaults";
+import { SEED_CREATORS } from "../content/creators";
 import { ADMIN_STORAGE_KEY } from "./store";
 
 /**
@@ -77,6 +79,24 @@ export function isLennyContentEnabled(): boolean {
   // Explicit false flips it off; anything else (true / undefined / missing)
   // keeps the default-ON behaviour.
   return cfg.flags.lennyContentEnabled !== false;
+}
+
+/**
+ * Live creator registry. Merges seed creators (always present) with any
+ * admin-saved creators (operator-added or operator-edited overrides).
+ * Saved entries win on id collisions so the operator can rename / re-skin
+ * a seed creator without losing the seed's id.
+ */
+export function getRuntimeCreators(): Record<CreatorId, Creator> {
+  const cfg = readAdminConfig();
+  const saved = (cfg?.creators ?? {}) as Record<CreatorId, Creator>;
+  return { ...SEED_CREATORS, ...saved };
+}
+
+/** Look up a single creator by id. Returns undefined if unknown. */
+export function getCreator(id: CreatorId | undefined): Creator | undefined {
+  if (!id) return undefined;
+  return getRuntimeCreators()[id];
 }
 
 /** For tests: clear the in-memory cache so localStorage changes are visible. */

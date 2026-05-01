@@ -7,6 +7,7 @@ import { AdminEmails } from "./AdminEmails";
 import { AdminConfigTab } from "./AdminConfigTab";
 import { AdminTuning } from "./AdminTuning";
 import { AdminContent } from "./AdminContent";
+import { AdminCreators } from "./AdminCreators";
 import { AdminPromptStudio } from "./AdminPromptStudio";
 import { AdminMemory } from "./AdminMemory";
 import { AdminModeration } from "./AdminModeration";
@@ -19,6 +20,7 @@ type Tab =
   | "config"
   | "tuning"
   | "content"
+  | "creators"
   | "prompt"
   | "memory"
   | "moderation";
@@ -31,6 +33,7 @@ const TABS: { id: Tab; label: string; emoji: string; gated?: "social" }[] = [
   { id: "emails", label: "Emails", emoji: "📧" },
   { id: "tuning", label: "Tuning", emoji: "🎮" },
   { id: "content", label: "Content", emoji: "📚" },
+  { id: "creators", label: "Creators", emoji: "🎨" },
   { id: "prompt", label: "Prompt Studio", emoji: "📝" },
   { id: "config", label: "Config", emoji: "⚙️" },
 ];
@@ -91,6 +94,7 @@ export function AdminConsole({ onExit }: { onExit: () => void }) {
       {tab === "config" && <AdminConfigTab />}
       {tab === "tuning" && <AdminTuning />}
       {tab === "content" && <AdminContent />}
+      {tab === "creators" && <AdminCreators />}
       {tab === "prompt" && <AdminPromptStudio apiKey={player.apiKey} apiProvider={player.apiProvider} />}
       {tab === "memory" && <AdminMemory />}
       {tab === "moderation" && <AdminModeration />}

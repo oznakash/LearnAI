@@ -179,13 +179,61 @@ export interface Tip {
 }
 
 /**
+ * A creator is an external content source (podcast / newsletter / channel
+ * / blog) that LearnAI credits inside Sparks. Creators live in a registry
+ * (seed defaults + admin overrides) so adding a new creator is a config
+ * change, not a code change. Sparks reference creators by `creatorId`.
+ *
+ * The registry is the source of truth for *who is being credited and
+ * how* (display name, avatar, credit URL, link label). Per-Spark fields
+ * like guest / episode title still live on the Spark itself — they vary
+ * per nugget; the creator never does.
+ *
+ * Adding a creator from Admin → Creators surfaces them as a category in
+ * the content admin and unlocks per-creator filters / counts. Deleting a
+ * creator is blocked while any Spark still references it.
+ */
+export type CreatorKind =
+  | "podcast"
+  | "newsletter"
+  | "channel"
+  | "blog"
+  | "book"
+  | "other";
+
+export type CreatorId = string;
+
+export interface Creator {
+  id: CreatorId;
+  name: string;
+  /** Optional handle (e.g. "@lennysan") shown as a secondary line. */
+  handle?: string;
+  kind: CreatorKind;
+  /** Hosted image URL for the avatar. Falls back to `avatarEmoji`. */
+  avatarUrl?: string;
+  /** 1–3 char emoji fallback when no `avatarUrl` is set. */
+  avatarEmoji?: string;
+  /** Optional hex accent for the credit chip; defaults to the warn token. */
+  accentColor?: string;
+  /** Where the credit chip + "Listen / Read" link lands. */
+  creditUrl: string;
+  /** Label for the link (e.g. "Listen on Lenny's Podcast"). */
+  creditLabel: string;
+  /** Optional one-paragraph blurb shown on the creator's admin card. */
+  bio?: string;
+}
+
+/**
  * A short, attributed nugget from an external podcast / interview source.
  *
  * - The nugget's `quote` is always ≤ 60 words. Always shown verbatim, in
  *   quotation marks, attributed to the named guest.
- * - The `source.podcastUrl` always points at the podcast root (we do not
- *   deep-link to specific episode pages — see `docs/lenny-archive.md`).
- * - The chip + "Listen" link both open `source.podcastUrl` in a new tab.
+ * - The credit chip + "Listen" link open the creator's `creditUrl` (looked
+ *   up from the registry by `creatorId`) — we do not deep-link to specific
+ *   episode pages. See `docs/lenny-archive.md`.
+ * - For back-compat with seeds authored before the creator registry, the
+ *   inline `source.podcastUrl` is used as a fallback when no `creatorId`
+ *   resolves to a known creator.
  *
  * Render passively (like MicroRead / Tip) — read, takeaway, "Got it ⚡".
  * If `flags.lennyContentEnabled` is OFF, the topic loader strips every
@@ -197,6 +245,12 @@ export interface PodcastNugget {
   quote: string;
   /** One sentence. The takeaway the user walks away with. */
   takeaway: string;
+  /**
+   * Creator registry id. New nuggets should set this so credit (name,
+   * URL, avatar, label) is sourced from Admin → Creators. Optional only
+   * for back-compat with seeds authored before the registry shipped.
+   */
+  creatorId?: CreatorId;
   /** Source attribution — never empty. */
   source: {
     /** Display name of the podcast, e.g. "Lenny's Podcast". */
