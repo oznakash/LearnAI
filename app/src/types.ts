@@ -2,6 +2,21 @@ export type AgeBand = "kid" | "teen" | "adult";
 
 export type SkillLevel = "starter" | "explorer" | "builder" | "architect" | "visionary";
 
+/**
+ * The user's intent — the *mode* they're in, not the topic they like.
+ *
+ * Captured at onboarding (multi-select; users can be in more than one
+ * mode). Drives the secondary CTA on the Level-Cleared screen and other
+ * personalization decisions: a *Curious* user wanting to understand
+ * shouldn't be nudged toward a Build Card, and an *Applied* user
+ * shouldn't be nudged toward "go deeper into theory."
+ *
+ * See `docs/content-model.md` §5 for the full mapping of intent → CTA
+ * shape and `docs/first-time-builder-findings.md` for why this fix is
+ * load-bearing on WAB.
+ */
+export type Intent = "curious" | "applied" | "decision" | "researcher" | "forker";
+
 export type TopicId =
   | "ai-foundations"
   | "llms-cognition"
@@ -200,6 +215,13 @@ export interface PlayerProfile {
   dailyMinutes: number;
   goal: string;            // free text or preset
   experience: string;      // free text
+  /**
+   * Multi-select user intent captured at onboarding. Optional for
+   * back-compat with profiles created before the intent UX shipped —
+   * downstream consumers should treat `undefined` and `[]` the same
+   * (no intent set; default to the universal CTA).
+   */
+  intents?: Intent[];
   createdAt: number;
 }
 

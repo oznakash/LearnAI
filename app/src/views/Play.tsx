@@ -14,6 +14,7 @@ import {
   suggestSwitchTopic,
 } from "../store/game";
 import { pickNextSparkIdx } from "../store/sequencer";
+import { pickIntentCTA } from "../store/intent";
 import type { Exercise, Spark, TopicId } from "../types";
 import { Mascot, type MascotMood } from "../visuals/Mascot";
 import { Confetti } from "../visuals/Confetti";
@@ -282,14 +283,46 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
           </div>
           <div className="mt-6 flex flex-wrap gap-2 justify-center">
             <button className="btn-primary" onClick={onDone}>Continue path →</button>
-            {switchTopic && (
-              <button
-                className="btn-ghost"
-                onClick={() => onSwitchTopic(switchTopic.id)}
-              >
-                ↔ Try {switchTopic.emoji} {switchTopic.name}
-              </button>
-            )}
+            {(() => {
+              // Intent-aware secondary CTA — picks a next step aligned
+              // with the *mode* the user told us they're in at onboarding.
+              // Falls back to the universal switch-topic suggestion when
+              // no intent applies.
+              const cta = pickIntentCTA(state.profile?.intents, topicId);
+              if (cta) {
+                if (cta.externalUrl) {
+                  return (
+                    <a
+                      href={cta.externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-ghost"
+                    >
+                      {cta.label}
+                    </a>
+                  );
+                }
+                return (
+                  <button
+                    className="btn-ghost"
+                    onClick={() => cta.topicId && onSwitchTopic(cta.topicId)}
+                  >
+                    {cta.label}
+                  </button>
+                );
+              }
+              if (switchTopic) {
+                return (
+                  <button
+                    className="btn-ghost"
+                    onClick={() => onSwitchTopic(switchTopic.id)}
+                  >
+                    ↔ Try {switchTopic.emoji} {switchTopic.name}
+                  </button>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       </div>
