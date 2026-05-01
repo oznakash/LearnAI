@@ -306,14 +306,19 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "init", cfg: defaultAdminConfig() });
   }, []);
 
-  // In production server-auth mode, trust the server-signed `is_admin`
+  // In production server-auth mode, **only** the server-signed `is_admin`
   // claim from the session JWT (sourced from the operator's ADMIN_EMAILS
-  // env var on mem0). The local `admins` allowlist is the demo-mode source
-  // of truth for forks running without a backend.
-  const am =
-    config.serverAuth.mode === "production" && player.serverSession
-      ? player.serverSession.isAdmin
-      : isAdmin(config, player.identity?.email);
+  // env var on mem0) grants admin. We deliberately do NOT fall back to
+  // the local `admins` allowlist when the JWT is missing — otherwise a
+  // user who self-bootstrapped locally (or any tampered admin
+  // localStorage) would be granted admin power in the UI. The local
+  // allowlist is the demo-mode source of truth only.
+  let am: boolean;
+  if (config.serverAuth.mode === "production") {
+    am = player.serverSession?.isAdmin === true;
+  } else {
+    am = isAdmin(config, player.identity?.email);
+  }
 
   const value = useMemo<Ctx>(
     () => ({
