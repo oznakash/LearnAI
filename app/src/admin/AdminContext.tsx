@@ -240,7 +240,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const queued = cfg.emailQueue.filter((q) => q.status === "queued");
     if (queued.length === 0) return;
     const results = await Promise.all(
-      queued.map(async (q) => ({ q, res: await sendEmail(cfg.emailConfig, q) }))
+      queued.map(async (q) => ({ q, res: await sendEmail(cfg.emailConfig, q, player.serverSession?.token) }))
     );
     setConfig((cur) => ({
       ...cur,
@@ -280,7 +280,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         level: 1,
       };
       const { cfg: nextCfg, queued } = queueEmail(config, to, templateId, vars);
-      const res = await sendEmail(nextCfg.emailConfig, queued);
+      const res = await sendEmail(nextCfg.emailConfig, queued, player.serverSession?.token);
       setConfig((cur) => ({
         ...nextCfg,
         emailQueue: nextCfg.emailQueue.map((q) =>

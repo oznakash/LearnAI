@@ -23,11 +23,12 @@ export interface EmailTemplate {
 export type EmailProvider =
   | "none"
   | "resend"
-  | "smtp-relay"   // POSTs to your own backend / n8n / Make / etc. that speaks SMTP
-  | "emailjs"      // EmailJS (purpose-built for browser → SMTP)
+  | "smtp-relay"      // POSTs to your own backend / n8n / Make / etc. that speaks SMTP
+  | "smtp-our-server" // POSTs to social-svc /v1/email/send → uses our own SMTP server (env-configured)
+  | "emailjs"         // EmailJS (purpose-built for browser → SMTP)
   | "postmark"
   | "sendgrid"
-  | "ses";         // ses + smtp left for future server-side
+  | "ses";            // ses + smtp left for future server-side
 
 export interface EmailConfig {
   provider: EmailProvider;

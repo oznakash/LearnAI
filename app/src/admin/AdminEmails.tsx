@@ -4,6 +4,7 @@ import type { EmailProvider, EmailTemplate, EmailTemplateId } from "./types";
 import { renderEmail, sampleTemplateVars } from "./store";
 
 const ALL_PROVIDERS: EmailProvider[] = [
+  "smtp-our-server",
   "resend",
   "smtp-relay",
   "emailjs",
@@ -12,6 +13,7 @@ const ALL_PROVIDERS: EmailProvider[] = [
   "ses",
   "none",
 ];
+
 
 export function AdminEmails() {
   const { config, setConfig, updateTemplate, toggleTemplate, flushQueue, sendTestEmail } = useAdmin();
@@ -118,6 +120,32 @@ export function AdminEmails() {
         </div>
 
         {/* Provider-specific fields */}
+        {config.emailConfig.provider === "smtp-our-server" && (
+          <div className="grid sm:grid-cols-2 gap-2 mt-2">
+            <p className="text-[11px] text-white/70 sm:col-span-2">
+              ✓ No browser-side credentials. The SPA POSTs to{" "}
+              <code className="text-white/90">/v1/email/send</code> on the social-svc sidecar
+              (same container as the SPA). The sidecar uses nodemailer with SMTP creds from
+              env vars (<code>SMTP_HOST</code>, <code>SMTP_USER</code>, <code>SMTP_PASSWORD</code>,{" "}
+              <code>SMTP_FROM_EMAIL</code>) — set on cloud-claude. Admin-only on the server side
+              (your Gmail must be in <code>SOCIAL_ADMIN_EMAILS</code>). The From / Reply-To shown
+              below are sent in the request and override the server defaults if set.
+            </p>
+            <Field
+              label="From name"
+              value={config.emailConfig.fromName}
+              placeholder="LearnAI"
+              onChange={(v) => setConfig((cfg) => ({ ...cfg, emailConfig: { ...cfg.emailConfig, fromName: v } }))}
+            />
+            <Field
+              label="Reply-To (optional)"
+              value={config.emailConfig.replyTo ?? ""}
+              placeholder="support@useyl.com"
+              onChange={(v) => setConfig((cfg) => ({ ...cfg, emailConfig: { ...cfg.emailConfig, replyTo: v } }))}
+            />
+          </div>
+        )}
+
         {config.emailConfig.provider === "resend" && (
           <div className="grid sm:grid-cols-2 gap-2 mt-2">
             <Field
@@ -435,7 +463,8 @@ function Field({
 
 function providerLabel(p: EmailProvider): string {
   switch (p) {
-    case "smtp-relay": return "SMTP relay";
+    case "smtp-our-server": return "Our SMTP server";
+    case "smtp-relay": return "SMTP relay (webhook)";
     case "resend": return "Resend";
     case "emailjs": return "EmailJS";
     case "postmark": return "Postmark";
@@ -447,6 +476,7 @@ function providerLabel(p: EmailProvider): string {
 
 function providerEmoji(p: EmailProvider): string {
   switch (p) {
+    case "smtp-our-server": return "🏠";
     case "smtp-relay": return "📨";
     case "resend": return "🟣";
     case "emailjs": return "✉️";
