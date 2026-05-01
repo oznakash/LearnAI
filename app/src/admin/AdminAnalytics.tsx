@@ -112,10 +112,11 @@ export function AdminAnalytics() {
           <div className="text-sm text-white/80">
             Showing the <strong>{realUserCount}</strong> real signed-in
             users from mem0's <span className="font-mono">user_state</span>.
-            Funnel + retention charts below still derive from the local cohort
-            (mockUsers + you) — flip on
+            Charts below derive their numbers from this cohort — sparks,
+            minutes, signups, funnel, retention all reflect actual usage.
+            Flip on
             <span className="font-mono"> Demo data </span>
-            for populated charts.
+            in Config to layer the seeded mock cohort on top for screenshots.
           </div>
         </div>
       )}
