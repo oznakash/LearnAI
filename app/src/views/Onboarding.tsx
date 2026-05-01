@@ -3,7 +3,7 @@ import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
 import { useMemory } from "../memory/MemoryContext";
 import { useAdmin } from "../admin/AdminContext";
-import type { AgeBand, PlayerProfile, SkillLevel, TopicId } from "../types";
+import type { AgeBand, Intent, PlayerProfile, SkillLevel, TopicId } from "../types";
 import { Mascot } from "../visuals/Mascot";
 import { Illustration } from "../visuals/Illustrations";
 
@@ -41,6 +41,19 @@ const GOAL_PRESETS = [
   "Lead an AI initiative at work",
 ];
 
+/**
+ * Multi-select intent chips on the goal step. The user can pick more
+ * than one; downstream consumers (Level-Cleared CTA, recommender) read
+ * the array. See `Intent` in `types.ts` and `docs/content-model.md` §5.
+ */
+const INTENT_OPTIONS: { id: Intent; label: string; emoji: string; sub: string }[] = [
+  { id: "curious", emoji: "🌱", label: "Curious", sub: "I want to understand AI without coding" },
+  { id: "applied", emoji: "🛠", label: "Applied", sub: "I want to ship things, fast" },
+  { id: "decision", emoji: "📐", label: "Decision-maker", sub: "I want to make better calls (PM / exec / operator)" },
+  { id: "researcher", emoji: "🔬", label: "Researcher", sub: "I want to track the frontier" },
+  { id: "forker", emoji: "🌐", label: "Forker", sub: "I want to run my own version of this for my domain" },
+];
+
 export function Onboarding() {
   const { state, setProfile } = usePlayer();
   const { remember } = useMemory();
@@ -55,7 +68,11 @@ export function Onboarding() {
   const [interests, setInterests] = useState<TopicId[]>([]);
   const [dailyMinutes, setDailyMinutes] = useState(10);
   const [goal, setGoal] = useState<string>(GOAL_PRESETS[2]);
+  const [intents, setIntents] = useState<Intent[]>([]);
   const [experience, setExperience] = useState("");
+
+  const toggleIntent = (id: Intent) =>
+    setIntents((arr) => (arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]));
 
   const canNext = useMemo(() => {
     switch (step) {
@@ -83,6 +100,7 @@ export function Onboarding() {
       interests,
       dailyMinutes,
       goal,
+      intents,
       experience,
       createdAt: Date.now(),
     };
@@ -93,8 +111,21 @@ export function Onboarding() {
     void remember({
       text: `Goal: ${goal}`,
       category: "goal",
-      metadata: { source: "onboarding" },
+      metadata: { source: "onboarding", intents },
     });
+    if (intents.length > 0) {
+      const labels = intents
+        .map((id) => INTENT_OPTIONS.find((o) => o.id === id)?.label ?? id)
+        .join(", ");
+      // The intent record is its own memory so the recommender can find
+      // it cleanly (top-k search by category="goal" + metadata.kind="intent")
+      // without parsing the free-text Goal line.
+      void remember({
+        text: `User's intent on this platform: ${labels}.`,
+        category: "goal",
+        metadata: { source: "onboarding", kind: "intent", intents },
+      });
+    }
     if (experience.trim()) {
       void remember({
         text: `Background: ${experience.trim()}`,
@@ -294,25 +325,55 @@ export function Onboarding() {
               {step === "goal" && (
                 <>
                   <h2 className="h2">What are you here for?</h2>
-                  <p className="muted">We'll use this to pick missions and assessments.</p>
-                  <div className="space-y-2">
-                    {GOAL_PRESETS.map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setGoal(g)}
-                        className={`block w-full text-left p-3 rounded-xl border ${
-                          goal === g ? "bg-accent/15 border-accent" : "bg-white/5 border-white/10 hover:border-white/30"
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
-                    <input
-                      className="input"
-                      placeholder="Or write your own goal"
-                      value={GOAL_PRESETS.includes(goal) ? "" : goal}
-                      onChange={(e) => setGoal(e.target.value)}
-                    />
+                  <p className="muted">Pick what fits — you can pick more than one. We use this to pick the next-step nudge after every level.</p>
+                  <div>
+                    <div className="label mb-2">Mode (optional, multi-select)</div>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      {INTENT_OPTIONS.map((o) => {
+                        const on = intents.includes(o.id);
+                        return (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => toggleIntent(o.id)}
+                            aria-pressed={on}
+                            className={`p-3 rounded-xl border text-left transition ${
+                              on
+                                ? "bg-accent/15 border-accent text-white"
+                                : "bg-white/5 border-white/10 text-white/80 hover:border-white/30"
+                            }`}
+                          >
+                            <div className="text-base font-semibold">
+                              <span className="mr-2">{o.emoji}</span>
+                              {o.label}
+                            </div>
+                            <div className="text-xs text-white/60 mt-0.5">{o.sub}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="label mb-2">Goal — pick one or write your own</div>
+                    <div className="space-y-2">
+                      {GOAL_PRESETS.map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setGoal(g)}
+                          className={`block w-full text-left p-3 rounded-xl border ${
+                            goal === g ? "bg-accent/15 border-accent" : "bg-white/5 border-white/10 hover:border-white/30"
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                      <input
+                        className="input"
+                        placeholder="Or write your own goal"
+                        value={GOAL_PRESETS.includes(goal) ? "" : goal}
+                        onChange={(e) => setGoal(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </>
               )}
