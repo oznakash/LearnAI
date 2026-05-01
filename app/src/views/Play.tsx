@@ -6,6 +6,8 @@ import { useAdmin } from "../admin/AdminContext";
 import type { MemoryItem } from "../memory/types";
 import {
   completedSparkIds,
+  dislikedSparkIds,
+  getSparkVote,
   isLevelUnlocked,
   levelCompletion,
   nextRecommendedSpark,
@@ -17,6 +19,7 @@ import { Confetti } from "../visuals/Confetti";
 import { Illustration } from "../visuals/Illustrations";
 import { ExerciseRenderer } from "../components/Exercise";
 import { AddToTaskButton } from "../components/AddToTaskButton";
+import { SparkThumbsRow } from "../components/SparkThumbsRow";
 
 interface Props {
   topicId: TopicId;
@@ -31,7 +34,7 @@ interface PlayedSparkLog {
 }
 
 export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
-  const { state, completeSpark, passBoss, recordSession } = usePlayer();
+  const { state, completeSpark, passBoss, recordSession, voteSpark } = usePlayer();
   const { remember, recall } = useMemory();
   const { config: adminCfg } = useAdmin();
   const [nudge, setNudge] = useState<MemoryItem | null>(null);
@@ -49,9 +52,15 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const [activeLevelId, setActiveLevelId] = useState<string | null>(initialLevel?.id ?? null);
   const activeLevel = topic?.levels.find((l) => l.id === activeLevelId) ?? initialLevel ?? null;
 
-  // sparks queue: start from the first incomplete spark in the level
+  // sparks queue: start from the first incomplete, non-disliked spark in the level
   const completedSet = new Set(completedSparkIds(state, activeLevel?.id ?? ""));
-  const startIdx = activeLevel ? Math.max(0, activeLevel.sparks.findIndex((s) => !completedSet.has(s.id))) : 0;
+  const dislikedSet = dislikedSparkIds(state);
+  const startIdx = activeLevel
+    ? Math.max(
+        0,
+        activeLevel.sparks.findIndex((s) => !completedSet.has(s.id) && !dislikedSet.has(s.id))
+      )
+    : 0;
   const [idx, setIdx] = useState<number>(startIdx === -1 ? 0 : startIdx);
   const [sessionLog, setSessionLog] = useState<PlayedSparkLog[]>([]);
   const [confettiTrigger, setConfettiTrigger] = useState(0);
@@ -193,7 +202,15 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const onContinue = () => {
     setFeedback(null);
     if (!activeLevel) return;
-    const nextIdx = idx + 1;
+    // Skip past disliked sparks (👎 = permanent skip for this user).
+    let nextIdx = idx + 1;
+    const dislikedNow = dislikedSparkIds(state);
+    while (
+      nextIdx < activeLevel.sparks.length &&
+      dislikedNow.has(activeLevel.sparks[nextIdx].id)
+    ) {
+      nextIdx += 1;
+    }
     if (nextIdx < activeLevel.sparks.length) {
       setIdx(nextIdx);
       return;
@@ -323,6 +340,33 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
             {idx + 1 < activeLevel.sparks.length ? "Next →" : "Finish"}
           </button>
         </div>
+      )}
+
+      {(feedback || alreadyDone) && spark && (
+        <SparkThumbsRow
+          key={spark.id}
+          sparkId={spark.id}
+          sparkTitle={spark.title}
+          topicId={topicId}
+          levelId={activeLevel.id}
+          currentVote={getSparkVote(state, spark.id)}
+          onVote={(vote, reason) => {
+            voteSpark(spark.id, vote, { reason, topicId, levelId: activeLevel.id });
+            if (vote === "down") {
+              const why = reason ? ` Reason: ${reason}.` : "";
+              void remember({
+                text: `User disliked Spark "${spark.title}" in ${topic.name} L${activeLevel.index}.${why}`,
+                category: "preference",
+                metadata: {
+                  sparkId: spark.id,
+                  topicId,
+                  levelId: activeLevel.id,
+                  reason: reason ?? null,
+                },
+              });
+            }
+          }}
+        />
       )}
 
       {!feedback && switchTopic && idx > 0 && idx % 4 === 0 && (

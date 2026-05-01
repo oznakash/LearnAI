@@ -221,6 +221,28 @@ export interface SessionRecord {
   minutes: number;
 }
 
+export type SparkVote = "up" | "down";
+
+/**
+ * A single user feedback record on a Spark. Stored per-player; written once
+ * (idempotent on repeat votes of the same value, overwritten on a flip).
+ *
+ * `vote: "down"` is the **permanent skip** signal — the spark is never
+ * shown to that user again on that device. The cognition layer also
+ * receives a `preference` memory write so it stops surfacing similar
+ * shapes (see `views/Play.tsx`).
+ */
+export interface SparkFeedback {
+  sparkId: string;
+  vote: SparkVote;
+  /** Optional one-line "why" the user added on a 👎 vote. Free text. */
+  reason?: string;
+  topicId?: TopicId;
+  levelId?: string;
+  /** Last-vote timestamp (ms since epoch). Updated on every vote/flip. */
+  ts: number;
+}
+
 export type TaskKind = "watch" | "read" | "build" | "explore" | "custom";
 export type TaskStatus = "todo" | "doing" | "done";
 
@@ -278,6 +300,13 @@ export interface PlayerState {
   progress: ProgressState;
   history: SessionRecord[];
   tasks: Task[];
+  /**
+   * Per-Spark thumbs-up / thumbs-down feedback. 👎 sparks are
+   * permanently skipped for this user via the topic loader and the
+   * recommended-spark helpers. The cognition layer receives a
+   * `preference` memory write on every 👎.
+   */
+  feedback?: SparkFeedback[];
   apiKey?: string;     // optional
   apiProvider?: "anthropic" | "openai";
   googleClientId?: string;
