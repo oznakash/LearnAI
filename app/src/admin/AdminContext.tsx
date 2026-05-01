@@ -111,6 +111,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
     setMockUsers(merged);
   }, [
+    config.flags.showDemoData,
     player.identity?.email,
     player.identity?.name,
     player.identity?.picture,

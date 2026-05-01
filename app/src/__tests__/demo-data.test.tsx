@@ -13,11 +13,22 @@ import { STORAGE_KEY } from "../store/game";
  * a one-click way to populate the UI for demos and screenshots.
  */
 function MockUsersProbe() {
-  const { mockUsers, config } = useAdmin();
+  const { mockUsers, config, setConfig } = useAdmin();
   return (
     <div>
       <span data-testid="count">{mockUsers.length}</span>
       <span data-testid="flag">{String(config.flags.showDemoData)}</span>
+      <button
+        data-testid="toggle"
+        onClick={() =>
+          setConfig((cfg) => ({
+            ...cfg,
+            flags: { ...cfg.flags, showDemoData: !cfg.flags.showDemoData },
+          }))
+        }
+      >
+        toggle
+      </button>
     </div>
   );
 }
@@ -106,5 +117,26 @@ describe("Admin → Demo data toggle gates the mock cohort everywhere", () => {
     mount();
     await settle();
     expect(screen.getByTestId("count").textContent).toBe("1");
+  });
+
+  // Regression: the cohort-build effect used to omit `showDemoData` from
+  // its dep array, so flipping the flag in the Config tab didn't refresh
+  // the Users / Analytics tables until something else nudged a re-render.
+  // Make sure a toggle is observed immediately.
+  it("toggling the flag at runtime updates mockUsers immediately", async () => {
+    mount();
+    await settle();
+    expect(screen.getByTestId("flag").textContent).toBe("false");
+    const before = Number(screen.getByTestId("count").textContent);
+    expect(before).toBeLessThanOrEqual(1);
+
+    await act(async () => {
+      screen.getByTestId("toggle").click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(screen.getByTestId("flag").textContent).toBe("true");
+    const after = Number(screen.getByTestId("count").textContent);
+    expect(after).toBeGreaterThan(20);
   });
 });
