@@ -18,6 +18,10 @@ export const aiPm: Topic = {
         body: "Classic PM: 'when user clicks X, do Y.' AI PM: 'when user asks X, the answer should be helpful 95% of the time, never harmful, and cite sources when it's a fact.' You write specs in target distributions, not guarantees. You ship evals, not just designs. You measure quality continuously, not at QA only.",
         takeaway: "AI PM = specs as distributions, evals as guardrails.",
         visual: "compass",
+        vocab: [
+          { term: "evals", definition: "A scored test set you run on every release of an AI feature. Each row is an input + the criteria a 'good answer' must meet. Replaces 'does it click X' with 'does it score above the bar on 50 hard cases.'" },
+          { term: "target distributions", definition: "Instead of a single 'this must work,' you state the *distribution* of acceptable outcomes: helpful 95% of the time, harmful 0% of the time, factual when it's a fact. AI PMs ship distributions; classic PMs shipped binary specs." },
+        ],
       }),
       spark("Tip & Trick", {
         type: "tip",
