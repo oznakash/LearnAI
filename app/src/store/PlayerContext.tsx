@@ -120,12 +120,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const loaded = loadState();
+    let loaded = loadState();
     // Drop any expired server session on hydrate so we don't try to call
-    // mem0 with a dead JWT. The user falls back to the sign-in screen.
+    // mem0 with a dead JWT. We also wipe progress fields here — once the
+    // session has expired we no longer trust *whose* progress this is.
+    // Without this wipe, leftover XP / history / sparks from the prior
+    // signed-in user would leak to whoever signs in next on this device.
     if (loaded.serverSession && isSessionExpired(loaded.serverSession)) {
-      loaded.serverSession = undefined;
-      loaded.identity = undefined;
+      loaded = clearForNewIdentity(loaded);
     }
     dispatch({ type: "init", state: loaded });
     setHydrated(true);
@@ -195,12 +197,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const signIn: Ctx["signIn"] = useCallback((identity) => {
     const newEmail = identity.email.trim().toLowerCase();
     setState((s) => {
-      // Identity swap: a *different* email is signing in on this device.
-      // Wipe progress before applying the new identity so the new user
-      // doesn't inherit the prior user's XP / streak / sparks / tasks.
-      // See `clearForNewIdentity` in game.ts.
+      // Wipe progress whenever (a) the new email differs from the prior
+      // identity, OR (b) there is no prior identity — meaning the prior
+      // user signed out, or hydrate cleared an expired JWT, leaving
+      // their progress stranded in localStorage. In both cases the
+      // safe default is "treat the device as a fresh slate." Cross-device
+      // sync then restores the new user's own state from the server.
       const prevEmail = s.identity?.email?.trim().toLowerCase();
-      const base = prevEmail && prevEmail !== newEmail ? clearForNewIdentity(s) : s;
+      const shouldWipe = !prevEmail || prevEmail !== newEmail;
+      const base = shouldWipe ? clearForNewIdentity(s) : s;
       return {
         ...base,
         identity: { ...identity, provider: "google" },
@@ -213,7 +218,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const newEmail = session.email.trim().toLowerCase();
       setState((s) => {
         const prevEmail = s.identity?.email?.trim().toLowerCase();
-        const base = prevEmail && prevEmail !== newEmail ? clearForNewIdentity(s) : s;
+        const shouldWipe = !prevEmail || prevEmail !== newEmail;
+        const base = shouldWipe ? clearForNewIdentity(s) : s;
         return {
           ...base,
           identity: {
@@ -233,12 +239,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // Snapshot the server-side bits before we mutate so the network call has
     // the URL and token; we don't await it (sessions are stateless JWTs, the
     // client-side discard is the real act of signing out).
+    //
+    // We also wipe progress fields here (via `clearForNewIdentity`). This is
+    // a security boundary, not a UX nicety: without it, a different user
+    // signing in on the same device after sign-out would inherit the prior
+    // user's XP / history / sparks / tasks, because `signIn` only wipes
+    // when there's a prior identity to compare against. Same-user re-sign-in
+    // is harmless: the cross-device sync effect restores their state from
+    // the server immediately.
     let mem0Url = "";
     let token = "";
     setState((s) => {
       mem0Url = ""; // resolved below from admin config via runtime
       token = s.serverSession?.token ?? "";
-      return { ...s, identity: undefined, serverSession: undefined };
+      return clearForNewIdentity(s);
     });
     // Ask the server to acknowledge the signout (best effort).
     if (token) {
