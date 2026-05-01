@@ -140,6 +140,27 @@ describe("applySparkResult", () => {
     });
     expect(after.focus).toBe(MAX_FOCUS);
   });
+
+  it("is a no-op on replay of an already-completed spark", () => {
+    const s = defaultState();
+    const topic = TOPICS[0];
+    const lvl = topic.levels[0];
+    const spark = lvl.sparks.find((sp) => sp.exercise.type === "quickpick")!;
+    const first = applySparkResult(s, topic.id, lvl.id, {
+      sparkId: spark.id,
+      correct: true,
+      awardedXP: 10,
+    });
+    const replay = applySparkResult(first, topic.id, lvl.id, {
+      sparkId: spark.id,
+      correct: false,
+      awardedXP: 4,
+    });
+    expect(replay.xp).toBe(first.xp);
+    expect(replay.focus).toBe(first.focus);
+    expect(replay.progress.topicXP[topic.id]).toBe(first.progress.topicXP[topic.id]);
+    expect(replay.progress.completed[lvl.id]).toEqual([spark.id]);
+  });
 });
 
 describe("level unlocking", () => {
