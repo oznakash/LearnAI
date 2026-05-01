@@ -156,6 +156,13 @@ export function applySparkResult(
   result: SparkResult,
   now = Date.now()
 ): PlayerState {
+  // Replay guard: a Spark can only score once. Re-answering one that is
+  // already in the completed set for this level is a no-op — no XP, no
+  // focus drain, no streak bump.
+  if ((s.progress.completed[levelId] ?? []).includes(result.sparkId)) {
+    return s;
+  }
+
   const next = { ...s };
   next.xp = s.xp + result.awardedXP;
   next.guildTier = tierForXP(next.xp);

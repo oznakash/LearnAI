@@ -108,6 +108,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   }
 
   const spark: Spark | undefined = activeLevel.sparks[idx];
+  const alreadyDone = !!spark && completedSet.has(spark.id);
 
   const onAnswer = (correct: boolean, explain?: string) => {
     if (!spark) return;
@@ -298,7 +299,15 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         <div className="absolute -right-6 -top-6 w-32 h-32 opacity-20 pointer-events-none">
           <Illustration k={topic.visual ?? "spark"} />
         </div>
-        <ExerciseSparkView spark={spark} topicVisual={topic.visual} locked={feedback !== null} onAnswer={onAnswer} />
+        {alreadyDone ? (
+          <ReviewSparkView
+            spark={spark}
+            isLast={idx + 1 >= activeLevel.sparks.length}
+            onContinue={onContinue}
+          />
+        ) : (
+          <ExerciseSparkView spark={spark} topicVisual={topic.visual} locked={feedback !== null} onAnswer={onAnswer} />
+        )}
       </div>
 
       {feedback && (
@@ -362,5 +371,104 @@ function ExerciseSparkView({
       locked={locked}
       onAnswer={onAnswer}
     />
+  );
+}
+
+function ReviewSparkView({
+  spark,
+  isLast,
+  onContinue,
+}: {
+  spark: Spark;
+  isLast: boolean;
+  onContinue: () => void;
+}) {
+  const ex = spark.exercise;
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <span className="chip bg-good/15 border-good/30 text-good">✓ Already mastered</span>
+        <span className="chip text-[10px] uppercase tracking-wider">{ex.type}</span>
+      </div>
+      <h2 className="h2 mb-3">{spark.title}</h2>
+
+      {ex.type === "microread" && (
+        <>
+          <p className="text-white/85 leading-relaxed text-[15px]">{ex.body}</p>
+          <div className="mt-3 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
+            💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
+          </div>
+        </>
+      )}
+
+      {ex.type === "tip" && (
+        <p className="text-white/85 leading-relaxed text-[15px]">{ex.body}</p>
+      )}
+
+      {ex.type === "quickpick" && (
+        <>
+          <div className="text-white font-semibold mb-2">{ex.prompt}</div>
+          <div className="rounded-xl bg-good/15 border border-good/40 p-3 text-white">
+            ✓ {ex.options[ex.answer]}
+          </div>
+          <div className="mt-3 text-sm text-white/70">{ex.explain}</div>
+        </>
+      )}
+
+      {ex.type === "fillstack" && (
+        <>
+          <div className="text-white font-semibold mb-2">{ex.prompt}</div>
+          <div className="rounded-xl bg-good/15 border border-good/40 p-3 text-white">
+            ✓ {ex.options[ex.answer]}
+          </div>
+          <div className="mt-3 text-sm text-white/70">{ex.explain}</div>
+        </>
+      )}
+
+      {ex.type === "scenario" && (
+        <>
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3 mb-3 text-white/80 italic">{ex.setup}</div>
+          <div className="text-white font-semibold mb-2">{ex.prompt}</div>
+          <div className="rounded-xl bg-good/15 border border-good/40 p-3 text-white">
+            ✓ {ex.options[ex.answer]}
+          </div>
+          <div className="mt-3 text-sm text-white/70">{ex.explain}</div>
+        </>
+      )}
+
+      {ex.type === "patternmatch" && (
+        <>
+          <div className="text-white font-semibold mb-2">{ex.prompt}</div>
+          <ul className="space-y-1.5">
+            {ex.pairs.map((p, i) => (
+              <li key={i} className="rounded-xl bg-white/5 border border-white/10 p-2.5 text-sm">
+                <span className="text-white/70">{p.left}</span>
+                <span className="text-white/40 mx-2">→</span>
+                <span className="text-good">{p.right}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 text-sm text-white/70">{ex.explain}</div>
+        </>
+      )}
+
+      {ex.type === "buildcard" && (
+        <>
+          <p className="text-white/80 text-sm">{ex.pitch}</p>
+          <pre className="mt-3 rounded-xl border border-white/10 bg-black/40 p-3 font-mono text-xs whitespace-pre-wrap text-white/85">{ex.promptToCopy}</pre>
+          <div className="mt-3 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
+            🎯 <span className="text-white">Success when:</span> {ex.successCriteria}
+          </div>
+        </>
+      )}
+
+      {ex.type === "boss" && (
+        <p className="text-white/80 text-sm">Boss Cell already cleared — onward.</p>
+      )}
+
+      <button className="btn-primary mt-4" onClick={onContinue}>
+        {isLast ? "Finish" : "Next →"}
+      </button>
+    </div>
   );
 }
