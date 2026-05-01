@@ -69,6 +69,14 @@ function reducer(state: PlayerState, action: Action): PlayerState {
 
 interface Ctx {
   state: PlayerState;
+  /**
+   * False until the localStorage hydrate effect has run on mount.
+   * Consumers (notably the top-level Shell) gate "is the user signed in?"
+   * decisions on this — otherwise the first render uses `defaultState()`,
+   * sees no identity, and flashes the SignIn screen for a tick before
+   * the real identity loads.
+   */
+  hydrated: boolean;
   setState: (mutate: (s: PlayerState) => PlayerState) => void;
   signIn: (
     identity: { email: string; name?: string; picture?: string; sub?: string }
@@ -379,6 +387,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       state,
+      hydrated,
       setState,
       signIn,
       signInWithSession,
@@ -394,7 +403,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       removeTask,
       voteSpark,
     }),
-    [state, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask, voteSpark]
+    [state, hydrated, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask, voteSpark]
   );
 
   return <PlayerCtx.Provider value={value}>{children}</PlayerCtx.Provider>;
