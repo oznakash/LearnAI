@@ -42,12 +42,14 @@
 | [`contributing.md`](./contributing.md) | Five flavors of contribution · house rules · authoring a Spark · review criteria · code of conduct | Before opening your first PR. |
 | [`fork-recipe.md`](./fork-recipe.md) | The 30-minute fork · what you keep for free · what to customize · recommended initial domains · sharing back | Forking the engine for a new domain. |
 
-## Content seams + experience plan
+## Content model & sources
 
 | Document | What's in it | When you'd read it |
 |---|---|---|
-| [`content-experience-plan.md`](./content-experience-plan.md) | The three-workstream plan that turns LearnAI from "a hand of cards" into a stitched session experience: mem0-driven session sequencer + visual-box redesign · `PodcastNugget` Spark variant + admin feature flag · 👍/👎 feedback loop with permanent skip on 👎 | Before reviewing or building any of the three feature PRs. The `north-star metric` is "% of sessions ending with Continue path." |
-| [`lenny-archive.md`](./lenny-archive.md) | The Lenny's Podcast transcripts archive · `PodcastNugget` Spark spec · curation rubric · attribution policy (root URL only) · topic mapping · 12 seed nuggets ready to ship | Before authoring or reviewing a `PodcastNugget` Spark. The canonical staging area for any nugget before it lands in `content/topics/*.ts`. |
+| [`content-model.md`](./content-model.md) | **The operating manual for what content *means* at LearnAI.** Compression-not-curriculum thesis · five principles · the user's three choices on every Spark (✅/🔍/⏭) · the source pipeline · just-in-time vocabulary · cognition's role · what we are NOT · the next-PR queue with KPI mappings | Anyone designing a new Spark format, a new content surface, the recommender, or the cognition layer. Read **first** if you're going to touch any of it. |
+| [`first-time-builder-findings.md`](./first-time-builder-findings.md) | A driven-the-live-SPA audit by a fresh builder persona — 33 numbered findings, four near-aha moments, top-10 prioritized changes mapped to `metrics.md` | Before reviewing or scoping the next content-experience PR. The empirical ground truth behind `content-model.md` §8. |
+| [`content-experience-plan.md`](./content-experience-plan.md) | The three-workstream plan that turned LearnAI from "a hand of cards" into a stitched session experience: mem0-driven session sequencer · `PodcastNugget` Spark variant + admin feature flag · 👍/👎 feedback loop with permanent skip on 👎. Many items now subsumed into [`content-model.md`](./content-model.md) §8 — read this for the historical record | Historical reference; new work should ladder to [`content-model.md`](./content-model.md) |
+| [`lenny-archive.md`](./lenny-archive.md) | The Lenny's Podcast transcripts archive · `PodcastNugget` Spark spec · curation rubric · attribution policy · topic mapping · 12 seed nuggets. **First source-anchored Spark variant** — every future `VideoNugget` / `PaperNugget` / `ReleaseNote` / `EssayNugget` / `NewsletterNugget` inherits this shape | Before authoring or reviewing any source-anchored Spark. The canonical staging area for any nugget before it lands in `content/topics/*.ts`. |
 
 ## Legacy / deep reference
 

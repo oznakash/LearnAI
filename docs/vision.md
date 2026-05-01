@@ -48,9 +48,11 @@ Three forces collided in 2023–2026 to make this product possible *and* necessa
 
 Anyone can write 12 topics. Few will build a memory layer that *truly* knows what each user has learned, struggled with, and built. We use **mem0** (self-hosted, open, inspectable) as our cognition engine. Every interaction makes it smarter. Users see their own memory, edit it, and own it.
 
-### 2. Bite-size is non-negotiable
+### 2. Bite-size is non-negotiable — but the bite is shaped to the user
 
 Every Spark is 30 seconds to 2 minutes. Every level is 5 minutes. Every session is whatever the user has — 5 / 10 / 20 / 45 minutes. We never ask for a "study session." We ask for a moment. The product earns its place in the cracks of the day.
+
+The deeper claim: **bite-size is a function of the user, not a fixed length**. For a senior architect, the bite on "prompt caching" is a paragraph + a snippet. For a curious starter, the same insight needs three paragraphs and a definition of "tokens." The cognition layer (pillar 1) shapes the bite-size; we do not. **5 minutes is the hook, not the cap** — once a user is engaged, longer sessions are the win, provided every additional minute carries a new compressed insight, not a stretched one. See [`content-model.md`](./content-model.md) for the full articulation.
 
 ### 3. Open source is the multiplier
 

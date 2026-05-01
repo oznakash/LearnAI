@@ -80,6 +80,10 @@ This is where time-on-app would lie to us. Replace it with *useful* engagement.
 |---|---|---|
 | **Sparks per active session** | 4–7 (the "I had a snack, not a meal" zone) | 20+ Sparks/session — that's a binge, not a habit. Investigate. |
 | **Wow-per-minute self-report** (👍 on Spark) | ≥ 70% Sparks rated 👍 of those rated | Volume of ratings (we don't reward authors who beg for ratings). |
+| **Zoom-in rate** (% of Sparks where the user taps 🔍 *Zoom in*) | 5–15% (band) | Below 5% = the expandability promise of [`content-model.md`](./content-model.md) §2.3 isn't felt; above 15% = bite-size is mis-tuned and we're forcing every user into a deeper rabbit hole. |
+| **Skip-not-down ratio** (⏭ *Skip for now* events / 👎 events) | ≥ 4 : 1 | Confirms users have a soft "not now" path that lives apart from "never." If 👎 is being used as the catch-all skip, the ratio collapses and the cognition layer learns the wrong preference. |
+| **Source-attribution CTR** (clicks on the source-link of any source-anchored Spark — `PodcastNugget` and future variants) | ≥ 8% | Validates the "source-anchored, expandable on demand" pillar. A Spark a user wants to follow back to is one that landed. |
+| **Vocabulary coverage**, per-user (% of vocab atoms in seen Sparks the user has been exposed to *and* engaged with) | Compounding | The leading indicator that the just-in-time vocabulary loop is shaping the user's mind, not just delivering content. |
 | **Build Streak (active streaks ≥ 7 days)** | Compounding share of WAB | Streak count alone — a player on a 200-day streak who hates the product is a flight risk, not a fan. |
 | **Focus-ran-out rate** (player hit zero Focus and bounced) | < 8% of sessions | If high, the difficulty curve is misaligned. Tune via admin. |
 | **Boss Cell pass rate** | 55–75% on first attempt | Below 40% = punishing. Above 85% = trivial. |
