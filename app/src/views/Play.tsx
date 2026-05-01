@@ -35,7 +35,7 @@ interface PlayedSparkLog {
 }
 
 export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
-  const { state, completeSpark, passBoss, recordSession, voteSpark } = usePlayer();
+  const { state, completeSpark, passBoss, recordSession, voteSpark, signalSpark } = usePlayer();
   const { remember, recall } = useMemory();
   const { config: adminCfg } = useAdmin();
   const [nudge, setNudge] = useState<MemoryItem | null>(null);
@@ -67,6 +67,10 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [feedback, setFeedback] = useState<{ correct: boolean; explain?: string; xp: number; mood: MascotMood; msg: string } | null>(null);
   const [completedThisSession, setCompletedThisSession] = useState<string[]>([]);
+  // Spark IDs the user has soft-skipped (⏭ "not now") *during this
+  // session*. Distinct from `dislikedSparkIds(state)` which is a
+  // permanent filter (👎). Resets on level/topic switch and on remount.
+  const [softSkippedThisSession, setSoftSkippedThisSession] = useState<Set<string>>(new Set());
   const [done, setDone] = useState(false);
   const sessionStart = useRef<number>(Date.now());
   // Stable ref to onContinue so the passive-Spark auto-advance in onAnswer
@@ -80,6 +84,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
     setSessionLog([]);
     setFeedback(null);
     setCompletedThisSession([]);
+    setSoftSkippedThisSession(new Set());
     setDone(false);
     setNudge(null);
     sessionStart.current = Date.now();
@@ -204,14 +209,16 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
     setFeedback(null);
     if (!activeLevel) return;
     // Sequencer picks the next idx — skips disliked Sparks (👎 = permanent
-    // skip), and avoids two passive Sparks back-to-back so the session
+    // skip) AND soft-skipped Sparks (⏭ = "not now" — see content-model.md
+    // §2.3). Also avoids two passive Sparks back-to-back so the session
     // doesn't fatigue. See `store/sequencer.ts`.
     const dislikedNow = dislikedSparkIds(state);
+    const skipIds = new Set<string>([...dislikedNow, ...softSkippedThisSession]);
     const lastShownType = spark?.exercise.type ?? null;
     const nextIdx = pickNextSparkIdx(
       activeLevel.sparks,
       idx,
-      dislikedNow,
+      skipIds,
       lastShownType,
     );
     if (nextIdx >= 0) {
@@ -367,6 +374,16 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
           topicId={topicId}
           levelId={activeLevel.id}
           currentVote={getSparkVote(state, spark.id)}
+          sourceUrl={
+            spark.exercise.type === "podcastnugget"
+              ? spark.exercise.source.podcastUrl
+              : undefined
+          }
+          sourceLabel={
+            spark.exercise.type === "podcastnugget"
+              ? `Listen on ${spark.exercise.source.podcast}`
+              : undefined
+          }
           onVote={(vote, reason) => {
             voteSpark(spark.id, vote, { reason, topicId, levelId: activeLevel.id });
             if (vote === "down") {
@@ -381,6 +398,54 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
                   reason: reason ?? null,
                 },
               });
+            }
+          }}
+          onSignal={(signal, reason) => {
+            signalSpark(spark.id, signal, { reason, topicId, levelId: activeLevel.id });
+            if (signal === "zoom") {
+              // Captures intent: this user wants more on this concept.
+              // The cognition layer reads this category as a deeper-
+              // interest signal for the recommender. The free-text
+              // reason (when present) is gold-standard signal for
+              // future content authoring — store it verbatim.
+              const why = reason ? ` They want to know more about: ${reason}.` : "";
+              void remember({
+                text: `User asked to zoom in on Spark "${spark.title}" in ${topic.name} L${activeLevel.index}.${why}`,
+                category: "goal",
+                metadata: {
+                  signal: "zoom",
+                  sparkId: spark.id,
+                  topicId,
+                  levelId: activeLevel.id,
+                  sparkTitle: spark.title,
+                  reason: reason ?? null,
+                },
+              });
+            } else if (signal === "skip-not-now") {
+              // Soft-skip — current session moves on, but the Spark
+              // can resurface later. Distinct from 👎 which permanently
+              // filters. Records a `preference` memory hint at low
+              // weight; the cognition layer's recommender deboosts
+              // similar shapes for *this session*.
+              setSoftSkippedThisSession((s) => {
+                const next = new Set(s);
+                next.add(spark.id);
+                return next;
+              });
+              void remember({
+                text: `User soft-skipped Spark "${spark.title}" in ${topic.name} L${activeLevel.index} for this session.`,
+                category: "preference",
+                metadata: {
+                  signal: "skip-not-now",
+                  sparkId: spark.id,
+                  topicId,
+                  levelId: activeLevel.id,
+                  ts: Date.now(),
+                },
+              });
+              // Advance the queue so the user is moved on. Same path
+              // the "Next →" button takes after a normal Spark.
+              onContinue();
             }
           }}
         />

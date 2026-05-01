@@ -1,15 +1,24 @@
 import { useState } from "react";
-import type { SparkVote, TopicId } from "../types";
+import type { SparkSignal, SparkVote, TopicId } from "../types";
 
 /**
- * Two thumbs (👍 / 👎) plus an optional one-line "why?" on a 👎 vote.
+ * The Spark action surface — two rows.
  *
- * - 👎 is the **permanent skip** signal — the spark never shows again
- *   for this user on this device. Skipping is wired through
- *   `dislikedSparkIds()` in `store/game.ts`.
- * - The cognition-layer write (mem0 `preference` memory) is the parent's
- *   responsibility — this component is a pure presentation surface that
- *   keeps the Player ↔ Memory boundary clean.
+ * Top row (quality rating about the Spark itself):
+ *   👍 helpful · 👎 skip forever
+ *
+ * Bottom row (state-of-mind signals — about the user, not the Spark):
+ *   🔍 Zoom in · ⏭ Skip for now
+ *
+ * The two rows are intentionally separate. 👎 is **permanent** (never
+ * show this Spark again on this device). ⏭ is **for now only** — current
+ * session skips it; the Spark can resurface later. 🔍 captures intent
+ * for the cognition layer to surface deeper Sparks; with a source-link
+ * present (e.g. PodcastNugget), we also surface the source as the
+ * immediate way to go deeper.
+ *
+ * Component is presentation-only. The cognition-layer write (memory
+ * `add`) is the parent's job — keeps the Player ↔ Memory boundary clean.
  */
 export function SparkThumbsRow({
   sparkId,
@@ -18,6 +27,9 @@ export function SparkThumbsRow({
   levelId: _levelId,
   currentVote,
   onVote,
+  onSignal,
+  sourceUrl,
+  sourceLabel,
 }: {
   sparkId: string;
   sparkTitle: string;
@@ -25,103 +37,210 @@ export function SparkThumbsRow({
   levelId: string;
   currentVote: SparkVote | null;
   onVote: (vote: SparkVote, reason?: string) => void;
+  /**
+   * Fires for state-of-mind signals (zoom / skip-not-now). Multiple
+   * fires per Spark are valid — the parent records each one. The
+   * parent typically advances the queue on `skip-not-now`; for `zoom`
+   * the parent leaves the user on the Spark to read deeper.
+   */
+  onSignal?: (signal: SparkSignal, reason?: string) => void;
+  /** When present, surfaces a "📚 See source →" affordance on Zoom-in. */
+  sourceUrl?: string;
+  sourceLabel?: string;
 }) {
-  const [showReason, setShowReason] = useState(false);
-  const [reason, setReason] = useState("");
+  // Quality-rating (👎) reason input state.
+  const [showVoteReason, setShowVoteReason] = useState(false);
+  const [voteReason, setVoteReason] = useState("");
+
+  // Zoom-in panel state.
+  const [zoomedIn, setZoomedIn] = useState(false);
+  const [zoomReason, setZoomReason] = useState("");
+  const [zoomSubmitted, setZoomSubmitted] = useState(false);
 
   const onUp = () => {
     if (currentVote === "up") return;
     onVote("up");
-    setShowReason(false);
+    setShowVoteReason(false);
   };
 
   const onDown = () => {
     if (currentVote !== "down") {
       onVote("down");
     }
-    setShowReason(true);
+    setShowVoteReason(true);
   };
 
-  const submitReason = () => {
-    const trimmed = reason.trim();
+  const submitVoteReason = () => {
+    const trimmed = voteReason.trim();
     onVote("down", trimmed || undefined);
-    setShowReason(false);
+    setShowVoteReason(false);
+  };
+
+  const onZoom = () => {
+    if (!zoomedIn) {
+      // First click — fire the bare zoom signal, expand the panel
+      // for an optional reason.
+      onSignal?.("zoom");
+      setZoomedIn(true);
+    }
+  };
+
+  const submitZoomReason = () => {
+    const trimmed = zoomReason.trim();
+    if (trimmed) {
+      onSignal?.("zoom", trimmed);
+    }
+    setZoomSubmitted(true);
+  };
+
+  const onSkipNow = () => {
+    // Caller is responsible for advancing the Spark queue. The signal
+    // capture is independent — fires whether or not the queue moves.
+    onSignal?.("skip-not-now");
   };
 
   return (
-    <div
-      className="card p-3 sm:p-4 flex flex-wrap items-center gap-3"
-      role="group"
-      aria-label={`Feedback for spark ${sparkTitle}`}
-    >
-      <div className="text-xs text-white/55 mr-1 flex-1 min-w-[140px]">
-        Was this Spark useful?
+    <div className="space-y-2">
+      <div
+        className="card p-3 sm:p-4 flex flex-wrap items-center gap-3"
+        role="group"
+        aria-label={`Quality feedback for spark ${sparkTitle}`}
+      >
+        <div className="text-xs text-white/55 mr-1 flex-1 min-w-[140px]">
+          Was this Spark useful?
+        </div>
+        <button
+          type="button"
+          onClick={onUp}
+          aria-pressed={currentVote === "up"}
+          aria-label="Helpful"
+          className={`pill text-sm transition ${
+            currentVote === "up"
+              ? "bg-good/20 border border-good text-good"
+              : "bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-white/30"
+          }`}
+        >
+          👍 helpful
+        </button>
+        <button
+          type="button"
+          onClick={onDown}
+          aria-pressed={currentVote === "down"}
+          aria-label="Skip this spark forever"
+          className={`pill text-sm transition ${
+            currentVote === "down"
+              ? "bg-bad/20 border border-bad text-bad"
+              : "bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-white/30"
+          }`}
+        >
+          👎 skip forever
+        </button>
+        {currentVote === "up" && (
+          <span className="text-xs text-good/90">Thanks — we'll show more like this.</span>
+        )}
+        {currentVote === "down" && !showVoteReason && (
+          <span className="text-xs text-white/60">
+            Skipped. We won't show this Spark again.
+          </span>
+        )}
+        {showVoteReason && (
+          <div className="basis-full flex flex-wrap items-center gap-2 mt-1">
+            <input
+              type="text"
+              placeholder="(optional) Tell us why — one line"
+              value={voteReason}
+              onChange={(e) => setVoteReason(e.target.value.slice(0, 200))}
+              className="input flex-1 text-sm"
+              aria-label="Reason for skipping"
+            />
+            <button type="button" onClick={submitVoteReason} className="btn-primary text-xs">
+              {voteReason.trim() ? "Save reason" : "Done"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowVoteReason(false);
+                setVoteReason("");
+              }}
+              className="btn-ghost text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        {currentVote === null && (
+          <span className="text-[11px] text-white/40 hidden sm:inline">
+            (👎 = never show again on this device)
+          </span>
+        )}
+        <span className="sr-only" data-testid="spark-id">{sparkId}</span>
       </div>
-      <button
-        type="button"
-        onClick={onUp}
-        aria-pressed={currentVote === "up"}
-        aria-label="Helpful"
-        className={`pill text-sm transition ${
-          currentVote === "up"
-            ? "bg-good/20 border border-good text-good"
-            : "bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-white/30"
-        }`}
-      >
-        👍 helpful
-      </button>
-      <button
-        type="button"
-        onClick={onDown}
-        aria-pressed={currentVote === "down"}
-        aria-label="Skip this spark forever"
-        className={`pill text-sm transition ${
-          currentVote === "down"
-            ? "bg-bad/20 border border-bad text-bad"
-            : "bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-white/30"
-        }`}
-      >
-        👎 skip this
-      </button>
-      {currentVote === "up" && (
-        <span className="text-xs text-good/90">Thanks — we'll show more like this.</span>
-      )}
-      {currentVote === "down" && !showReason && (
-        <span className="text-xs text-white/60">
-          Skipped. We won't show this Spark again.
-        </span>
-      )}
-      {showReason && (
-        <div className="basis-full flex flex-wrap items-center gap-2 mt-1">
-          <input
-            type="text"
-            placeholder="(optional) Tell us why — one line"
-            value={reason}
-            onChange={(e) => setReason(e.target.value.slice(0, 200))}
-            className="input flex-1 text-sm"
-            aria-label="Reason for skipping"
-          />
-          <button type="button" onClick={submitReason} className="btn-primary text-xs">
-            {reason.trim() ? "Save reason" : "Done"}
+
+      {onSignal && (
+        <div
+          className="card p-3 sm:p-4 flex flex-wrap items-center gap-3"
+          role="group"
+          aria-label={`State-of-mind for spark ${sparkTitle}`}
+        >
+          <div className="text-xs text-white/55 mr-1 flex-1 min-w-[140px]">
+            Want more, or not the right moment?
+          </div>
+          <button
+            type="button"
+            onClick={onZoom}
+            aria-pressed={zoomedIn}
+            aria-label="Zoom in — I want to go deeper"
+            className={`pill text-sm transition ${
+              zoomedIn
+                ? "bg-accent/20 border border-accent text-accent"
+                : "bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-white/30"
+            }`}
+          >
+            🔍 Zoom in
           </button>
           <button
             type="button"
-            onClick={() => {
-              setShowReason(false);
-              setReason("");
-            }}
-            className="btn-ghost text-xs"
+            onClick={onSkipNow}
+            aria-label="Skip for now — not the right moment"
+            className="pill text-sm transition bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-white/30"
           >
-            Cancel
+            ⏭ Skip for now
           </button>
+          {zoomedIn && (
+            <div className="basis-full flex flex-col gap-2 mt-1">
+              {sourceUrl && (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-warn hover:underline"
+                >
+                  📚 {sourceLabel ?? "See the source"} →
+                </a>
+              )}
+              {zoomSubmitted ? (
+                <div className="text-xs text-accent/90">
+                  Got it — we'll surface deeper Sparks on this when more land.
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="(optional) What did you want to know more about?"
+                    value={zoomReason}
+                    onChange={(e) => setZoomReason(e.target.value.slice(0, 240))}
+                    className="input flex-1 text-sm"
+                    aria-label="What did you want to know more about?"
+                  />
+                  <button type="button" onClick={submitZoomReason} className="btn-primary text-xs">
+                    {zoomReason.trim() ? "Save" : "Done"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
-      {currentVote === null && (
-        <span className="text-[11px] text-white/40 hidden sm:inline">
-          (👎 = never show again on this device)
-        </span>
-      )}
-      <span className="sr-only" data-testid="spark-id">{sparkId}</span>
     </div>
   );
 }

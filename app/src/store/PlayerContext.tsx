@@ -14,6 +14,7 @@ import type {
   ServerSessionState,
   Spark,
   SessionRecord,
+  SparkSignal,
   SparkVote,
   Task,
   TopicId,
@@ -25,6 +26,7 @@ import {
   loadState,
   passBoss,
   recordSession,
+  recordSparkSignal,
   regenFocus,
   saveState,
   type SparkResult,
@@ -110,6 +112,20 @@ interface Ctx {
   voteSpark: (
     sparkId: string,
     vote: SparkVote,
+    opts?: { reason?: string; topicId?: TopicId; levelId?: string }
+  ) => void;
+  /**
+   * Record a state-of-mind signal on a Spark. Distinct from `voteSpark`,
+   * which is a quality rating. Signals carry "what's the user feeling
+   * right now" — *zoom* (wants to go deeper), *skip-not-now* (not
+   * relevant in this moment but don't filter forever).
+   *
+   * Multiple records per Spark are allowed; the cognition layer treats
+   * a stack of zoom-ins on the same Spark as stronger interest.
+   */
+  signalSpark: (
+    sparkId: string,
+    signal: SparkSignal,
     opts?: { reason?: string; topicId?: TopicId; levelId?: string }
   ) => void;
 }
@@ -384,6 +400,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [setState]
   );
 
+  const signalSpark: Ctx["signalSpark"] = useCallback(
+    (sparkId, signal, opts) =>
+      setState((s) => recordSparkSignal(s, sparkId, signal, opts ?? {})),
+    [setState]
+  );
+
   const value = useMemo<Ctx>(
     () => ({
       state,
@@ -402,8 +424,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       updateTask,
       removeTask,
       voteSpark,
+      signalSpark,
     }),
-    [state, hydrated, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask, voteSpark]
+    [state, hydrated, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask, voteSpark, signalSpark]
   );
 
   return <PlayerCtx.Provider value={value}>{children}</PlayerCtx.Provider>;
