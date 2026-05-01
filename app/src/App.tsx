@@ -40,7 +40,7 @@ export type View =
   | { name: "stream" };
 
 function Shell() {
-  const { state } = usePlayer();
+  const { state, hydrated } = usePlayer();
   const [view, setView] = useState<View>(() =>
     typeof window === "undefined" ? { name: "home" } : viewFromPath(window.location.pathname)
   );
@@ -53,6 +53,10 @@ function Shell() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
+  // Suppress first-paint flicker. Until the localStorage hydrate effect
+  // runs, `state.identity` is `undefined` and we'd otherwise flash <SignIn />
+  // for one frame before re-rendering as the real signed-in user.
+  if (!hydrated) return null;
   if (!state.identity) return <SignIn />;
   if (!state.profile) return <Onboarding />;
 
