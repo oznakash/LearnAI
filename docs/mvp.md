@@ -76,15 +76,14 @@ Source: **`https://github.com/oznakash/learnai`**.
 - **Topic Leaderboards (Boards)** — replaces the single Guild leaderboard with tabbed Global / per-Topic / Following + Week/Month/All-time pills. Per-Topic tabs only appear for the player's active Signals (max 5); `+ Topic` button opens an ad-hoc picker for any of the 12 Topics. Mock filler ("sample" tag) below real rows when sparse.
 - **Spark Stream** — auto-derived feed (level-up / boss-beaten / streak-milestone / spotlight cards). Per-card actions: Follow, Try this Topic, Mute author. "All / Only people I follow" filter. **No engagement-feedback term in ranking** (vision §4).
 - **Admin → Moderation tab** — report queue (Open / Resolved). Resolution actions: ✓ No action / ⚠ Warn / 🚫 Ban from social / 🚷 Global ban. Optimistic removal + audit on resolve.
-- **`services/social-svc/`** — Node + Express + TypeScript backend. 19 REST endpoints, in-memory store with optional JSON-file persistence, viewer-aware projection. Production migration to Postgres-2 documented in the README.
-- **`services/auth-proxy/`** — Cloudflare Worker that fronts both mem0 + social-svc. Verifies Google ID token, injects `X-User-Email`, rate-limits per email, swaps in upstream API keys (kept out of the browser). **Closes the bearer-in-browser issue.**
+- **`services/social-svc/`** — Node + Express + TypeScript social-graph backend. 19 REST endpoints, in-memory store with optional JSON-file persistence, viewer-aware projection. **Bundled inside the SPA container as a sidecar** (single deploy unit on cloud-claude); nginx reverse-proxies `/v1/social/*` to `localhost:8787`. Auth: verifies the mem0-issued session JWT locally with the shared `JWT_SECRET` — no separate proxy, no Cloudflare account, no bearer-in-browser issue. Production migration to Postgres-2 is one module swap (documented in the service README).
 - **All flags default OFF** in `defaults.ts` so a fork pulling main today sees zero behavior change. Live deploy flips them on via admin localStorage.
 
 → Sprint changelog + open punch list: [`social-mvp-status.md`](./social-mvp-status.md).
 
 ### Quality bar
 
-- **287 tests passing**: 256 SPA (Vitest) + 21 social-svc (supertest+vitest) + 10 auth-proxy (vitest).
+- **300 tests passing**: 265 SPA (Vitest) + 35 social-svc (supertest+vitest). After Sprint 2.5 consolidation, the auth-proxy package was folded into social-svc and its 10 tests were either retained as JWT-verification tests or made obsolete by the simpler architecture.
 - Build: ~556 KB JS / ~30 KB CSS gzipped, ~83 modules.
 - Pinch-zoom + double-tap-zoom blocked (mobile + desktop trackpad). Keyboard zoom intentionally preserved.
 - Overscroll bounce stopped.
@@ -97,7 +96,8 @@ Source: **`https://github.com/oznakash/learnai`**.
 - Social MVP: [`social-mvp-product.md`](./social-mvp-product.md) (PRD) · [`social-mvp-engineering.md`](./social-mvp-engineering.md) (eng plan) · [`social-mvp-status.md`](./social-mvp-status.md) (changelog).
 - Sprint planning: [`mvp.md`](./mvp.md) (this) · [`roadmap.md`](./roadmap.md).
 - Community: [`contributing.md`](./contributing.md) · [`fork-recipe.md`](./fork-recipe.md).
-- Service READMEs: [`../services/social-svc/README.md`](../services/social-svc/README.md) · [`../services/auth-proxy/README.md`](../services/auth-proxy/README.md).
+- Service README: [`../services/social-svc/README.md`](../services/social-svc/README.md).
+- Operator runbook: [`operator-checklist.md`](./operator-checklist.md) — env vars, deploy steps, monitoring, log keys to alert on.
 
 ---
 
@@ -127,9 +127,8 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ```sh
 # Source on disk, not screenshots:
-npm test                              # SPA: 256 / 256
-npm test --prefix services/social-svc # 21 / 21
-npm test --prefix services/auth-proxy # 10 / 10
+npm test                              # SPA: 265 / 265
+npm test --prefix services/social-svc # 35 / 35
 npm run build                         # green
 npm run dev                           # play it
 ```

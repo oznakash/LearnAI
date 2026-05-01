@@ -1,13 +1,18 @@
-// social-svc — Express app factory. Exported as a function so tests can
-// stand up a fresh app per test file with an isolated store.
+// social-svc — Express app factory.
 //
-// Auth model (MVP): every endpoint requires an `X-User-Email` header,
-// either injected by the auth-verifying proxy (production) or sent
-// directly by the SPA in demo mode. The header is treated as the
-// authenticated principal — the proxy is the trust boundary.
+// Auth model (production): the SPA sends the mem0-issued session JWT
+// (HS256, signed with JWT_SECRET) in the `Authorization: Bearer ...`
+// header. The sidecar verifies it locally — same secret as mem0 — and
+// extracts the email claim. No round-trip, no separate proxy, no
+// bearer-in-browser issue (the JWT is short-lived and scoped).
 //
-// This is intentionally simple. Tightening (rate limits, scope, full
-// session-token verification) lives in the proxy, not here.
+// Demo / fork mode: when `demoTrustHeader` is true (set via env
+// SOCIAL_DEMO_TRUST_HEADER=1), the sidecar accepts `X-User-Email`
+// directly, no JWT. Refused at module load when NODE_ENV=production.
+//
+// This file is the only http-facing module. Logging is structured
+// JSON via ./log.ts; rate limits via ./rate-limit.ts; JWT verify via
+// ./verify.ts.
 
 import express, { type Request, type Response, type NextFunction } from "express";
 import type { Store } from "./store.js";
@@ -23,47 +28,83 @@ import type {
   ReportReason,
   StreamCardKind,
 } from "./types.js";
+import { log, emailHash } from "./log.js";
+import { verifySessionJwt } from "./verify.js";
+import { DEFAULT_RULES, inMemoryBucket, type RateBucket, type RateRule } from "./rate-limit.js";
 
 interface AppOpts {
   store: Store;
-  /**
-   * Admin allowlist (lowercased emails). Endpoints under
-   * /v1/social/admin require X-User-Email ∈ this set.
-   */
+  /** Admin allowlist (lowercased emails). */
   admins?: string[];
   /**
-   * If set, every request must carry `Authorization: Bearer ${upstreamKey}`.
-   * The auth-verifying proxy sets this; direct callers without the
-   * shared secret are rejected with 401. Closes the P0-2 issue from
-   * docs/social-mvp-status.md.
-   *
-   * If unset (e.g. local dev / fork without a proxy), the service runs
-   * in trusted-network mode — no bearer required. Operators must
-   * either set this OR put the service on a private network.
+   * HMAC secret for session-JWT verification. Same value as mem0's
+   * JWT_SECRET. When empty, JWT auth is disabled and only the demo
+   * header path is open (intended only for local-dev / fork mode).
    */
-  upstreamKey?: string;
+  jwtSecret?: string;
   /**
-   * CORS allowed origins. Comma-separated list, or "*" for any. Default
-   * "*". In production set this to your SPA hostname (closes the P1-6
-   * issue: combined with upstreamKey, narrows the trust surface).
+   * CORS allowed origins. Comma-separated, or "*" for any.
+   * Defaults to "*" — same-origin deployments don't trigger CORS at all,
+   * so this only matters when the SPA and sidecar are on different
+   * hostnames (fork / dev setups).
    */
   allowedOrigins?: string;
+  /**
+   * When true, accept `X-User-Email` directly (no JWT). For local dev
+   * and forks. The constructor refuses this with NODE_ENV=production.
+   */
+  demoTrustHeader?: boolean;
+  /** Optional rate-limit bucket. Defaults to in-memory. */
+  rateBucket?: RateBucket;
 }
 
 export function createApp(opts: AppOpts) {
+  if (opts.demoTrustHeader && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "demoTrustHeader=true is refused under NODE_ENV=production — would let any caller impersonate any user.",
+    );
+  }
   const app = express();
   const store = opts.store;
   const admins = (opts.admins ?? []).map((s) => s.toLowerCase());
-  const upstreamKey = opts.upstreamKey?.trim() || "";
+  const jwtSecret = opts.jwtSecret?.trim() || "";
+  const demoTrustHeader = !!opts.demoTrustHeader;
   const allowedOrigins = (opts.allowedOrigins ?? "*")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  const rateBucket = opts.rateBucket ?? inMemoryBucket();
+
+  if (!jwtSecret && !demoTrustHeader) {
+    log.warn(
+      "no jwtSecret and demoTrustHeader=false — every request will 401. Set JWT_SECRET (production) or SOCIAL_DEMO_TRUST_HEADER=1 (dev).",
+    );
+  }
 
   app.use(express.json({ limit: "256kb" }));
 
-  // CORS — restricted by allowedOrigins. Default keeps "*" for backward
-  // compat with the offline / demo flow; production sets a real origin.
+  // -- Per-request log line + req_id ---------------------------------------
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const reqId = `r-${start.toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    (req as Request & { _reqId: string })._reqId = reqId;
+    res.setHeader("x-req-id", reqId);
+    res.on("finish", () => {
+      const ms = Date.now() - start;
+      const email = (req as Request & { profile?: ProfileRecord }).profile?.email;
+      log.info("req", {
+        req_id: reqId,
+        method: req.method,
+        route: req.path,
+        status: res.statusCode,
+        ms,
+        email_hash: emailHash(email),
+      });
+    });
+    next();
+  });
+
+  // -- CORS -----------------------------------------------------------------
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (allowedOrigins.includes("*")) {
@@ -84,25 +125,53 @@ export function createApp(opts: AppOpts) {
     next();
   });
 
-  // Upstream-bearer enforcement. Runs before requireUser so that direct
-  // /curl callers without the shared secret are rejected before the
-  // X-User-Email header is even read. Bypassed for /health.
-  app.use((req, res, next) => {
-    if (req.path === "/health" || req.method === "OPTIONS") return next();
-    if (!upstreamKey) return next(); // trusted-network mode
+  // -- Auth: verify session JWT, derive email --------------------------------
+  async function authenticate(req: Request): Promise<string | null> {
     const auth = req.header("authorization") ?? "";
     const m = auth.match(/^Bearer\s+(.+)$/);
-    if (!m || m[1] !== upstreamKey) {
-      return res.status(401).json({ error: "missing_upstream_bearer" });
+    if (m && jwtSecret) {
+      try {
+        const claims = await verifySessionJwt(m[1]!, { secret: jwtSecret });
+        if (typeof claims.email === "string" && claims.email) {
+          return claims.email.trim().toLowerCase();
+        }
+      } catch (e) {
+        log.warn("jwt_verify_failed", {
+          req_id: (req as Request & { _reqId: string })._reqId,
+          err: (e as Error).message,
+        });
+        return null;
+      }
     }
-    next();
-  });
+    // Demo / fork fallback: trust X-User-Email directly. Refused in prod
+    // by the constructor guard above.
+    if (demoTrustHeader) {
+      const demo = (req.header("x-user-email") ?? "").trim();
+      if (demo && demo.includes("@")) return demo.toLowerCase();
+    }
+    return null;
+  }
 
-  // -- Auth -----------------------------------------------------------------
-  function requireUser(req: Request, res: Response, next: NextFunction) {
-    const email = (req.header("x-user-email") ?? "").trim();
-    if (!email) return res.status(401).json({ error: "missing_user" });
-    // Read or create the profile lazily on first authenticated request.
+  // -- requireUser: rate-limit + auth + lazy-create profile -----------------
+  async function requireUser(req: Request, res: Response, next: NextFunction) {
+    const email = await authenticate(req);
+    if (!email) return res.status(401).json({ error: "unauthenticated" });
+
+    // Rate limit BEFORE creating the profile so spammers can't fill the store.
+    const rule = pickRateRule(req);
+    const limited = rateBucket.hit(email, rule);
+    if (!limited.ok) {
+      res.setHeader("retry-after", String(limited.retryAfter ?? 60));
+      log.warn("rate_limited", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        email_hash: emailHash(email),
+        action: rule.action,
+        reason: limited.reason,
+      });
+      return res.status(429).json({ error: "rate_limited", reason: limited.reason });
+    }
+
+    // Lazy profile creation on first authenticated request.
     let profile = store.getProfileByEmail(email);
     if (!profile) {
       const base = baseHandleFromEmail(email);
@@ -127,15 +196,35 @@ export function createApp(opts: AppOpts) {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      log.info("profile_created", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        email_hash: emailHash(email),
+        handle,
+      });
     }
-    if (profile.banned) return res.status(403).json({ error: "banned" });
+    if (profile.banned) {
+      log.warn("banned_request", { email_hash: emailHash(email) });
+      return res.status(403).json({ error: "banned" });
+    }
     (req as Request & { profile: ProfileRecord }).profile = profile;
     next();
   }
 
+  function pickRateRule(req: Request): RateRule {
+    const p = req.path;
+    const m = req.method;
+    if (m === "POST" && p === "/v1/social/me/snapshot") return DEFAULT_RULES.social_snapshot;
+    if (m === "POST" && p === "/v1/social/reports") return DEFAULT_RULES.social_report;
+    if (m === "GET") return DEFAULT_RULES.social_read;
+    return DEFAULT_RULES.social_write;
+  }
+
   function requireAdmin(req: Request, res: Response, next: NextFunction) {
-    const email = (req.header("x-user-email") ?? "").toLowerCase();
-    if (!admins.includes(email)) return res.status(403).json({ error: "forbidden" });
+    // requireUser must run first — req.profile is set by it.
+    const profile = (req as Request & { profile?: ProfileRecord }).profile;
+    if (!profile || !admins.includes(profile.email.toLowerCase())) {
+      return res.status(403).json({ error: "forbidden" });
+    }
     next();
   }
 

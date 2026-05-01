@@ -6,6 +6,23 @@
 
 ---
 
+## 🔄 Sprint 2.5 consolidation note (read this first)
+
+The original plan below specified **three deploy units**: SPA + `social-svc` + `auth-proxy` (Cloudflare Worker). That plan shipped (PRs #40-#48) and surfaced a pile of P0/P1 issues during the post-merge review (see [`social-mvp-status.md`](./social-mvp-status.md)).
+
+**As of Sprint 2.5 PR #11, the architecture is consolidated to two deploy units:**
+
+- The Cloudflare Worker is gone. `services/auth-proxy/` is deleted. Its verify + rate-limit logic moved into `services/social-svc/`.
+- `services/social-svc/` is bundled inside the SPA's container as a sidecar. nginx reverse-proxies `/v1/social/*` to the Node sidecar on `localhost:8787`.
+- Auth: the sidecar verifies the **mem0-issued session JWT** locally (HS256, same `JWT_SECRET` as mem0). No bearer-in-browser issue, no separate proxy.
+- `mem0` remains its own service (Python + own Postgres + own deploy cadence).
+
+**Net result:** the operator runs **two services on cloud-claude** (the SPA-with-sidecar container + mem0), exactly as before Sprint 2. No new vendors, no Cloudflare account, no new subdomains, same deploy story.
+
+Everything in §§1–17 below describes the *original* design. Where it says "auth-proxy", "Cloudflare Worker", or "three services", treat it as historical record. The consolidated shape is in [`architecture.md`](./architecture.md). The runbook is in [`operator-checklist.md`](./operator-checklist.md).
+
+---
+
 ## 1. Mental model in one paragraph
 
 We're adding a second self-hosted backend that mirrors the **shape** of how we shipped mem0: thin client in the SPA, narrow service interface, decoupled storage, optional + flag-gated, fork-friendly. The cognition layer (mem0) stays exactly as it is — private, per-Gmail. The new **Social Graph Service** is its sibling: public-shaped data only (profiles, follows, blocks, reports, Signals, Stream events), in its own Postgres, behind a tiny **auth-verifying proxy** that verifies a Google ID token, injects `userEmail`, rate-limits, and forwards. The SPA gets a new `SocialService` interface (offline impl + HTTP impl) wrapped in a React provider that mirrors `MemoryContext`. Five new player views (Profile, SparkStream, Network) and three upgraded views (Leaderboard → Boards, Settings, Home, TopicView), one new admin tab (Moderation). One PR.

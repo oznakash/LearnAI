@@ -205,33 +205,44 @@ A senior engineer can read this page in 15 minutes and ship a feature in an hour
 
 **Sprint 2 — social MVP (shipped behind feature flags, see `docs/social-mvp-status.md`):**
 
-- `services/social-svc/` — Node + Express social-graph backend (profiles, follows, blocks, reports, signals, stream events). 19 REST endpoints, in-memory store with optional JSON-file persistence. Postgres-2 swap path documented in the service README.
-- `services/auth-proxy/` — Cloudflare Worker fronting both mem0 + social-svc. Verifies Google ID tokens (JWKS via `jose`), injects `X-User-Email` server-side, rate-limits per email, swaps in upstream API keys (kept out of the browser). Closes the bearer-in-browser issue.
+- `services/social-svc/` — Node + Express social-graph backend (profiles, follows, blocks, reports, signals, stream events). 19 REST endpoints, in-memory store with optional JSON-file persistence on a mounted volume. Postgres-2 swap path documented in the service README.
+- **Bundled inside the SPA container as a sidecar.** Single deploy unit (the `learnai` service on cloud-claude); nginx reverse-proxies `/v1/social/*` to the Node sidecar on `localhost:8787`. No separate container, no separate subdomain, no CORS dance, no Cloudflare account.
+- Auth: the sidecar verifies the **mem0-issued session JWT** locally (HS256, same `JWT_SECRET` mem0 uses). No bearer-in-browser issue: the JWT is short-lived and minted server-side by mem0 after Google ID-token verification.
 - SPA: Public Profile (`/u/<handle>`), Settings → Network, Follow / Unfollow / Mute / Block / Report, Topic Leaderboards (Boards), Spark Stream, AdminModeration tab. All gated behind `flags.socialEnabled`, `streamEnabled`, `boardsEnabled`.
 
 ```
-                    ┌────────────────────────────────────┐
-                    │  auth-proxy (Cloudflare Worker)    │
-                    │   verify(ID token) →               │
-                    │   inject X-User-Email →            │
-                    │   rate-limit per email →           │
-                    │   swap upstream key →              │
-                    │   forward                          │
-                    └─────────┬──────────────┬───────────┘
-                              │              │
-                  /v1/social/*│              │/v1/memories/*
-                              ▼              ▼
-                    ┌──────────────┐  ┌──────────────┐
-                    │ social-svc   │  │ mem0 server  │
-                    │ Node+Express │  │ FastAPI      │
-                    └──────┬───────┘  └──────┬───────┘
-                           │                  │
-                    ┌──────▼───────┐   ┌──────▼───────┐
-                    │ social store │   │ Postgres +   │
-                    │ (JSON-file → │   │ pgvector     │
-                    │  Postgres-2) │   │              │
-                    └──────────────┘   └──────────────┘
+   Browser
+      │
+      │ all calls go to the SPA's own origin
+      ▼
+   ┌───────────────────────────────────────────────┐
+   │ learnai container  (cloud-claude)              │
+   │   ┌──────────────────────────────────────┐    │
+   │   │ nginx (port 80)                      │    │
+   │   │   /            → static SPA           │    │
+   │   │   /v1/social/* → reverse-proxy ─┐     │    │
+   │   └─────────────────────────────────│─────┘    │
+   │                                     ▼          │
+   │   ┌──────────────────────────────────────┐    │
+   │   │ Node sidecar (localhost:8787)        │    │
+   │   │   - verify session JWT (jose, HS256) │    │
+   │   │   - rate-limit per email             │    │
+   │   │   - structured JSON logs (stdout)    │    │
+   │   │   - serve /v1/social/* directly      │    │
+   │   └────────────────┬─────────────────────┘    │
+   │                    │                          │
+   │   ┌────────────────▼─────────────────────┐    │
+   │   │ social store                          │    │
+   │   │ (JSON-file on /data volume → P2.5:    │    │
+   │   │  swap in Postgres-2)                  │    │
+   │   └──────────────────────────────────────┘    │
+   └───────────────────────────────────────────────┘
+
+   Memory calls go directly to mem0 (unchanged):
+   Browser → https://mem0-09b7ea.cloud-claude.com/v1/memories/*
 ```
+
+**Why one container instead of two services:** the SPA and social-svc are two processes but a single deploy unit. Operating two cloud-claude services for one logical product would double the ops surface (subdomains × 2, secrets × 2, healthchecks × 2) for no value. mem0 stays its own service because it's Python, has its own Postgres, and is updated on its own cadence.
 
 **Next (post-Sprint-2 roadmap, see `docs/roadmap.md`):**
 

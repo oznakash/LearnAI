@@ -29,7 +29,7 @@ What landed (9 PRs, 287 tests):
 | [#44](https://github.com/oznakash/learnai/pull/44) | Topic Leaderboards (Boards) + Signals tabs. |
 | [#45](https://github.com/oznakash/learnai/pull/45) | Spark Stream view + flag-gated TabBar tab. |
 | [#46](https://github.com/oznakash/learnai/pull/46) | `services/social-svc/` Node backend + `OnlineSocialService` HTTP client. |
-| [#47](https://github.com/oznakash/learnai/pull/47) | `services/auth-proxy/` Cloudflare Worker — closes the bearer-in-browser issue. |
+| [#47](https://github.com/oznakash/learnai/pull/47) | `services/auth-proxy/` Cloudflare Worker (later consolidated into `services/social-svc/` in Sprint 2.5 PR #11 — see status doc). |
 | [#48](https://github.com/oznakash/learnai/pull/48) | AdminModeration tab — report queue UI. |
 
 **Done when:** any signed-in user can share a public link to their profile, follow other players, and see a Spark Stream of their network's activity. ✅
@@ -42,21 +42,34 @@ What landed (9 PRs, 287 tests):
 
 **Goal:** close the P0/P1 punch list from `social-mvp-status.md` before flipping the social flags on in the live deploy. The flag-flipping moment for Sprint 2.
 
+### Done in Sprint 2.5 (PRs #50, #11)
+
+| Item | Status |
+|---|---|
+| Wire `pushSnapshot` from `PlayerProvider` after every state change | ✅ PR #50 |
+| Drop the auth-proxy entirely; bundle social-svc into the SPA container as a sidecar | ✅ PR #11 (consolidation) |
+| Switch sidecar auth from injected `X-User-Email` to local session-JWT verification (same `JWT_SECRET` as mem0) | ✅ PR #11 |
+| Same-origin defaults on the SPA — no separate `serverUrl` to configure in production | ✅ PR #11 |
+| Remove `email` from non-owner `PublicProfile` payload | ✅ PR #50 |
+| Snapshot validation + clientId idempotency + `kind` runtime-checking | ✅ PR #50 |
+| `baseHandleFromEmail` in all views | ✅ PR #50 |
+| Kid-safety branch reachable; `ageBand` patchable via PUT /me; kid → forced Closed | ✅ PR #50 |
+| Closed-mode stub no longer leaks `email` / `pictureUrl` / `ageBandIsKid` | ✅ PR #50 |
+| Strip dead `showFullName` ternary | ✅ PR #50 |
+| Structured JSON logging in social-svc; nginx access logs to stdout | ✅ PR #11 |
+| `docs/operator-checklist.md` — Social MVP section (deploy / env vars / monitoring / rollback) | ✅ PR #11 |
+| Dockerfile bundling nginx + Node sidecar with signal-forwarding entrypoint | ✅ PR #11 |
+
+### Still open (Sprint 2.5 close-out — small follow-up PR)
+
 | Item | Why |
 |---|---|
-| Wire `pushSnapshot` from `PlayerProvider` after every state change | Without it, `profile_aggregates` and `stream_events` never populate; Boards + Stream are dead even with the flag on. (Code review P0-1.) |
-| Require `Authorization: Bearer ${UPSTREAM_KEY_SOCIAL}` server-side in `social-svc` | Today the proxy injects `X-User-Email` but social-svc doesn't verify the upstream bearer; combined with `*` CORS the proxy is bypassable. (Security P0-1.) |
-| Remove `email` from non-owner `PublicProfile` payload | PRD §4.2 says "never displayed to viewers"; today every profile fetch leaks the gmail. (Security P0-3.) |
-| Add runtime validation to `POST /v1/social/me/snapshot` (zod-like + return 400 on bad shape) | Today a malformed body hits an uncaught `TypeError` and 500s. (Stability P1.) |
-| Use `baseHandleFromEmail` consistently in views (replace `email.split("@")[0].toLowerCase()`) | "John.Doe@gmail.com" → handle is `johndoe` not `john.doe`; own-profile detection breaks for any email with dots. (Code review P0-4.) |
-| Snapshot upsert dedupes `(email, clientId)` events server-side | StrictMode double-fires multiply `stream_events`. (Code review P0-5.) |
-| Strip dead `showFullName ? showFullName : showFullName` ternary | Owner-side preview leaks if intent ever changes. (Code review P1-9.) |
-| Postgres-2 migration on `social-svc` (replace the in-memory + JSON-file store) | Production durability. The `Store` interface is already the seam. |
-| Operator deploy script — `npm run deploy:social` mirroring `deploy:mem0` | One-command Fly deploy + Wrangler deploy + smoke. |
-| `docs/operator-checklist.md` — Social MVP section (deploy / rollback / moderation SLA) | Operations runbook. |
-| Telemetry dashboards in admin (per engineering plan §10) | Tune-rate, follow-graph density, stream cards/day, % Closed profiles. |
+| Postgres-2 migration on `social-svc` (replace the in-memory + JSON-file store) | Production durability beyond a single host. The `Store` interface is already the seam. |
+| Telemetry dashboards in admin (per engineering plan §10) | Follow-rate, follow-graph density, stream cards/day, % Closed profiles. |
+| `ALLOW_DEMO_HEADER` startup guard that surfaces in `/health` | Operator footgun if accidentally enabled in prod. |
+| Server-side stream Signal-overlap path + spotlight cron | PRD §4.5 — the Stream feels sparse without it. |
 
-**Done when:** social flags can be flipped on in production with no P0/P1 from the Sprint-2 review still open. CI green across all three packages. Operator checklist documented.
+**Done when:** social flags can be flipped on in production with no remaining P0/P1 from the Sprint-2 review. Container rebuilds pick up the latest /dist/. CI green across both packages.
 
 ---
 

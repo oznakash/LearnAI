@@ -168,13 +168,17 @@ describe("selectSocialService", () => {
     expect(svc).toBeInstanceOf(OfflineSocialService);
   });
 
-  it("returns offline when serverUrl is empty", () => {
+  it("returns the online client even with an empty serverUrl (same-origin default)", async () => {
+    // Production deployment: SPA + sidecar in one container; the SPA
+    // calls /v1/social/* on its own origin and nginx proxies to localhost.
+    // An empty serverUrl is the *correct* production config.
+    const { OnlineSocialService } = await import("../social/online");
     const svc = selectSocialService({
       email: "maya@gmail.com",
       socialEnabled: true,
       serverUrl: "",
     });
-    expect(svc).toBeInstanceOf(OfflineSocialService);
+    expect(svc).toBeInstanceOf(OnlineSocialService);
   });
 
   it("returns offline when no email (pre-signin)", () => {

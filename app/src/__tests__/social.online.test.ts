@@ -138,4 +138,33 @@ describe("selectSocialService", () => {
     });
     expect(got).toBeInstanceOf(OnlineSocialService);
   });
+
+  it("returns OnlineSocialService with same-origin (empty serverUrl) when socialEnabled", () => {
+    const got = selectSocialService({
+      email: "maya@gmail.com",
+      socialEnabled: true,
+      serverUrl: "",
+    });
+    expect(got).toBeInstanceOf(OnlineSocialService);
+  });
+});
+
+describe("OnlineSocialService — same-origin behavior", () => {
+  it("makes a relative-URL fetch when serverUrl is empty", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ email: "maya@gmail.com", handle: "maya" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const sameOrigin = new OnlineSocialService({
+      serverUrl: "",
+      apiKey: "tok",
+      userEmail: "maya@gmail.com",
+    });
+    await sameOrigin.getMyProfile();
+    const [url] = fetchMock.mock.calls[0]!;
+    // Empty base ⇒ path-only; resolves against the page origin in browser.
+    expect(String(url)).toBe("/v1/social/me");
+  });
 });
