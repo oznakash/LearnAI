@@ -56,9 +56,16 @@ function MicroReadView({
   return (
     <div>
       <div className="chip mb-2">📖 MicroRead · 60s</div>
-      <h2 className="h2 mb-2">{ex.title}</h2>
+      <h2 className="h2 mb-2 break-words">{ex.title}</h2>
       <div className="rounded-xl overflow-hidden mb-3 border border-white/5 bg-white/5">
-        <div className="h-28 sm:h-36"><Illustration k={ex.visual ?? topicVisual ?? "spark"} className="w-full h-full" /></div>
+        {/* Mobile-first sizing: a 96 px floor below `sm` keeps the
+            illustration legible on a 390 px viewport without crowding the
+            text below; sm+ takes the comfortable 144 px tall slot. The
+            inner `flex items-center` centers SVGs whose intrinsic aspect
+            ratio (typically 5:3) doesn't match the slot. */}
+        <div className="h-24 sm:h-36 flex items-center justify-center">
+          <Illustration k={ex.visual ?? topicVisual ?? "spark"} className="w-full h-full" />
+        </div>
       </div>
       <p className="text-white/85 leading-relaxed text-[15px]">{ex.body}</p>
       <div className="mt-4 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
