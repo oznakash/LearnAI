@@ -382,9 +382,40 @@ export function isLevelUnlocked(
   return s.progress.bossPassed[prev.id] === true || levelCompletion(s, topicId, prev.id).pct >= 100;
 }
 
+/**
+ * Pick the level the player should land on for `topicId`.
+ *
+ * Default: linear progression — return the lowest level that isn't 100%
+ * complete.
+ *
+ * Calibrated start: when the player has a `profile.calibratedLevel` and
+ * has *no progress at all* on this topic, jump them to the calibrated
+ * level (capped at the topic's max) instead of forcing them through L1
+ * for content they've already shown they know. As soon as they make any
+ * progress in the topic, we resume linear progression — the calibrated
+ * jump only fires for fresh topics.
+ */
 export function nextRecommendedLevel(s: PlayerState, topicId: TopicId) {
   const t = getTopic(topicId);
   if (!t) return null;
+  const calibrated = s.profile?.calibratedLevel;
+  const hasNoProgress =
+    !Object.entries(s.progress.completed).some(([levelId, ids]) => {
+      if (ids.length === 0) return false;
+      return t.levels.some((l) => l.id === levelId);
+    }) &&
+    !t.levels.some((l) => s.progress.bossPassed[l.id]);
+
+  if (
+    typeof calibrated === "number" &&
+    calibrated >= 1 &&
+    hasNoProgress &&
+    t.levels.length > 0
+  ) {
+    const target = Math.min(calibrated, t.levels.length);
+    const match = t.levels.find((l) => l.index === target);
+    if (match) return match;
+  }
   for (const lvl of t.levels) {
     const c = levelCompletion(s, topicId, lvl.id);
     if (c.pct < 100) return lvl;
