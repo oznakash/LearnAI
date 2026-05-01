@@ -308,6 +308,20 @@ export interface PlayerProfile {
    * (no intent set; default to the universal CTA).
    */
   intents?: Intent[];
+  /**
+   * Numeric level (1-10) inferred by the most recent calibration. Maps
+   * to the same 1..N index used by Topic levels — when a player opens a
+   * topic they haven't started yet, the engine recommends the level
+   * matching this number rather than always starting at L1. Optional
+   * for back-compat with profiles created before adaptive calibration
+   * shipped; absence means "fall back to linear progression from L1."
+   *
+   * Set by the calibration view via `scoreCalibration()`. Independent
+   * from per-topic completion: once a player makes progress in a topic,
+   * the engine resumes from their actual progress rather than this
+   * starting offset.
+   */
+  calibratedLevel?: number;
   createdAt: number;
 }
 
@@ -455,6 +469,13 @@ export interface PlayerState {
   apiProvider?: "anthropic" | "openai";
   googleClientId?: string;
   lastCalibrationAt?: number;
+  /**
+   * Calibration question ids the player has already seen. The smart
+   * selector excludes these from new calibration sessions so the player
+   * gets fresh probes every time. Capped at 200 entries — old ids fall
+   * off the front when the cap is exceeded. Optional for back-compat.
+   */
+  seenCalibrationQuestionIds?: string[];
   prefs: {
     sound: boolean;
     haptics: boolean;

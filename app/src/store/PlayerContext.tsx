@@ -86,6 +86,12 @@ interface Ctx {
   signInWithSession: (session: ServerSessionState) => void;
   signOut: () => void;
   setProfile: (p: PlayerProfile) => void;
+  /**
+   * Persist the list of calibration question ids the player has already
+   * seen. The smart selector excludes these from new calibrations so the
+   * player gets fresh probes every time. Capped to 200 entries.
+   */
+  setSeenCalibrationIds: (ids: string[]) => void;
   completeSpark: (
     topicId: TopicId,
     levelId: string,
@@ -302,6 +308,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     [setState]
   );
 
+  const setSeenCalibrationIds: Ctx["setSeenCalibrationIds"] = useCallback(
+    (ids) =>
+      setState((s) => ({
+        ...s,
+        seenCalibrationQuestionIds: ids.slice(-200),
+        lastCalibrationAt: Date.now(),
+      })),
+    [setState]
+  );
+
   const completeSpark: Ctx["completeSpark"] = useCallback(
     (topicId, levelId, spark, correct) => {
       const award = xpForExercise(spark.exercise, correct);
@@ -415,6 +431,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       signInWithSession,
       signOut,
       setProfile,
+      setSeenCalibrationIds,
       completeSpark,
       passBoss: passBossCb,
       recordSession: recordSessionCb,
@@ -426,7 +443,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       voteSpark,
       signalSpark,
     }),
-    [state, hydrated, setState, signIn, signInWithSession, signOut, setProfile, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask, voteSpark, signalSpark]
+    [state, hydrated, setState, signIn, signInWithSession, signOut, setProfile, setSeenCalibrationIds, completeSpark, passBossCb, recordSessionCb, setApiKey, setGoogleClientId, addTask, updateTask, removeTask, voteSpark, signalSpark]
   );
 
   return <PlayerCtx.Provider value={value}>{children}</PlayerCtx.Provider>;

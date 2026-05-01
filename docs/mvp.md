@@ -22,7 +22,7 @@ Source: **`https://github.com/oznakash/learnai`**.
 - 6-step wizard (~90 seconds): name, age, skill level, interests, daily minutes, goal.
 - Age-band shaping (kid / teen / adult).
 - Skill-level shaping (5 tiers from "Curious starter" to "Frontier visionary").
-- Recalibration flow — 5-question quiz + interest re-pick, retunes the path.
+- **Adaptive recalibration** — 5-question quiz with smart probes (anchor at the player's level + one and two levels up + one level down + one cross-area probe), drawn from a tagged pool that excludes ids the player has already seen. Records `profile.calibratedLevel` (1-10) — when the player opens a *fresh* topic, recommendations start at that level instead of always at L1. Plus the existing interest re-pick.
 
 ### Identity
 
