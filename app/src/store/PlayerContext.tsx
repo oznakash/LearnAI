@@ -285,8 +285,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         updatedAt: now,
         ...task,
       };
-      setState((s) => ({ ...s, tasks: [created, ...s.tasks] }));
-      return created;
+      // Defense-in-depth: a task tied to a specific Spark
+      // (source.sparkId) is unique per player. Repeated `addTask`
+      // calls for the same Spark return the existing task instead of
+      // creating duplicates. The "+ Task" button in the UI also
+      // dedups, but a fast double-click or any future programmatic
+      // path can hit this code multiple times before React state
+      // settles. This guard makes the second call a no-op.
+      let resolved: Task = created;
+      setState((s) => {
+        if (created.source?.sparkId) {
+          const existing = s.tasks.find((t) => t.source?.sparkId === created.source!.sparkId);
+          if (existing) {
+            resolved = existing;
+            return s;
+          }
+        }
+        return { ...s, tasks: [created, ...s.tasks] };
+      });
+      return resolved;
     },
     [setState]
   );
