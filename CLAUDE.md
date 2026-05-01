@@ -15,6 +15,8 @@
 - **Today's MVP:** [`docs/mvp.md`](./docs/mvp.md)
 - **Architecture:** [`docs/architecture.md`](./docs/architecture.md)
 - **Wiki TOC:** [`docs/INDEX.md`](./docs/INDEX.md)
+- **Content-experience plan (active):** [`docs/content-experience-plan.md`](./docs/content-experience-plan.md). Three workstreams: session sequencer + visual-box redesign · `PodcastNugget` Spark variant + admin feature flag · 👍/👎 with permanent skip on 👎.
+- **External content seam — Lenny's Podcast archive:** [`docs/lenny-archive.md`](./docs/lenny-archive.md). The transcripts themselves live **outside** this repo at `/Users/oznakash/Downloads/Lenny's Podcast Transcripts Archive [public]` (319 files, ~27 MB). That folder is read-only reference material, **not** committed to git. Use the doc above as the staging surface for any `PodcastNugget` Spark before it ships into `app/src/content/topics/*.ts`.
 
 ## What you're allowed to change
 

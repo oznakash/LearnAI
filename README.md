@@ -183,6 +183,16 @@ You can see, edit, forget, wipe, and export what the system remembers. Privacy p
 
 ---
 
+## 🎙️ Content seams
+
+LearnAI is mostly hand-authored — but we also weave in curated, ≤ 60-word nuggets from external voices our audience already trusts. Each one is short, attributed to the guest by name, and links back to the source.
+
+- **[Lenny's Podcast](https://www.lennysnewsletter.com/podcast)** — short, attributed nuggets from interviews with Anthropic's Benjamin Mann, Claude Code's Boris Cherny, Simon Willison, April Dunford, Brian Chesky, Tobi Lütke, Bob Moesta, Marty Cagan, Dr. Fei-Fei Li, Bret Taylor, Mike Krieger, Kevin Weil, Aparna Chennapragada, Karina Nguyen, and many more. Every nugget links back to the Lenny's Podcast home page. Operators can flip the whole seam off with one toggle in **Admin → Config**. See the staging doc and reference: [`docs/lenny-archive.md`](./docs/lenny-archive.md).
+
+If you have a podcast, newsletter, or talk archive that fits the same shape, open an issue — we want to add more content seams the same way.
+
+---
+
 ## ✨ What's in the MVP
 
 - 🌌 **12 Topics × 10 Levels** — ~480 hand-authored micro-lessons across AI Foundations, LLMs & Cognition, Memory & Safety, AI PM, AI Builder mindset, Cybersecurity, Cloud, AI Dev Tools, AI Trends, Frontier Companies, AI News, Open Source AI.

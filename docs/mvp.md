@@ -113,6 +113,9 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 | Capability | Why we don't have it yet | When |
 |---|---|---|
+| `PodcastNugget` Spark variant + first ~12 nuggets from [Lenny's Podcast](https://www.lennysnewsletter.com/podcast) (Boris Cherny, Simon Willison, Benjamin Mann, April Dunford, …), gated by `flags.lennyContentEnabled` (default ON) | Reference doc and seed nuggets are staged in [`lenny-archive.md`](./lenny-archive.md). Engine work + topic-file integration land in the active content-experience sprint. See [`content-experience-plan.md`](./content-experience-plan.md). | Active sprint (PR (b)) |
+| 👍 / 👎 feedback on every Spark + permanent skip on 👎 (per-user) + admin roll-up of best/worst Sparks | Schema and UX outlined in [`content-experience-plan.md`](./content-experience-plan.md). Cognition-layer hook writes a `preference` memory on 👎 so mem0 stops surfacing similar shapes. | Active sprint (PR (c)) |
+| mem0-driven session sequencer + visual-box redesign (concept-tied diagrams, mobile-first sizing) | Today the mem0 layer observes but doesn't drive sequencing; the animation slot shows the same generic illustration regardless of concept. See [`content-experience-plan.md`](./content-experience-plan.md). | Active sprint (PR (a)) |
 | Production hardening of the social layer (Postgres-2 swap, snapshot pipeline wiring, server-side upstream-bearer enforcement) | The Sprint-2 PRs shipped the surface; Sprint 2.5 closes the open P0/P1 punch list before flipping flags on in production. See [`social-mvp-status.md`](./social-mvp-status.md). | Sprint 2.5 |
 | Contribution flow (community-authored Sparks with AI-assisted review) | Needs review pipeline + maintainer queue | Sprint 3 |
 | Talent Match (recruiters search the behavioral graph) | Needs public profiles (✅ Sprint 2) + skills index | Sprint 4 |
