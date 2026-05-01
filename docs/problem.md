@@ -83,6 +83,16 @@ Every existing product picks 1 or 2 of these. Bootcamps do (2)+(4). YouTube does
 
 The reason no product has all four is that **all four require AI to make the unit economics work**. Personalizing 10,000 paths weekly with frontier-level content used to cost $50/user/year in editor labor. With models that can extract, evaluate, and generate at $0.20/user/year, the math finally works.
 
+### 4.1 The shape of the answer — *compression*, not curriculum
+
+Saying "we'll do all four" still isn't a product shape. The actual shape is:
+
+> **A personal compression layer for the AI internet.** Any data point — a 4-hour podcast, a 60-page paper, a release-note thread, a launch memo, a YouTube video — gets compressed, through the lens of AI topics, into Sparks shaped to *this* user's mental model. The user keeps the controls: ✅ got it / 🔍 zoom in / ⏭ skip / 📚 see source.
+
+The lossiness of compression is what makes it personal. We do not write courses; we **decide what 1% of the firehose this specific user needs right now**, and we make the other 99% one click away. That's the unit of value the existing products miss — Coursera and Duolingo built **fixed curricula** below this layer, Twitter and YouTube serve **infinite firehose** above this layer, and **the compression layer in between does not exist yet**.
+
+The full articulation of how this layer works is in [`content-model.md`](./content-model.md). It is the operating manual for what content *means* at LearnAI.
+
 ## 5. Our hypothesis
 
 > **The product that does all four — bite-size, personalized, current, practical — wins this moment in education.** It will become as dominant in AI learning as Duolingo became in languages, with a much bigger TAM (every knowledge worker on Earth feels AI FOMO).

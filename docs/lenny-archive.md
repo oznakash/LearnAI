@@ -1,6 +1,8 @@
 # Lenny's Podcast — content reference
 
 > _This document is the operator manual for using Lenny's Podcast as a content seam in LearnAI. It is the source of truth for: where the archive lives, what shape we extract from it, how we credit, which episodes feed which Constellation, and the first batch of curated nuggets._
+>
+> **Architectural note.** `PodcastNugget` (the Spark variant defined here) is the **first instance of the source-anchored compression pattern** described in [`content-model.md`](./content-model.md) §2.2. The schema, attribution policy, and curation rubric below are the templates that every future source-anchored variant — `VideoNugget`, `PaperNugget`, `ReleaseNote`, `EssayNugget`, `NewsletterNugget` — will inherit. Read [`content-model.md`](./content-model.md) for the broader content thesis; this doc is the concrete first implementation.
 
 > **Important.** This file is the **only** thing in the repo that should reference the transcripts. The transcripts themselves are **not committed** — they're a personal archive on the author's machine. The `PodcastNugget` Sparks we ship will quote ≤ 60 words per nugget, always credit Lenny + the guest, and always link to the episode page. We do not redistribute the archive.
 
