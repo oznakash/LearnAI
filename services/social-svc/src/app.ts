@@ -385,8 +385,19 @@ export function createApp(opts: AppOpts) {
       return res.status(400).json({ error: "level_out_of_range" });
     }
 
-    // Plausibility: xp must not regress more than 10%.
+    // Plausibility: a real user's xp doesn't regress by more than 10%.
+    // BUT: a snapshot with `xpTotal === 0` is the textbook fresh-device
+    // signal — local state was cleared (e.g. by the cross-account-leak
+    // wipe in #72) and the SPA hasn't pulled the server snapshot yet.
+    // Rejecting that with 409 made every focus-regen tick spam the
+    // server log forever and silently broke cross-device restore. The
+    // server's existing aggregate is canonical here; treat the post as
+    // a no-op so the client stops retrying and the cross-device pull
+    // can repopulate local state without ceremony.
     const prev = store.getAggregate(me.email);
+    if (prev && snap.xpTotal === 0 && prev.xpTotal > 0) {
+      return res.json({ ok: true, noop: "fresh_device" });
+    }
     if (prev && snap.xpTotal < prev.xpTotal * 0.9) {
       return res.status(409).json({ error: "implausible_xp" });
     }
