@@ -333,7 +333,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
             }
           />
         </div>
-        {alreadyDone ? (
+        {alreadyDone && !feedback ? (
           <ReviewSparkView
             spark={spark}
             isLast={idx + 1 >= activeLevel.sparks.length}
