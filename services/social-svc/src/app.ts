@@ -668,7 +668,7 @@ export function createApp(opts: AppOpts) {
 
   app.post("/v1/email/send", requireUser, requireAdmin, async (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
-    const { to, subject, html, fromName, replyTo } = req.body ?? {};
+    const { to, subject, html, text, fromName, replyTo, unsubscribeUrl } = req.body ?? {};
     if (typeof to !== "string" || !to.includes("@")) {
       return res.status(400).json({ error: "invalid_to" });
     }
@@ -678,6 +678,15 @@ export function createApp(opts: AppOpts) {
     if (typeof html !== "string" || !html.length) {
       return res.status(400).json({ error: "invalid_html" });
     }
+    if (
+      typeof unsubscribeUrl === "string" &&
+      unsubscribeUrl.length > 0 &&
+      !/^https:\/\//i.test(unsubscribeUrl)
+    ) {
+      // Reject non-HTTPS up front so callers don't think they got a
+      // working one-click button while RFC 8058 silently disabled it.
+      return res.status(400).json({ error: "unsubscribe_url_must_be_https" });
+    }
     log.info("email_attempt", {
       sent_by_hash: emailHash(me.email),
       to_domain: to.split("@")[1] ?? "?",
@@ -686,8 +695,13 @@ export function createApp(opts: AppOpts) {
       to,
       subject,
       html,
+      text: typeof text === "string" ? text : undefined,
       fromName: typeof fromName === "string" ? fromName : undefined,
       replyTo: typeof replyTo === "string" ? replyTo : undefined,
+      unsubscribeUrl:
+        typeof unsubscribeUrl === "string" && unsubscribeUrl.length > 0
+          ? unsubscribeUrl
+          : undefined,
     });
     if (!r.ok) return res.status(503).json({ error: "send_failed", reason: r.reason });
     res.json({ ok: true, messageId: r.messageId });

@@ -38,10 +38,30 @@ export interface SendEmailInput {
   subject: string;
   /** HTML body — pre-rendered by the SPA's template renderer. */
   html: string;
+  /**
+   * Optional plain-text alternative. If omitted, we auto-derive a sane
+   * fallback by stripping tags from `html` so the message ships as
+   * multipart/alternative. Spam filters reward having a text part even
+   * when it's never displayed.
+   */
+  text?: string;
   /** Optional override of the default From: name (e.g. "LearnAI Support"). */
   fromName?: string;
   /** Optional Reply-To. */
   replyTo?: string;
+  /**
+   * Optional one-click unsubscribe URL (RFC 8058). When provided, must
+   * be HTTPS — we then emit both `List-Unsubscribe` (with the URL +
+   * mailto fallback) and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
+   * so Gmail / Outlook / Yahoo render the native one-click button.
+   *
+   * For transactional / admin sends with no opt-out flow (test emails,
+   * password reset, etc.) leave this undefined — we still emit a
+   * mailto-only `List-Unsubscribe` header pointing at the From address,
+   * which is enough to satisfy bulk-sender heuristics without surfacing
+   * an unsubscribe affordance in the recipient's client.
+   */
+  unsubscribeUrl?: string;
 }
 
 export interface SendEmailResult {
@@ -85,6 +105,61 @@ function transporter(cfg: SmtpConfig): Transporter {
   return cachedTransporter;
 }
 
+/**
+ * Best-effort HTML → plain-text. Not a perfect renderer — it just
+ * needs to give spam filters and text-only mail clients something
+ * readable so the message qualifies as multipart/alternative. We
+ * deliberately avoid pulling in `html-to-text` to keep the sidecar
+ * dependency footprint flat.
+ */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/\s*p\s*>/gi, "\n\n")
+    .replace(/<\/\s*div\s*>/gi, "\n")
+    .replace(/<\s*li[^>]*>/gi, "• ")
+    .replace(/<\/\s*li\s*>/gi, "\n")
+    .replace(/<\/\s*h[1-6]\s*>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * Build the `List-Unsubscribe` and (optionally) `List-Unsubscribe-Post`
+ * headers per RFC 2369 + RFC 8058. The mailto fallback is always
+ * present — Gmail's bulk-sender requirements treat its absence as a
+ * red flag even for transactional volume. The one-click POST header
+ * is only emitted when `unsubscribeUrl` is HTTPS (RFC 8058 §3 forbids
+ * non-HTTPS for one-click).
+ */
+export function buildListUnsubHeaders(
+  fromEmail: string,
+  unsubscribeUrl?: string,
+): Record<string, string> {
+  const mailto = `mailto:${fromEmail}?subject=unsubscribe`;
+  const httpsOk = !!unsubscribeUrl && /^https:\/\//i.test(unsubscribeUrl);
+  const headers: Record<string, string> = {
+    "List-Unsubscribe": httpsOk
+      ? `<${unsubscribeUrl}>, <${mailto}>`
+      : `<${mailto}>`,
+  };
+  if (httpsOk) {
+    headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+  }
+  return headers;
+}
+
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   const cfg = configFromEnv();
   if (!cfg) {
@@ -94,15 +169,23 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     };
   }
   const fromName = input.fromName ?? cfg.fromName;
+  const text = input.text ?? htmlToText(input.html);
+  const headers = buildListUnsubHeaders(cfg.fromEmail, input.unsubscribeUrl);
   try {
     const info = await transporter(cfg).sendMail({
       from: `${fromName} <${cfg.fromEmail}>`,
       to: input.to,
       subject: input.subject,
       html: input.html,
+      text,
       replyTo: input.replyTo,
+      headers,
     });
-    log.info("email_sent", { to_domain: input.to.split("@")[1] ?? "?", subject_len: input.subject.length });
+    log.info("email_sent", {
+      to_domain: input.to.split("@")[1] ?? "?",
+      subject_len: input.subject.length,
+      has_unsub_url: !!input.unsubscribeUrl,
+    });
     return { ok: true, messageId: info.messageId };
   } catch (e) {
     const msg = (e as Error).message;
