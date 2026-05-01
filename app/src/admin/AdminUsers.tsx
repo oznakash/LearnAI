@@ -39,8 +39,23 @@ export function AdminUsers() {
 
   const enabledTemplates = Object.values(config.emailTemplates).filter((t) => t.enabled);
 
+  // Mirror of AdminAnalytics: with one or zero users the table is mostly
+  // empty — surface a one-line hint about the demo-data flag so admins
+  // landing here in production know they're not looking at a broken page.
+  const realUserOnly = mockUsers.length <= 1 && !config.flags.showDemoData;
+
   return (
     <div className="space-y-4">
+      {realUserOnly && (
+        <div className="card p-4 border-white/10 bg-white/[0.02]">
+          <div className="text-sm text-white/70">
+            Real-data only mode — {mockUsers.length === 0 ? "no users have signed in yet on this device." : "showing the 1 signed-in user."}
+            {" "}Want a populated table for screenshots? Flip on
+            <span className="font-mono"> Demo data </span>
+            in <span className="font-mono">Config → Demo data</span>.
+          </div>
+        </div>
+      )}
       <section className="card p-4 space-y-3">
         <div className="grid sm:grid-cols-4 gap-2">
           <input

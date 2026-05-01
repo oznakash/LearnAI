@@ -61,6 +61,11 @@ function Shell() {
     if (typeof window === "undefined") return;
     if (sameView(next, viewFromPath(window.location.pathname))) return;
     window.history.pushState(null, "", pathForView(next));
+    // SPA nav should land at the top of the new screen — without this,
+    // a long page (e.g. Settings) leaves the next view (e.g. Admin) scrolled
+    // partway down. Native back/forward (popstate) is intentionally not
+    // affected here so the browser can restore its remembered scroll.
+    window.scrollTo({ top: 0, left: 0 });
   };
 
   return (
