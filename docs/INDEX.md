@@ -41,6 +41,13 @@
 | [`contributing.md`](./contributing.md) | Five flavors of contribution · house rules · authoring a Spark · review criteria · code of conduct | Before opening your first PR. |
 | [`fork-recipe.md`](./fork-recipe.md) | The 30-minute fork · what you keep for free · what to customize · recommended initial domains · sharing back | Forking the engine for a new domain. |
 
+## Content seams + experience plan
+
+| Document | What's in it | When you'd read it |
+|---|---|---|
+| [`content-experience-plan.md`](./content-experience-plan.md) | The three-workstream plan that turns LearnAI from "a hand of cards" into a stitched session experience: mem0-driven session sequencer + visual-box redesign · `PodcastNugget` Spark variant + admin feature flag · 👍/👎 feedback loop with permanent skip on 👎 | Before reviewing or building any of the three feature PRs. The `north-star metric` is "% of sessions ending with Continue path." |
+| [`lenny-archive.md`](./lenny-archive.md) | The Lenny's Podcast transcripts archive · `PodcastNugget` Spark spec · curation rubric · attribution policy (root URL only) · topic mapping · 12 seed nuggets ready to ship | Before authoring or reviewing a `PodcastNugget` Spark. The canonical staging area for any nugget before it lands in `content/topics/*.ts`. |
+
 ## Legacy / deep reference
 
 These pre-date the structured wiki but contain useful detail. Read them when the wiki sends you here.
