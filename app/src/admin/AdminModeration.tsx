@@ -50,6 +50,9 @@ export function AdminModeration() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  // Empty serverUrl means "same origin" — production co-hosts social-svc
+  // behind the same nginx that serves the SPA at /v1/social/*. Forks
+  // running social-svc on a different host set serverUrl explicitly.
   const baseUrl = config.socialConfig.serverUrl.replace(/\/+$/, "");
   const adminEmail = player.identity?.email ?? "";
 
@@ -58,19 +61,14 @@ export function AdminModeration() {
       "content-type": "application/json",
       "x-user-email": adminEmail,
     };
-    if (config.socialConfig.apiKey) {
-      h["authorization"] = `Bearer ${config.socialConfig.apiKey}`;
-    }
+    // Prefer the player session JWT in production (social-svc verifies
+    // it). Demo-mode falls back to the shared apiKey.
+    const bearer = player.serverSession?.token || config.socialConfig.apiKey;
+    if (bearer) h["authorization"] = `Bearer ${bearer}`;
     return h;
-  }, [adminEmail, config.socialConfig.apiKey]);
+  }, [adminEmail, config.socialConfig.apiKey, player.serverSession?.token]);
 
   const refresh = async () => {
-    if (!baseUrl) {
-      setError("Configure socialConfig.serverUrl to load reports.");
-      setRows([]);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
@@ -130,7 +128,7 @@ export function AdminModeration() {
         <div>
           <h1 className="h2">Moderation</h1>
           <p className="muted text-xs">
-            Reports queue. Backed by <code className="text-white/70">{baseUrl || "(no social-svc URL configured)"}</code>.
+            Reports queue. Backed by <code className="text-white/70">{baseUrl || "/v1/social/* (same origin)"}</code>.
           </p>
         </div>
         <div className="flex gap-1.5">
