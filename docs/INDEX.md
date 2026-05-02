@@ -32,7 +32,7 @@
 | [`ux.md`](./ux.md) | UX of the cognition layer: where memory shows up, the privacy ethic, edge cases | Designing or reviewing memory-touching UX. |
 | [`mem0-fork-publish.workflow.yml`](./mem0-fork-publish.workflow.yml) | Drop-in GitHub workflow to publish your mem0 fork to GHCR | Before deploying mem0 self-hosted. |
 | [`cloud-claude-mcp.md`](./cloud-claude-mcp.md) | The Cloud-Claude MCP — 36 tools for read + mutate of the deploy · audit recipe (`describe_project` → `get_logs`) · safety rules · patterns (rotate JWT_SECRET, add domain, fix stuck deploy, rollback) | Whenever the deploy needs introspection or a platform-side action. Integral to the autonomous-delivery directive in [`../CLAUDE.md`](../CLAUDE.md). |
-| [`../services/social-svc/README.md`](../services/social-svc/README.md) | Node + Express social-graph sidecar (bundled in the SPA container) · 19 REST endpoints · session-JWT auth · in-memory + JSON-file MVP · Postgres-2 swap path | Running or extending `social-svc`. |
+| [`../services/social-svc/README.md`](../services/social-svc/README.md) | Node + Express social-graph sidecar (bundled in the SPA container) · 21 endpoints (19 REST + SSR `/u/<handle>` + sitemap) · session-JWT auth · in-memory + JSON-file MVP · Postgres-2 swap path | Running or extending `social-svc`. |
 | [`operator-checklist.md`](./operator-checklist.md) | Production deploy steps · env vars to set on cloud-claude · what logs to monitor · rollback · moderation SLA | Operating LearnAI in production. |
 
 ## Community
