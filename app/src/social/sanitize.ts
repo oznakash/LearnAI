@@ -111,3 +111,91 @@ export function safeDisplayName(raw?: string | null): string | undefined {
 export function isReservedHandle(candidate: string): boolean {
   return RESERVED_HANDLES.has(candidate.toLowerCase());
 }
+
+// ---- Extended profile metadata sanitizers (PR #111) -----------------------
+
+const BIO_MAX = 160;
+const PRONOUNS_MAX = 30;
+const LOCATION_MAX = 60;
+const LINK_URL_MAX = 2048;
+
+/**
+ * Bio: ≤160 chars (one sentence), no HTML, no control chars. Same NFKC +
+ * format-char strip as fullName, plus a defensive HTML-tag check.
+ */
+export function safeBio(raw?: string | null): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  let s = String(raw).normalize("NFKC");
+  s = stripFormatChars(s);
+  s = s.replace(/\s+/g, " ").trim();
+  if (!s) return undefined;
+  if (/<\s*\/?\s*[a-z]/i.test(s)) return undefined;
+  if (s.length > BIO_MAX) s = s.slice(0, BIO_MAX);
+  return s;
+}
+
+export function safePronouns(raw?: string | null): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  let s = String(raw).normalize("NFKC");
+  s = stripFormatChars(s);
+  s = s.trim();
+  if (!s) return undefined;
+  if (/<|>|"/.test(s)) return undefined;
+  if (s.length > PRONOUNS_MAX) s = s.slice(0, PRONOUNS_MAX);
+  return s;
+}
+
+export function safeLocation(raw?: string | null): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  let s = String(raw).normalize("NFKC");
+  s = stripFormatChars(s);
+  s = s.trim();
+  if (!s) return undefined;
+  if (/<|>|"/.test(s)) return undefined;
+  if (s.length > LOCATION_MAX) s = s.slice(0, LOCATION_MAX);
+  return s;
+}
+
+/** Hero / banner image — same rules as `safePictureUrl` (https only, ≤2 KB). */
+export function safeHeroUrl(raw?: string | null): string | undefined {
+  return safePictureUrl(raw);
+}
+
+export type LinkKind = "linkedin" | "github" | "twitter" | "website";
+
+const LINK_HOST_RULES: Record<LinkKind, (host: string, path: string) => boolean> = {
+  linkedin: (h, p) =>
+    (h === "linkedin.com" || h === "www.linkedin.com") &&
+    /^\/(in|company|pub|school)\//i.test(p),
+  github: (h) => h === "github.com" || h === "www.github.com",
+  twitter: (h) =>
+    h === "x.com" || h === "www.x.com" || h === "twitter.com" || h === "www.twitter.com",
+  website: () => true,
+};
+
+/**
+ * Validates and normalizes one external profile link.
+ * - Must be https.
+ * - Per-kind host whitelist (LinkedIn, GitHub, X/Twitter — anything for website).
+ * - Strips query + fragment so saved values are clean (no UTM tags leaking
+ *   into share previews / JSON-LD sameAs).
+ * Returns `undefined` for anything that fails validation; never throws.
+ */
+export function safeLink(raw: string | null | undefined, kind: LinkKind): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const trimmed = String(raw).trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > LINK_URL_MAX) return undefined;
+  let u: URL;
+  try {
+    u = new URL(trimmed);
+  } catch {
+    return undefined;
+  }
+  if (u.protocol !== "https:") return undefined;
+  const host = u.hostname.toLowerCase();
+  if (!LINK_HOST_RULES[kind](host, u.pathname)) return undefined;
+  // Drop trailing slash; drop query + fragment.
+  const path = u.pathname.replace(/\/+$/, "") || "/";
+  return `${u.protocol}//${host}${path}`;
+}

@@ -16,8 +16,25 @@ import {
   firstNameFrom,
   resolveDisplayName,
 } from "./handles";
-import { safeDisplayName, safePictureUrl } from "./sanitize";
-import type { GuildTier, TopicId } from "../types";
+import {
+  safeBio,
+  safeDisplayName,
+  safeHeroUrl,
+  safeLink,
+  safeLocation,
+  safePictureUrl,
+  safePronouns,
+} from "./sanitize";
+import type { GuildTier, SkillLevel, TopicId } from "../types";
+import type { ProfileLinks } from "./types";
+
+const VALID_SKILL_LEVELS: ReadonlySet<SkillLevel> = new Set<SkillLevel>([
+  "starter",
+  "explorer",
+  "builder",
+  "architect",
+  "visionary",
+]);
 
 /**
  * Offline social service — single-tenant, localStorage only. Used when:
@@ -54,6 +71,19 @@ interface OfflineState {
     signalsGlobal: boolean;
     ageBandIsKid: boolean;
     signupAt: number;
+    // -- new in PR #111 (extended metadata) -------------------------------
+    bio?: string;
+    pronouns?: string;
+    location?: string;
+    heroUrl?: string;
+    skillLevel?: SkillLevel;
+    links?: ProfileLinks;
+    showBio: boolean;
+    showPronouns: boolean;
+    showLocation: boolean;
+    showHero: boolean;
+    showSkillLevel: boolean;
+    showLinks: boolean;
   };
   /** Aggregated stats (last seen via pushSnapshot). */
   aggregate: {
@@ -99,6 +129,13 @@ export interface ProfileDefaults {
   showBadges: boolean;
   showSignup: boolean;
   signalsGlobal: boolean;
+  // PR #111 — extended metadata defaults
+  showBio: boolean;
+  showPronouns: boolean;
+  showLocation: boolean;
+  showHero: boolean;
+  showSkillLevel: boolean;
+  showLinks: boolean;
 }
 
 const HARDCODED_PROFILE_DEFAULTS: ProfileDefaults = {
@@ -110,6 +147,15 @@ const HARDCODED_PROFILE_DEFAULTS: ProfileDefaults = {
   showBadges: true,
   showSignup: true,
   signalsGlobal: true,
+  // New visibility toggles default ON: if the owner takes the trouble to
+  // fill in a bio/pronouns/location/links, the natural assumption is
+  // they want it shown. Each one stays per-field flippable from Network.
+  showBio: true,
+  showPronouns: true,
+  showLocation: true,
+  showHero: true,
+  showSkillLevel: true,
+  showLinks: true,
 };
 
 function defaultState(
@@ -134,6 +180,18 @@ function defaultState(
       signalsGlobal: defaults.signalsGlobal,
       ageBandIsKid,
       signupAt: Date.now(),
+      bio: undefined,
+      pronouns: undefined,
+      location: undefined,
+      heroUrl: undefined,
+      skillLevel: undefined,
+      links: undefined,
+      showBio: defaults.showBio,
+      showPronouns: defaults.showPronouns,
+      showLocation: defaults.showLocation,
+      showHero: defaults.showHero,
+      showSkillLevel: defaults.showSkillLevel,
+      showLinks: defaults.showLinks,
     },
     aggregate: {
       xpTotal: 0,
@@ -283,6 +341,18 @@ export class OfflineSocialService implements SocialService {
           : undefined,
       activity14d:
         viewerIsOwner || state.profile.showActivity ? state.aggregate.activity14d : undefined,
+      bio:
+        viewerIsOwner || state.profile.showBio ? state.profile.bio : undefined,
+      pronouns:
+        viewerIsOwner || state.profile.showPronouns ? state.profile.pronouns : undefined,
+      location:
+        viewerIsOwner || state.profile.showLocation ? state.profile.location : undefined,
+      heroUrl:
+        viewerIsOwner || state.profile.showHero ? state.profile.heroUrl : undefined,
+      skillLevel:
+        viewerIsOwner || state.profile.showSkillLevel ? state.profile.skillLevel : undefined,
+      links:
+        viewerIsOwner || state.profile.showLinks ? state.profile.links : undefined,
       ownerPrefs: viewerIsOwner
         ? {
             fullName: effectiveFullName,
@@ -293,6 +363,12 @@ export class OfflineSocialService implements SocialService {
             showBadges: state.profile.showBadges,
             showSignup: state.profile.showSignup,
             signalsGlobal: state.profile.signalsGlobal,
+            showBio: state.profile.showBio,
+            showPronouns: state.profile.showPronouns,
+            showLocation: state.profile.showLocation,
+            showHero: state.profile.showHero,
+            showSkillLevel: state.profile.showSkillLevel,
+            showLinks: state.profile.showLinks,
           }
         : undefined,
     };
@@ -354,6 +430,25 @@ export class OfflineSocialService implements SocialService {
     const cleanPatch: ProfilePatch = { ...patch };
     if ("pictureUrl" in patch) cleanPatch.pictureUrl = safePictureUrl(patch.pictureUrl);
     if ("fullName" in patch) cleanPatch.fullName = safeDisplayName(patch.fullName);
+    if ("bio" in patch) cleanPatch.bio = safeBio(patch.bio);
+    if ("pronouns" in patch) cleanPatch.pronouns = safePronouns(patch.pronouns);
+    if ("location" in patch) cleanPatch.location = safeLocation(patch.location);
+    if ("heroUrl" in patch) cleanPatch.heroUrl = safeHeroUrl(patch.heroUrl);
+    if ("skillLevel" in patch) {
+      cleanPatch.skillLevel =
+        patch.skillLevel && VALID_SKILL_LEVELS.has(patch.skillLevel) ? patch.skillLevel : undefined;
+    }
+    if ("links" in patch) {
+      const raw = patch.links;
+      cleanPatch.links = raw
+        ? {
+            linkedin: safeLink(raw.linkedin, "linkedin"),
+            github: safeLink(raw.github, "github"),
+            twitter: safeLink(raw.twitter, "twitter"),
+            website: safeLink(raw.website, "website"),
+          }
+        : undefined;
+    }
     const nextProfile = { ...state.profile, ...cleanPatch };
     // Defense in depth: kid profiles can NEVER leave Closed mode regardless
     // of what the patch tries to set. (The earlier check on `patch.profileMode`

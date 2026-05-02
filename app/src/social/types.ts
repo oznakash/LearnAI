@@ -11,7 +11,15 @@
  * `docs/social-mvp-engineering.md` (engineering plan) for the rationale.
  */
 
-import type { GuildTier, TopicId } from "../types";
+import type { GuildTier, SkillLevel, TopicId } from "../types";
+
+/** External self-managed profile links surfaced on `/u/<handle>`. */
+export interface ProfileLinks {
+  linkedin?: string;
+  github?: string;
+  twitter?: string;
+  website?: string;
+}
 
 /** Two values: discoverable to all (`open`), or gated by approval (`closed`). */
 export type ProfileMode = "open" | "closed";
@@ -51,6 +59,18 @@ export interface PublicProfile {
   topicMap?: { topicId: TopicId; xp: number }[];
   /** Last 14 daily-Spark counts, oldest first. */
   activity14d?: number[];
+  /** One-sentence bio, ≤160 chars. Plain text, no HTML. */
+  bio?: string;
+  /** Self-described pronouns (e.g. "she/her"). Free-text, ≤30 chars. */
+  pronouns?: string;
+  /** Self-described location (e.g. "Tel Aviv"). Free-text, ≤60 chars. */
+  location?: string;
+  /** URL of a hero / banner image. Defaults to a topic-tinted gradient when unset. */
+  heroUrl?: string;
+  /** Self-declared skill level (matches the onboarding ladder). */
+  skillLevel?: SkillLevel;
+  /** Self-managed external links — host-whitelisted per kind. */
+  links?: ProfileLinks;
   /**
    * Owner-side preference snapshot. Present only when the viewer is the
    * profile owner (server-side guarantee). Used by Settings → Network to
@@ -65,6 +85,12 @@ export interface PublicProfile {
     showBadges: boolean;
     showSignup: boolean;
     signalsGlobal: boolean;
+    showBio: boolean;
+    showPronouns: boolean;
+    showLocation: boolean;
+    showHero: boolean;
+    showSkillLevel: boolean;
+    showLinks: boolean;
   };
 }
 
@@ -141,6 +167,19 @@ export type ProfilePatch = Partial<{
   showSignup: boolean;
   /** Show on the Global Leaderboard (independent of per-Topic Signals). */
   signalsGlobal: boolean;
+  // -- new metadata fields (see docs/profile-extended.md) --
+  bio: string;
+  pronouns: string;
+  location: string;
+  heroUrl: string;
+  skillLevel: SkillLevel;
+  links: ProfileLinks;
+  showBio: boolean;
+  showPronouns: boolean;
+  showLocation: boolean;
+  showHero: boolean;
+  showSkillLevel: boolean;
+  showLinks: boolean;
 }>;
 
 /**
