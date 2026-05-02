@@ -7,6 +7,12 @@ import { getCreator } from "../admin/runtime";
 interface Props {
   exercise: Exercise;
   title: string;
+  /**
+   * Topic-level visual fallback. Accepted for back-compat with callers
+   * that still forward `topic.visual` here, but ignored — MicroReadView
+   * only renders an illustration when the Spark itself sets `visual`.
+   * Generic topic-level fallbacks read as empty noise on dark theme.
+   */
   topicVisual?: VisualKey;
   /** True once this Spark has been answered; the renderer disables further input. */
   locked?: boolean;
@@ -31,10 +37,10 @@ interface Props {
   onVocabZoom?: (term: string) => void;
 }
 
-export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswer, onVocabTap, onVocabZoom, ageBand }: Props) {
+export function ExerciseRenderer({ exercise, title, topicVisual: _topicVisual, locked, onAnswer, onVocabTap, onVocabZoom, ageBand }: Props) {
   switch (exercise.type) {
     case "microread":
-      return <MicroReadView ex={exercise} title={title} topicVisual={topicVisual} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} ageBand={ageBand} />;
+      return <MicroReadView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} ageBand={ageBand} />;
     case "tip":
       return <TipView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} ageBand={ageBand} />;
     case "quickpick":
@@ -59,7 +65,6 @@ export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswe
 function MicroReadView({
   ex,
   title,
-  topicVisual,
   locked,
   onAnswer,
   onVocabTap,
@@ -68,7 +73,6 @@ function MicroReadView({
 }: {
   ex: Extract<Exercise, { type: "microread" }>;
   title: string;
-  topicVisual?: VisualKey;
   locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
   onVocabTap?: (term: string, definition: string) => void;
@@ -89,16 +93,18 @@ function MicroReadView({
     <div>
       <div className="chip mb-2">📖 MicroRead · 60s</div>
       <h2 className="h2 mb-2 break-words">{ex.title}</h2>
-      <div className="rounded-xl overflow-hidden mb-3 border border-white/5 bg-white/5">
-        {/* Mobile-first sizing: a 96 px floor below `sm` keeps the
-            illustration legible on a 390 px viewport without crowding the
-            text below; sm+ takes the comfortable 144 px tall slot. The
-            inner `flex items-center` centers SVGs whose intrinsic aspect
-            ratio (typically 5:3) doesn't match the slot. */}
-        <div className="h-24 sm:h-36 flex items-center justify-center">
-          <Illustration k={ex.visual ?? topicVisual ?? "spark"} className="w-full h-full" />
+      {ex.visual && (
+        <div className="rounded-xl overflow-hidden mb-3 border border-white/5 bg-white/5">
+          {/* Visual slot only renders when the Spark explicitly sets a
+              `visual` key — generic topic fallbacks read as empty noise
+              against the dark theme. Sparks that deliberately pick a
+              shape (robot, shield, build, etc.) get an illustration that
+              ties to the content. */}
+          <div className="h-24 sm:h-36 flex items-center justify-center">
+            <Illustration k={ex.visual} className="w-full h-full" />
+          </div>
         </div>
-      </div>
+      )}
       <VocabBody body={body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
       <div className="mt-4 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
         💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
