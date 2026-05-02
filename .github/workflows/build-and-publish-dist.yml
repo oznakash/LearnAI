@@ -1,10 +1,24 @@
 name: Build & publish /dist
 
-# Keeps the committed `/dist/` directory in sync with the source on every
-# push to `main`, so static-mirror deployers (e.g. cloud-claude.com nginx)
-# always serve the latest built SPA without having to run a build themselves.
+# Two roles in one workflow:
+#   1. PR-time gate: on every pull_request that touches `app/**` (or
+#      this workflow itself), build + test the SPA so the operator
+#      can see green/red before merging. No commit, no push.
+#   2. Post-merge publisher: on push to `main`, the same build + test
+#      runs, then commits the rebuilt `/dist/` so static-mirror
+#      deployers (e.g. cloud-claude.com nginx) always serve the
+#      latest built SPA without having to run a build themselves.
+#
+# The commit step is gated on `github.event_name == 'push'` so PRs
+# from forks (read-only token) never try to write back.
 
 on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build-and-publish-dist.yml"
   push:
     branches: [main]
     paths:
@@ -54,6 +68,7 @@ jobs:
         run: npm test --prefix app
 
       - name: Commit /dist/ if changed
+        if: github.event_name == 'push'
         run: |
           git config user.name "builderquest-bot"
           git config user.email "actions@users.noreply.github.com"

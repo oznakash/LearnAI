@@ -1,0 +1,57 @@
+name: social-svc tests
+
+# Verifies the Node sidecar (`services/social-svc/`) builds + tests
+# cleanly on every PR + every push to main that touches its sources.
+#
+# The existing `build-and-publish-dist.yml` workflow only runs on
+# `app/**` paths, so sidecar-only PRs (#100, #105, #111, …) used to
+# skip CI entirely and the 114-test sidecar suite only ever ran
+# locally pre-merge. This workflow closes that gap.
+#
+# This workflow does NOT publish anything — no /dist/ rebuild, no
+# git push, no deploy. It's a pure verification gate.
+
+on:
+  pull_request:
+    paths:
+      - "services/social-svc/**"
+      - ".github/workflows/social-svc-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "services/social-svc/**"
+      - ".github/workflows/social-svc-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: social-svc-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/social-svc
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: services/social-svc/package-lock.json
+
+      - name: Install
+        run: npm install
+
+      - name: Type-check + build
+        run: npm run build
+
+      - name: Test
+        run: npm test
