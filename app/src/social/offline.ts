@@ -84,22 +84,54 @@ interface OfflineState {
 
 const STORAGE_KEY_PREFIX = "learnai:social:offline:";
 
-function defaultState(email: string, ageBandIsKid: boolean): OfflineState {
+/**
+ * Operator-level policy defaults that flow from the admin config
+ * (`config.socialConfig.publicProfile`) into a fresh user's offline
+ * state. Existing users keep their saved values — these only apply
+ * the first time `defaultState()` runs for an email.
+ */
+export interface ProfileDefaults {
+  defaultProfileMode: "open" | "closed";
+  showFullName: boolean;
+  showCurrent: boolean;
+  showMap: boolean;
+  showActivity: boolean;
+  showBadges: boolean;
+  showSignup: boolean;
+  signalsGlobal: boolean;
+}
+
+const HARDCODED_PROFILE_DEFAULTS: ProfileDefaults = {
+  defaultProfileMode: "open",
+  showFullName: false,
+  showCurrent: true,
+  showMap: true,
+  showActivity: true,
+  showBadges: true,
+  showSignup: true,
+  signalsGlobal: true,
+};
+
+function defaultState(
+  email: string,
+  ageBandIsKid: boolean,
+  defaults: ProfileDefaults = HARDCODED_PROFILE_DEFAULTS,
+): OfflineState {
   return {
     profile: {
       email,
       handle: baseHandleFromEmail(email),
       fullName: undefined,
       pictureUrl: undefined,
-      // Kid profiles forced to closed, no override.
-      profileMode: ageBandIsKid ? "closed" : "open",
-      showFullName: false,
-      showCurrent: true,
-      showMap: true,
-      showActivity: true,
-      showBadges: true,
-      showSignup: true,
-      signalsGlobal: true,
+      // Kid profiles forced to closed, regardless of admin default.
+      profileMode: ageBandIsKid ? "closed" : defaults.defaultProfileMode,
+      showFullName: defaults.showFullName,
+      showCurrent: defaults.showCurrent,
+      showMap: defaults.showMap,
+      showActivity: defaults.showActivity,
+      showBadges: defaults.showBadges,
+      showSignup: defaults.showSignup,
+      signalsGlobal: defaults.signalsGlobal,
       ageBandIsKid,
       signupAt: Date.now(),
     },
@@ -137,30 +169,41 @@ export class OfflineSocialService implements SocialService {
    */
   private readonly identityName?: string;
   private readonly identityPicture?: string;
+  /**
+   * Per-instance policy defaults from `admin.socialConfig.publicProfile`.
+   * Applied only on first profile creation — existing users keep their
+   * saved field values.
+   */
+  private readonly profileDefaults: ProfileDefaults;
 
   constructor(opts: {
     email: string;
     ageBandIsKid?: boolean;
     identityName?: string;
     identityPicture?: string;
+    profileDefaults?: Partial<ProfileDefaults>;
   }) {
     this.email = opts.email || "anon";
     this.ageBandIsKid = !!opts.ageBandIsKid;
     this.identityName = opts.identityName?.trim() || undefined;
     this.identityPicture = opts.identityPicture?.trim() || undefined;
+    this.profileDefaults = {
+      ...HARDCODED_PROFILE_DEFAULTS,
+      ...(opts.profileDefaults ?? {}),
+    };
     this.storageKey = `${STORAGE_KEY_PREFIX}${this.email}`;
   }
 
   // -- internal storage -----------------------------------------------------
 
   private read(): OfflineState {
-    if (typeof window === "undefined") return defaultState(this.email, this.ageBandIsKid);
+    if (typeof window === "undefined") return defaultState(this.email, this.ageBandIsKid, this.profileDefaults);
     try {
       const raw = window.localStorage.getItem(this.storageKey);
-      if (!raw) return defaultState(this.email, this.ageBandIsKid);
+      if (!raw) return defaultState(this.email, this.ageBandIsKid, this.profileDefaults);
       const parsed = JSON.parse(raw) as Partial<OfflineState>;
       // Forward-merge so older saved states inherit new defaults.
-      const base = defaultState(this.email, this.ageBandIsKid);
+      const base = defaultState(this.email, this.ageBandIsKid, this.profileDefaults);
       const profile = { ...base.profile, ...(parsed.profile ?? {}) };
       // ageBandIsKid is a *derived* property — always source it from the
       // constructor arg (which the SocialProvider keeps in sync with the
@@ -179,7 +222,7 @@ export class OfflineSocialService implements SocialService {
         reports: parsed.reports ?? base.reports,
       };
     } catch {
-      return defaultState(this.email, this.ageBandIsKid);
+      return defaultState(this.email, this.ageBandIsKid, this.profileDefaults);
     }
   }
 

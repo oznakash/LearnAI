@@ -1,4 +1,4 @@
-import { OfflineSocialService } from "./offline";
+import { OfflineSocialService, type ProfileDefaults } from "./offline";
 import { OnlineSocialService } from "./online";
 import type { SocialService } from "./types";
 
@@ -47,6 +47,12 @@ export interface SelectSocialOpts {
    */
   identityName?: string;
   identityPicture?: string;
+  /**
+   * Operator-level field defaults from
+   * `admin.socialConfig.publicProfile`. Applied only on first
+   * profile creation — existing users keep their saved values.
+   */
+  profileDefaults?: Partial<ProfileDefaults>;
 }
 
 /**
@@ -65,6 +71,7 @@ export function selectSocialService(opts: SelectSocialOpts): SocialService {
       ageBandIsKid: opts.ageBandIsKid,
       identityName: opts.identityName,
       identityPicture: opts.identityPicture,
+      profileDefaults: opts.profileDefaults,
     });
   }
   // Same-origin is the default in production: the social-svc sidecar
@@ -88,6 +95,7 @@ export function selectSocialService(opts: SelectSocialOpts): SocialService {
       ageBandIsKid: opts.ageBandIsKid,
       identityName: opts.identityName,
       identityPicture: opts.identityPicture,
+      profileDefaults: opts.profileDefaults,
     });
   }
   return new OnlineSocialService({

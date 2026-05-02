@@ -258,6 +258,137 @@ describe("ssr — renderProfileHtml (open profile)", () => {
   });
 });
 
+// -- Personalized learnings + AI-ingestion structured data --------------
+
+describe("ssr — personalized topic learnings (SEO + AI ingestion)", () => {
+  it("renders the 'What @<handle> is learning' section header personalized to the user", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-builder"] }),
+      aggregate: makeAggregate(),
+    });
+    expect(html).toContain("What @maya is learning");
+  });
+
+  it("includes the longer 'whatYoudLearn' rundown per Signal topic — keyword-dense SEO content", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-foundations"] }),
+      aggregate: makeAggregate(),
+    });
+    // Pin a few keyword-dense phrases from the new whatYoudLearn body.
+    expect(html).toContain("transformer architecture");
+    expect(html).toContain("scaling laws");
+    expect(html).toContain("RLHF");
+  });
+
+  it("renders 5 sample sparks per Signal topic (was 2 in the v1 snippet)", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-builder"] }),
+      aggregate: makeAggregate(),
+    });
+    const sparkCount = (html.match(/<article class="spark"/g) ?? []).length;
+    expect(sparkCount).toBeGreaterThanOrEqual(5);
+  });
+
+  it("each sample spark carries Schema.org LearningResource microdata", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-pm"] }),
+      aggregate: makeAggregate(),
+    });
+    expect(html).toContain('itemtype="https://schema.org/LearningResource"');
+    expect(html).toContain('itemprop="name"');
+    expect(html).toContain('itemprop="description"');
+    expect(html).toContain('itemprop="learningResourceType" content="article"');
+  });
+
+  it("renders a per-topic XP hint when the aggregate carries earned XP for that topic", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-builder"] }),
+      aggregate: makeAggregate({ topicXp: { "ai-builder": 320 } }),
+    });
+    // The per-topic XP pill flag personalizes each Signal section so two
+    // users with the same Signals don't render byte-identical content.
+    expect(html).toContain("⚡ 320 earned here");
+  });
+
+  it("hides the per-topic XP hint when the user hasn't earned XP in that topic yet", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["cybersecurity"] }),
+      aggregate: makeAggregate({ topicXp: {} }),
+    });
+    expect(html).not.toContain("earned here");
+  });
+});
+
+describe("ssr — JSON-LD Course graph for AI ingestion bots", () => {
+  function parseJsonLd(html: string): Record<string, unknown> {
+    const m = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
+    expect(m).toBeTruthy();
+    return JSON.parse(
+      m![1].replace(/\\u003c/g, "<").replace(/--\\u003e/g, "-->"),
+    );
+  }
+
+  it("emits a @graph with ProfilePage + Person + a Course per Signal", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-builder", "ai-pm"] }),
+      aggregate: makeAggregate(),
+    });
+    const json = parseJsonLd(html);
+    const graph = json["@graph"] as { "@type": string }[];
+    expect(Array.isArray(graph)).toBe(true);
+    const types = graph.map((n) => n["@type"]);
+    expect(types).toContain("ProfilePage");
+    expect(types).toContain("Person");
+    expect(types.filter((t) => t === "Course").length).toBe(2);
+  });
+
+  it("each Course carries a hasPart array of LearningResource items", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-foundations"] }),
+      aggregate: makeAggregate(),
+    });
+    const json = parseJsonLd(html);
+    const graph = json["@graph"] as Array<{
+      "@type": string;
+      hasPart?: Array<{ "@type": string; name: string; description: string }>;
+    }>;
+    const course = graph.find((n) => n["@type"] === "Course");
+    expect(course).toBeDefined();
+    expect(course!.hasPart!.length).toBeGreaterThanOrEqual(5);
+    expect(course!.hasPart![0]["@type"]).toBe("LearningResource");
+    expect(course!.hasPart![0].name).toBeTruthy();
+    expect(course!.hasPart![0].description).toBeTruthy();
+  });
+
+  it("the Person knowsAbout the user's Signal courses", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ signals: ["ai-builder", "memory-safety"] }),
+      aggregate: makeAggregate(),
+    });
+    const json = parseJsonLd(html);
+    const graph = json["@graph"] as Array<{
+      "@type": string;
+      knowsAbout?: string[];
+    }>;
+    const person = graph.find((n) => n["@type"] === "Person");
+    expect(person?.knowsAbout).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("#topic-ai-builder"),
+        expect.stringContaining("#topic-memory-safety"),
+      ]),
+    );
+  });
+
+  it("closed profiles emit no Course / LearningResource leakage in the JSON-LD", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ profileMode: "closed", signals: ["ai-builder"] }),
+      aggregate: makeAggregate(),
+    });
+    expect(html).not.toContain('"@type":"Course"');
+    expect(html).not.toContain('"@type":"LearningResource"');
+  });
+});
+
 describe("ssr — privacy gates", () => {
   it("renders the closed gate (no XP, no signals, no aggregates) for profileMode=closed", () => {
     const html = renderProfileHtml({

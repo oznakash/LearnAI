@@ -154,6 +154,43 @@ export interface SocialConfig {
     signalOverlap: number;
     qualityTier: number;
   };
+  /**
+   * Operator-level policy for the public profile page (`/u/<handle>`).
+   *
+   * The Network view lets each user toggle individual visibility flags
+   * (`showCurrent`, `showMap`, `showActivity`, `showBadges`, `showSignup`,
+   * `showFullName`, `signalsGlobal`). These admin-level settings are the
+   * defaults a fresh sign-up starts from, plus master switches the
+   * operator can flip globally. The /admin → Public Profile tab is the
+   * UI for editing them.
+   *
+   * Forward-compat note: this is read by the Network view at v1; the
+   * social-svc lazy-create flow honors them in a follow-up. The current
+   * profile bools live in localStorage admin config (cross-device synced
+   * via mem0); persisting them to the server is a future PR.
+   */
+  publicProfile: {
+    /** What `profileMode` a brand-new sign-up starts in. */
+    defaultProfileMode: "open" | "closed";
+    /** Defaults for the per-field visibility toggles in Network view. */
+    defaults: {
+      showFullName: boolean;
+      showCurrent: boolean;
+      showMap: boolean;
+      showActivity: boolean;
+      showBadges: boolean;
+      showSignup: boolean;
+      signalsGlobal: boolean;
+    };
+    /**
+     * Master switch for the SSR personalized-learnings section on
+     * `/u/<handle>`. When false, the SSR public profile renders the
+     * basic header + activity sparkline only (closed-gate style).
+     * When true (default), every Signal topic renders its full
+     * `<details>` with intro + whatYoudLearn + 5 sample sparks.
+     */
+    showLearningContent: boolean;
+  };
 }
 
 export interface MemoryConfig {

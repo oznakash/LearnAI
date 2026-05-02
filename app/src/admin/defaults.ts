@@ -311,6 +311,19 @@ export function defaultAdminConfig(): AdminConfig {
         signalOverlap: 0.3,
         qualityTier: 0.2,
       },
+      publicProfile: {
+        defaultProfileMode: "open",
+        defaults: {
+          showFullName: false,
+          showCurrent: true,
+          showMap: true,
+          showActivity: true,
+          showBadges: true,
+          showSignup: true,
+          signalsGlobal: true,
+        },
+        showLearningContent: true,
+      },
     },
     serverAuth: defaultServerAuth(),
   };
