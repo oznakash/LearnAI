@@ -107,6 +107,29 @@ export interface VocabAtom {
   definition: string;
 }
 
+/**
+ * Source attribution for hand-authored Sparks (MicroRead, Tip, future
+ * EssayNugget / ReleaseNote / NewsletterNugget variants). Renders as
+ * a small, quiet cite chip below the body — same shape as the more
+ * prominent `🎙️ Lenny's Podcast` chip on `PodcastNugget`.
+ *
+ * Why this is its own type, not just a string: every source-anchored
+ * Spark inherits the same attribution contract — name + URL — so the
+ * renderer (and the future vocabulary recommender) can treat them
+ * uniformly. See `docs/aha-and-network.md` §2.3 for the trust rationale
+ * and `docs/content-model.md` §2.2 for the source-anchored thesis.
+ *
+ * Schema lands in Sprint #1. Content backfill — citing real sources on
+ * the worst-rated 100 Sparks — happens in Sprint #3 alongside the
+ * editorial pass.
+ */
+export interface SparkSource {
+  /** Human-readable name shown on the chip — e.g. "Anthropic Blog", "Stripe Press". */
+  name: string;
+  /** Direct URL to the source. Opens in a new tab. */
+  url: string;
+}
+
 export interface MicroRead {
   type: "microread";
   title: string;
@@ -120,6 +143,8 @@ export interface MicroRead {
    * Sparks without `vocab` render exactly as today.
    */
   vocab?: VocabAtom[];
+  /** Optional source attribution. See {@link SparkSource}. */
+  source?: SparkSource;
 }
 
 export interface QuickPick {
@@ -176,6 +201,8 @@ export interface Tip {
   visual?: VisualKey;
   /** See {@link VocabAtom}. Optional. */
   vocab?: VocabAtom[];
+  /** Optional source attribution. See {@link SparkSource}. */
+  source?: SparkSource;
 }
 
 /**

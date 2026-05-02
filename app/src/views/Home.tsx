@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TOPICS } from "../content";
 import { usePlayer } from "../store/PlayerContext";
-import { activityByDay, nextRecommendedSpark, suggestSwitchTopic, topicCompletion } from "../store/game";
+import { activityByDay, nextRecommendedSpark, nextTierThreshold, suggestSwitchTopic, topicCompletion, uxStage } from "../store/game";
 import { useTodayInsight } from "../memory/insight";
 import { useAdmin } from "../admin/AdminContext";
 import type { View } from "../App";
@@ -36,6 +36,13 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
   const next = nextRecommendedSpark(state, target.id);
   const switchSuggestion = suggestSwitchTopic(state, target.id);
   const switchTopic = switchSuggestion ? TOPICS.find((t) => t.id === switchSuggestion) : null;
+
+  // Progressive disclosure: a fresh user shouldn't see an empty 14-day
+  // sparkline, an empty stats grid, or a "0-day Streak" tile. The
+  // primary CTA (Start a Spark) is the only thing they need on Home.
+  // See `docs/aha-and-network.md` §5.
+  const stage = uxStage(state);
+  const nextTier = nextTierThreshold(state.xp);
 
   return (
     <div className="space-y-6">
@@ -140,29 +147,74 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
         </div>
       </section>
 
-      <section className="grid sm:grid-cols-3 gap-4">
-        <div className="card p-4 flex items-center gap-4">
-          <Ring pct={Math.min(100, Math.round((state.xp % 500) / 5))} size={84} stroke={10} sublabel="Tier ⚡" label={`${state.xp}`} />
-          <div>
-            <div className="font-semibold text-white">{adminCfg.branding.xpUnit}</div>
-            <div className="muted text-sm">Tier: {state.guildTier}</div>
+      {stage === "fresh" ? (
+        <section
+          className="card p-4 sm:p-5 flex items-center gap-3 border border-white/5 bg-white/[0.03]"
+          aria-label="First steps"
+        >
+          <div className="text-2xl">🌱</div>
+          <div className="flex-1 text-sm text-white/75">
+            <div className="text-white font-semibold">Your first Spark plants your first dot.</div>
+            <div className="muted text-xs mt-0.5">
+              Stats, streaks, and your 14-day rhythm appear once you've completed a Spark or two.
+            </div>
           </div>
-        </div>
-        <div className="card p-4 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-warn/20 grid place-items-center text-warn text-3xl">🔥</div>
-          <div>
-            <div className="font-semibold text-white">{state.streak}-day Streak</div>
-            <div className="muted text-sm">Show up tomorrow to keep it.</div>
+        </section>
+      ) : (
+        <section className="grid sm:grid-cols-3 gap-4">
+          <div className="card p-4 flex items-center gap-4">
+            {nextTier ? (
+              <Ring
+                pct={Math.min(100, Math.round((state.xp / nextTier.xp) * 100))}
+                size={84}
+                stroke={10}
+                sublabel={`to ${nextTier.name}`}
+                label={`${state.xp}`}
+              />
+            ) : (
+              <Ring pct={100} size={84} stroke={10} sublabel="Top tier" label={`${state.xp}`} />
+            )}
+            <div>
+              <div className="font-semibold text-white">{adminCfg.branding.xpUnit}</div>
+              <div className="muted text-sm">Tier: {state.guildTier}</div>
+              {nextTier && (
+                <div className="text-[11px] text-white/50 mt-0.5">
+                  {Math.max(0, nextTier.xp - state.xp)} {adminCfg.branding.xpUnit} to {nextTier.name}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="card p-4">
-          <div className="text-xs text-white/50 mb-1">Last 14 days</div>
-          <Sparkline data={activity} width={240} height={56} />
-          <div className="text-xs text-white/50 mt-1">
-            {activity.reduce((a, b) => a + b, 0)} Sparks
+          <div className="card p-4 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-warn/20 grid place-items-center text-warn text-3xl">🔥</div>
+            <div>
+              <div className="font-semibold text-white">{state.streak}-day Streak</div>
+              <div className="muted text-sm">Show up tomorrow to keep it.</div>
+            </div>
           </div>
-        </div>
-      </section>
+          {stage === "returning" ? (
+            <div className="card p-4">
+              <div className="text-xs text-white/50 mb-1">Last 14 days</div>
+              <Sparkline data={activity} width={240} height={56} />
+              <div className="text-xs text-white/50 mt-1">
+                {activity.reduce((a, b) => a + b, 0)} Sparks
+              </div>
+            </div>
+          ) : (
+            // `engaged` users get a sparkline-shaped *placeholder* with
+            // a forward-looking message — not 14 grey dots. The
+            // sparkline appears in full on the next session ("returning").
+            <div className="card p-4 flex items-center gap-3">
+              <div className="w-14 h-14 rounded-2xl bg-accent/15 grid place-items-center text-2xl">📈</div>
+              <div className="text-sm text-white/75">
+                <div className="text-white font-semibold">Your rhythm starts forming tomorrow.</div>
+                <div className="muted text-xs mt-0.5">
+                  Come back to begin a 14-day streak chart.
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <section>
         <div className="flex items-end justify-between mb-3">

@@ -13,6 +13,7 @@ import {
   levelCompletion,
   nextRecommendedSpark,
   suggestSwitchTopic,
+  uxStage,
 } from "../store/game";
 import { pickNextSparkIdx } from "../store/sequencer";
 import { pickIntentCTA } from "../store/intent";
@@ -40,6 +41,11 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
   const { state, completeSpark, passBoss, recordSession, voteSpark, signalSpark } = usePlayer();
   const { remember, recall } = useMemory();
   const { config: adminCfg } = useAdmin();
+  // FTUE progressive disclosure — `fresh` users see only the primary
+  // CTA on a Spark; `engaged` reveals the quality row + `+ Task`;
+  // `returning` reveals the state-of-mind row + memory nudge. See
+  // `docs/aha-and-network.md` §5.
+  const stage = uxStage(state);
   const [nudge, setNudge] = useState<MemoryItem | null>(null);
   const topic = getTopic(topicId);
 
@@ -348,7 +354,9 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
           Spark {idx + 1}/{activeLevel.sparks.length}
         </div>
         <div className="flex items-center gap-2">
-          <AddToTaskButton spark={spark} topicId={topicId} levelId={activeLevel.id} />
+          {stage !== "fresh" && (
+            <AddToTaskButton spark={spark} topicId={topicId} levelId={activeLevel.id} />
+          )}
           <button className="btn-ghost text-xs" onClick={onDone}>✕ Exit</button>
         </div>
       </div>
@@ -446,7 +454,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         </div>
       )}
 
-      {(feedback || alreadyDone) && spark && (
+      {(feedback || alreadyDone) && spark && stage !== "fresh" && (
         <SparkThumbsRow
           key={spark.id}
           sparkId={spark.id}
@@ -454,6 +462,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
           topicId={topicId}
           levelId={activeLevel.id}
           currentVote={getSparkVote(state, spark.id)}
+          hideSignalRow={stage === "engaged"}
           sourceUrl={
             spark.exercise.type === "podcastnugget"
               ? (getCreator(spark.exercise.creatorId)?.creditUrl ??
@@ -533,7 +542,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         />
       )}
 
-      {!feedback && switchTopic && idx > 0 && idx % 4 === 0 && (
+      {!feedback && stage === "returning" && switchTopic && idx > 0 && idx % 4 === 0 && (
         <div className="card p-3 text-sm flex items-center gap-3">
           <span>🌀</span>
           <span className="flex-1">Switch it up? Try a quick {switchTopic.emoji} {switchTopic.name} Spark to keep your brain fresh.</span>
@@ -541,7 +550,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
         </div>
       )}
 
-      {!feedback && nudge && (
+      {!feedback && stage === "returning" && nudge && (
         <div
           className="card p-3 text-sm flex items-start gap-3 border border-accent/30 bg-accent/5"
           role="status"

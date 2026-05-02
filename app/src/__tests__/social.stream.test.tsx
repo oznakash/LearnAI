@@ -106,18 +106,24 @@ describe("Spark Stream view", () => {
   });
 });
 
-describe("TabBar respects social + stream flags", () => {
-  it("shows 4 tabs when social+stream are off (default)", async () => {
+describe("TabBar respects social / stream / boards flags", () => {
+  it("shows 3 tabs (Home / Tasks / Progress) when all social flags are off (the default)", async () => {
+    // Updated 2026-05-01: Boards used to show unconditionally, but a
+    // dead-link Boards tab is the worst kind of FTUE friction (clicking
+    // a tab whose backing surface doesn't render). Now Boards is gated
+    // by `socialEnabled && boardsEnabled`. See docs/aha-and-network.md
+    // §5.3 + first-time-builder-findings.md #41.
     mountTabBar({ name: "home" });
     await waitFor(() => {
-      // Home / Tasks / Progress / Boards — no Stream.
       expect(screen.queryByRole("button", { name: /Stream/i })).toBeNull();
     });
-    expect(screen.getByRole("button", { name: /Boards/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Boards/i })).toBeNull();
+    expect(screen.getByRole("button", { name: /Home/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Tasks/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Progress/i })).toBeTruthy();
   });
 
-  it("shows the Stream tab when both flags are on", async () => {
-    // Flip flags.
+  it("shows the Stream tab when both social and stream flags are on", async () => {
     const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
     cfg.flags = { ...(cfg.flags ?? {}), socialEnabled: true, streamEnabled: true };
     localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
@@ -126,5 +132,29 @@ describe("TabBar respects social + stream flags", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Stream/ })).toBeTruthy();
     });
+  });
+
+  it("shows the Boards tab only when both social and boards flags are on", async () => {
+    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
+    cfg.flags = { ...(cfg.flags ?? {}), socialEnabled: true, boardsEnabled: true };
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
+
+    mountTabBar({ name: "home" });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Boards/i })).toBeTruthy();
+    });
+  });
+
+  it("hides Boards when social is on but boards is off (the bad combination — would 404 otherwise)", async () => {
+    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
+    cfg.flags = { ...(cfg.flags ?? {}), socialEnabled: true, boardsEnabled: false };
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
+
+    mountTabBar({ name: "home" });
+    await waitFor(() => {
+      // Wait for the admin context to hydrate then verify.
+      expect(screen.getByRole("button", { name: /Home/i })).toBeTruthy();
+    });
+    expect(screen.queryByRole("button", { name: /Boards/i })).toBeNull();
   });
 });

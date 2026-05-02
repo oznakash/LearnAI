@@ -8,26 +8,30 @@ interface Tab {
   view: View;
 }
 
-const BASE_TABS: Tab[] = [
-  { id: "home", label: "Home", icon: "🏠", view: { name: "home" } },
-  { id: "tasks", label: "Tasks", icon: "✅", view: { name: "tasks" } },
-  { id: "dashboard", label: "Progress", icon: "📊", view: { name: "dashboard" } },
-  { id: "leaderboard", label: "Boards", icon: "🏆", view: { name: "leaderboard" } },
-];
+const HOME_TAB: Tab = { id: "home", label: "Home", icon: "🏠", view: { name: "home" } };
+const TASKS_TAB: Tab = { id: "tasks", label: "Tasks", icon: "✅", view: { name: "tasks" } };
+const PROGRESS_TAB: Tab = { id: "dashboard", label: "Progress", icon: "📊", view: { name: "dashboard" } };
+const BOARDS_TAB: Tab = { id: "leaderboard", label: "Boards", icon: "🏆", view: { name: "leaderboard" } };
+const STREAM_TAB: Tab = { id: "stream", label: "Stream", icon: "🌊", view: { name: "stream" } };
 
 export function TabBar({ view, onNav }: { view: View; onNav: (v: View) => void }) {
   const { config } = useAdmin();
 
-  // The Spark Stream tab only appears when both flags allow it. Forks
-  // that pull main with social off see a 4-tab nav (no behavior change).
-  const tabs: Tab[] =
-    config.flags.socialEnabled && config.flags.streamEnabled
-      ? [
-          BASE_TABS[0],
-          { id: "stream", label: "Stream", icon: "🌊", view: { name: "stream" } },
-          ...BASE_TABS.slice(1),
-        ]
-      : BASE_TABS;
+  // Build the tab set from the flags rather than hard-coding it. **Both
+  // Stream and Boards are gated:** clicking a tab whose backing surface
+  // doesn't render is a dead-link and the worst kind of FTUE friction
+  // (see docs/first-time-builder-findings.md #41 + docs/aha-and-network.md
+  // §5.3). Forks pulling main with all flags off see a clean 3-tab nav
+  // (Home · Tasks · Progress).
+  const tabs: Tab[] = [HOME_TAB];
+  if (config.flags.socialEnabled && config.flags.streamEnabled) {
+    tabs.push(STREAM_TAB);
+  }
+  tabs.push(TASKS_TAB);
+  tabs.push(PROGRESS_TAB);
+  if (config.flags.socialEnabled && config.flags.boardsEnabled) {
+    tabs.push(BOARDS_TAB);
+  }
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-30 backdrop-blur-md bg-ink/85 border-t border-white/5">

@@ -88,6 +88,7 @@ function MicroReadView({
       <div className="mt-4 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
         💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
       </div>
+      {ex.source && <SourceChip source={ex.source} />}
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
       <button className="btn-primary mt-4" disabled={taken || locked} onClick={click}>
         {taken || locked ? "✓ Logged" : "I got it ⚡"}
@@ -122,6 +123,7 @@ function TipView({
       <div className="chip mb-2 bg-warn/10 border-warn/30 text-warn">💡 Tip & Trick</div>
       <h2 className="h2 mb-2">{ex.title}</h2>
       <VocabBody body={ex.body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
+      {ex.source && <SourceChip source={ex.source} />}
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
       <button className="btn-primary mt-4" disabled={taken || locked} onClick={click}>
         {taken || locked ? "✓ Logged" : "Got the trick ⚡"}
@@ -598,5 +600,29 @@ function BossView({
       </div>
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
     </div>
+  );
+}
+
+/**
+ * Quiet attribution chip rendered below the body of any source-anchored
+ * Spark (MicroRead, Tip — extends to future EssayNugget / ReleaseNote
+ * variants). Same shape as the prominent `🎙️ Lenny's Podcast` chip on
+ * `PodcastNugget`, but smaller and unobtrusive — the source is *evidence*,
+ * not the headline. See `docs/aha-and-network.md` §2.3 for the trust
+ * rationale.
+ */
+function SourceChip({ source }: { source: { name: string; url: string } }) {
+  return (
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/55 hover:text-white/85 transition"
+      aria-label={`Source: ${source.name}`}
+    >
+      <span aria-hidden="true">📎</span>
+      <span>Source: {source.name}</span>
+      <span aria-hidden="true">→</span>
+    </a>
   );
 }
