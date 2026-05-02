@@ -221,6 +221,14 @@ export function Profile({ handle, onNav }: Props) {
 
 // -- Header --------------------------------------------------------------
 
+const SKILL_CHIP_LABEL: Record<string, string> = {
+  starter: "🌱 Curious starter",
+  explorer: "🔭 Hobby explorer",
+  builder: "🛠️ Active builder",
+  architect: "🏛️ Senior architect",
+  visionary: "🌌 Frontier visionary",
+};
+
 function ProfileHeader({ profile }: { profile: PublicProfile }) {
   const initials = profile.displayName
     .split(/\s+/)
@@ -229,33 +237,109 @@ function ProfileHeader({ profile }: { profile: PublicProfile }) {
     .map((s) => s[0]?.toUpperCase())
     .join("");
   const tier = tierForXP(profile.xpTotal);
+  const skillChip = profile.skillLevel ? SKILL_CHIP_LABEL[profile.skillLevel] : undefined;
+  const heroBg = profile.heroUrl
+    ? `url(${JSON.stringify(profile.heroUrl)})`
+    : "linear-gradient(135deg, rgba(124,92,255,0.35), rgba(40,224,179,0.25))";
 
   return (
-    <section className="card p-5 sm:p-6">
-      <div className="flex items-start gap-4">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold text-2xl ring-2 ring-white/10">
-          {profile.pictureUrl ? (
-            <img src={profile.pictureUrl} alt="" className="w-full h-full rounded-full object-cover" />
-          ) : (
-            <span>{initials}</span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="h1 leading-none">{profile.displayName}</h1>
-          <div className="text-sm text-white/50 mt-1">@{profile.handle}</div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="pill bg-accent/10 text-accent border border-accent/30">⚡ {profile.xpTotal}</span>
-            {profile.streak > 0 && (
-              <span className="pill bg-warn/10 text-warn border border-warn/30">🔥 {profile.streak}-day streak</span>
-            )}
-            <span className="pill bg-good/10 text-good border border-good/30">🏅 {tier}</span>
-            {profile.profileMode === "closed" && (
-              <span className="pill bg-white/5 text-white/60 border-white/10">🔒 Private</span>
+    <section className="card overflow-hidden">
+      <div
+        className="h-28 sm:h-36"
+        style={{ background: heroBg, backgroundSize: "cover", backgroundPosition: "center" }}
+      />
+      <div className="px-5 sm:px-6 pb-5 -mt-10 sm:-mt-12 relative">
+        <div className="flex items-end gap-4">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-ink2 ring-4 ring-ink shadow-card grid place-items-center overflow-hidden shrink-0">
+            {profile.pictureUrl ? (
+              <img
+                src={profile.pictureUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <span className="text-2xl font-bold text-white">{initials}</span>
             )}
           </div>
+          <div className="pb-1 flex-1 min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <h1 className="h1 leading-none truncate">{profile.displayName}</h1>
+              {profile.pronouns && (
+                <span className="text-xs text-white/50">({profile.pronouns})</span>
+              )}
+            </div>
+            <div className="text-sm text-white/50 mt-1 truncate">
+              @{profile.handle}
+              {profile.location && <span> · {profile.location}</span>}
+            </div>
+          </div>
         </div>
+        {profile.bio && (
+          <p className="mt-3 text-white/85 text-sm sm:text-base">{profile.bio}</p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="pill bg-accent/10 text-accent border border-accent/30">⚡ {profile.xpTotal}</span>
+          {profile.streak > 0 && (
+            <span className="pill bg-warn/10 text-warn border border-warn/30">🔥 {profile.streak}-day streak</span>
+          )}
+          <span className="pill bg-good/10 text-good border border-good/30">🏅 {tier}</span>
+          {skillChip && (
+            <span className="pill bg-white/5 text-white/80 border border-white/10">{skillChip}</span>
+          )}
+          {profile.profileMode === "closed" && (
+            <span className="pill bg-white/5 text-white/60 border-white/10">🔒 Private</span>
+          )}
+        </div>
+        {profile.links && (profile.links.linkedin || profile.links.github || profile.links.twitter || profile.links.website) && (
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <ProfileLink href={profile.links.linkedin} label="in/" hostStrip="linkedin.com" />
+            <ProfileLink href={profile.links.github} label="gh/" hostStrip="github.com" />
+            <ProfileLink href={profile.links.twitter} label="𝕏/" hostStrip="x.com" />
+            <ProfileLink href={profile.links.website} label="🌐 " host />
+          </div>
+        )}
       </div>
     </section>
+  );
+}
+
+function ProfileLink({
+  href,
+  label,
+  hostStrip,
+  host,
+}: {
+  href?: string;
+  label: string;
+  hostStrip?: string;
+  host?: boolean;
+}) {
+  if (!href) return null;
+  let display = href;
+  try {
+    const u = new URL(href);
+    if (host) {
+      display = u.hostname.replace(/^www\./, "");
+    } else if (hostStrip) {
+      display = u.pathname.replace(/^\/(in\/)?/, "").replace(/\/+$/, "");
+    } else {
+      display = `${u.hostname}${u.pathname}`;
+    }
+  } catch {
+    // Fallback to the raw href
+  }
+  return (
+    <a
+      className="chip hover:border-accent"
+      href={href}
+      target="_blank"
+      rel="noopener nofollow ugc"
+    >
+      {label}
+      {display}
+    </a>
   );
 }
 
