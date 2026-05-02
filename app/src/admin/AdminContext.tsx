@@ -19,6 +19,14 @@ import {
 import { defaultAdminConfig } from "./defaults";
 import { buildAnalytics, buildMockUsers } from "./mockUsers";
 import { sendEmail } from "./sender";
+import {
+  TRANSACTIONAL_TEMPLATES,
+  applyPlanToQueue,
+  callPrepareSend,
+  injectEmailExtras,
+  planEmailFlush,
+  type RecipientPolicyState,
+} from "./emailPolicy";
 import { usePlayer } from "../store/PlayerContext";
 import { tierForXP } from "../store/game";
 
@@ -417,31 +425,135 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * Send everything in the queue using the configured provider. Each message
-   * is updated with `sent` or `failed` (+ error). Browser-side providers
-   * supported: Resend, EmailJS, smtp-relay (your own webhook). For
-   * Postmark/SendGrid/SES use a server-side relay.
+   * Run the email policy then send what survives.
+   *
+   *   1. Build a plan from the queue (`planEmailFlush`) — applies 24h
+   *      cap, supersede-by-priority, unsub block, pause cooldown.
+   *   2. For each survivor, hit mem0's `prepare` to mint signed
+   *      unsubscribe + open-pixel URLs.
+   *   3. Inject the unsubscribe footer + open pixel into the body.
+   *   4. Send via the configured provider, with `unsubscribeUrl` set
+   *      so sender.ts builds RFC 8058 List-Unsubscribe headers.
+   *   5. Roll plan + results back into the queue: blocked items
+   *      surface their reason ("superseded" / "rate-limited" / etc.).
    */
   const flushQueue = useCallback(async () => {
     const cfg = config;
     const queued = cfg.emailQueue.filter((q) => q.status === "queued");
     if (queued.length === 0) return;
-    const results = await Promise.all(
-      queued.map(async (q) => ({ q, res: await sendEmail(cfg.emailConfig, q, player.serverSession?.token) }))
-    );
-    setConfig((cur) => ({
-      ...cur,
-      emailQueue: cur.emailQueue.map((q) => {
-        const hit = results.find((r) => r.q.id === q.id);
-        if (!hit) return q;
-        return {
-          ...q,
-          status: hit.res.ok ? "sent" : "failed",
-          error: hit.res.error,
+
+    const recipientState: Record<string, RecipientPolicyState> = {};
+    if (realUsers) {
+      for (const u of realUsers.recent) {
+        recipientState[u.email.toLowerCase()] = {
+          email: u.email,
+          email_unsubscribed_at: u.email_unsubscribed_at ?? null,
+          email_pause_until: u.email_pause_until ?? null,
+          email_log: (u.email_log ?? []) as RecipientPolicyState["email_log"],
         };
+      }
+    }
+
+    const plan = planEmailFlush({
+      policy: cfg.emailPolicy,
+      queued,
+      sentHistory: cfg.emailQueue.filter((q) => q.status === "sent"),
+      recipientState,
+    });
+
+    const sessionToken = player.serverSession?.token;
+    const mem0Base = cfg.serverAuth.mem0Url;
+    const prepareResultsById: Record<
+      string,
+      { logId?: string; serverDecision?: string; unsubscribeUrl?: string; openPixelUrl?: string }
+    > = {};
+    if (sessionToken && mem0Base) {
+      await Promise.all(
+        plan
+          .filter((p) => p.outcome === "send")
+          .map(async (p) => {
+            const res = await callPrepareSend({
+              base: mem0Base,
+              token: sessionToken,
+              to: p.queued.to,
+              templateId: p.queued.templateId,
+              isTransactional: TRANSACTIONAL_TEMPLATES.has(p.queued.templateId),
+            });
+            if (!res) return;
+            prepareResultsById[p.queued.id] = {
+              logId: res.log_id ?? undefined,
+              serverDecision: res.decision,
+              unsubscribeUrl: res.unsubscribe_url ?? undefined,
+              openPixelUrl: res.open_pixel_url ?? undefined,
+            };
+          }),
+      );
+    }
+
+    const sendable = plan.filter((p) => p.outcome === "send");
+    const sendResults = await Promise.all(
+      sendable.map(async (p) => {
+        const prep = prepareResultsById[p.queued.id];
+        const isTransactional = TRANSACTIONAL_TEMPLATES.has(p.queued.templateId);
+        const enriched: typeof p.queued = {
+          ...p.queued,
+          bodyRendered: injectEmailExtras(p.queued.bodyRendered, {
+            unsubscribeUrl: prep?.unsubscribeUrl,
+            openPixelUrl: prep?.openPixelUrl,
+            appendUnsubscribe: !!prep?.unsubscribeUrl && cfg.emailPolicy.appendUnsubscribe,
+            appendOpenPixel: !!prep?.openPixelUrl && cfg.emailPolicy.appendOpenPixel,
+            appName: cfg.branding.appName,
+            fromAddress: cfg.emailConfig.fromEmail,
+          }),
+          // Header-level Unsubscribe pill only on non-transactional —
+          // celebrations don't get the Gmail-native button.
+          unsubscribeUrl:
+            !isTransactional && cfg.emailPolicy.appendUnsubscribe
+              ? prep?.unsubscribeUrl
+              : undefined,
+          openPixelUrl: prep?.openPixelUrl,
+          prepareLogId: prep?.logId,
+          serverDecision: prep?.serverDecision,
+        };
+        const res = await sendEmail(cfg.emailConfig, enriched, sessionToken);
+        return { id: p.queued.id, res };
       }),
-    }));
-  }, [config, setConfig]);
+    );
+
+    setConfig((cur) => {
+      const queueAfterPlan = applyPlanToQueue(cur.emailQueue, plan, prepareResultsById);
+      return {
+        ...cur,
+        emailQueue: queueAfterPlan.map((q) => {
+          const hit = sendResults.find((r) => r.id === q.id);
+          if (!hit) return q;
+          return {
+            ...q,
+            status: hit.res.ok ? "sent" : "failed",
+            error: hit.res.error,
+          };
+        }),
+      };
+    });
+
+    if (sendable.length > 0) setRealUsersRefreshKey((k) => k + 1);
+  }, [config, setConfig, realUsers, player.serverSession?.token]);
+
+  // Auto-flush debouncer. After every queue mutation, schedule a flush
+  // for `policy.autoFlushDebounceSeconds` later. Subsequent queue
+  // events extend the timer (debounce). Operator can still hit "Send
+  // queue now" to force-fire. Guarded by `policy.autoFlushEnabled`.
+  const queuedCount = config.emailQueue.filter((q) => q.status === "queued").length;
+  const policyAutoFlush = config.emailPolicy.autoFlushEnabled;
+  const policyDebounce = Math.max(0, config.emailPolicy.autoFlushDebounceSeconds);
+  useEffect(() => {
+    if (!policyAutoFlush) return;
+    if (queuedCount === 0) return;
+    const handle = setTimeout(() => {
+      void flushQueue();
+    }, policyDebounce * 1000);
+    return () => clearTimeout(handle);
+  }, [queuedCount, policyAutoFlush, policyDebounce, flushQueue]);
 
   /**
    * Manually drop a one-off message into the queue & send. Useful for the
