@@ -142,9 +142,57 @@ The engine is **read-write loop**, not a one-time generator: every 👎 chip is 
 
 ### 6. The admin console
 
-- 8 tabs: Users · Analytics · Memory · Emails · Tuning · Content · Prompt Studio · Config.
+- 11 tabs: Users · Analytics · Memory · Emails · Tuning · Content · Prompt Studio · Moderation · Public Profile · Creators · Config.
+- The **Public Profile** tab is the operator surface for SSR/SEO behavior — default profile mode for new sign-ups, master switch for the personalized-learnings section, default per-field visibility (`showFullName`, `showCurrent`, `showMap`, `showActivity`, `showBadges`, `showSignup`, `signalsGlobal`), and a preview link. Settings live in `admin.socialConfig.publicProfile`; the admin store loader deep-merges the new fields so older saved configs forward-compat without losing hand-edited overrides.
+- The **Creators** tab lists every creator with attached-Sparks count. The `+ Add Spark` modal accepts pasted source content, calls `claude-haiku-4-5` via the admin `apiKey`, drafts a MicroRead, lets the operator edit, then persists to `contentOverrides`.
+- The **Emails** tab gained an Email-policy sub-panel (24 h cap, debounced auto-flush, RFC 8058 unsubscribe, open tracking, pause-on-unread; see §7).
 - Gated by the session JWT's `is_admin` claim (which mem0 derives from `ADMIN_EMAILS`). Admin status is server-signed, not local-state.
 - All edits live in `localStorage` for the admin's browser today (will move to a server-side admin namespace when multi-admin lands).
+
+### 7. SSR + SEO public profiles
+
+`/u/<handle>` is now a server-rendered surface — crawlers, link-unfurlers, and signed-out visitors get real per-user HTML before the SPA hydrates. The split keeps each side small: SSR has zero React; the SPA has zero SSR concerns.
+
+```mermaid
+flowchart LR
+    subgraph Visitor["Visitor"]
+        BOT["GPTBot · ClaudeBot · Googlebot ·<br/>Slackbot / Twitterbot / facebookexternalhit"]
+        SIGNED_OUT["Signed-out human"]
+        SIGNED_IN["Signed-in SPA user<br/>(navigates via pushState)"]
+    end
+
+    subgraph Container["learnai container"]
+        NGINX["nginx<br/>routes /u/* /robots.txt /sitemap.xml<br/>→ social-svc"]
+        SSR["social-svc<br/>ssr.ts + topic-snippets.ts"]
+        SPA["static SPA"]
+    end
+
+    BOT --> NGINX --> SSR
+    SIGNED_OUT --> NGINX
+    NGINX --> SSR
+    SSR -->|"per-user HTML +<br/>OG / Twitter / JSON-LD @graph"| BOT
+    SSR -->|"AnonymousHeader<br/>+ sign-in CTA"| SIGNED_OUT
+    SIGNED_IN -->|"React Profile.tsx<br/>(no server round-trip)"| SPA
+```
+
+| Module | What it does |
+|---|---|
+| `services/social-svc/src/ssr.ts` | Renders real HTML for `/u/:handle` — `<title>` / `<meta description>` / OpenGraph / Twitter card (square `summary` with the user's Google avatar as og:image) / JSON-LD `@graph` (`ProfilePage` → `Person` → `knowsAbout` → one `Course` per Signal → `hasPart[]` of `LearningResource` per sample spark), plus a semantic body with display name + tier + XP + streak chips, "Currently working on" block, and Signals as `<details>` collapsibles. Closed / kid / banned / banned_social profiles fall through to a polite minimal gate that emits no `Course` / `LearningResource` leakage. Anonymous-profile fallback for non-existent handles. JSON-LD escapes `<` → `&lt;` so a hostile `fullName` can't break out of the script block. All user-supplied strings flow through `escape()` / `safeUrl()`. |
+| `services/social-svc/src/topic-snippets.ts` | Curated subset of all 12 Constellations: name, emoji, tagline, 3-4-sentence keyword-dense `whatYoudLearn` rundown, plus 5 sample-spark titles + teasers per topic, marked up with `Schema.org/LearningResource` microdata (`itemtype`, `itemprop="name"`, `itemprop="description"`, `learningResourceType="article"`, `educationalLevel="beginner"`, `inLanguage="en"`). Duplicates a tight slice of `app/src/content/topics/*` because the social-svc TS build can't reach across the workspace boundary — when topics change shape, this file follows. Per-Signal personalization: when `aggregate.topicXp[signal] > 0`, an `⚡ N earned here` chip renders, making every profile uniquely deduplication-safe for Google + AI bots. |
+| `nginx.conf` | Routes `/u/*`, `/robots.txt`, `/sitemap.xml` through to the sidecar; honors `X-Forwarded-Proto` (the outer LB terminates TLS) so the canonical URL / sitemap / og:url all render `https://`. SPA at `/` is unchanged; signed-in users navigating to a profile via SPA `pushState` still get the React Profile view (no server round-trip). |
+| `app/src/App.tsx` | Drops the `if (!state.identity) return <SignIn />` gate **only** for the profile route. Adds an `AnonymousHeader` for that case so the TopBar/TabBar — which both assume signed-in identity — don't render. Every other route still requires sign-in. |
+| `robots.txt` | Explicit `User-agent` blocks welcoming the AI ingestion bots (GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, Claude-Web, anthropic-ai, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, cohere-ai) plus the classic search + unfurl set (Googlebot, Bingbot, DuckDuckBot, Twitterbot, facebookexternalhit, Slackbot, LinkedInBot). Disallows `/admin`, `/settings`, `/memory`, `/tasks`, `/dashboard`, `/play`. Links to the sitemap. |
+| `sitemap.xml` | Lists every `profileMode=open` adult profile with `<lastmod>` from `updatedAt`. Skips closed, kid, banned, banned_social. Home page sits at priority 1.0; profiles at 0.7 weekly. |
+
+**Hardening (PR #101).** Avatar `<img>` tags carry `referrerpolicy="no-referrer"` + `crossorigin="anonymous"` (and a page-level `<meta name="referrer" content="strict-origin-when-cross-origin">`) to keep iOS Safari's "Reduce Protections" banner off. The `/v1/social/me/snapshot` endpoint logs + accepts >10% XP drops instead of returning `409 implausible_xp`, fixing the "TopBar shows 165, public profile shows 248" drift. A new `SocialContext` effect calls `updateProfile({ fullName, pictureUrl })` once per identity change so the online server's `pictureUrl` stays in sync with Google. og:image now uses the user's avatar (square Twitter `summary` card) so unfurls show a real face instead of the brand default.
+
+**Admin policy.** The `/admin → 🪪 Public Profile` tab gates the master switch for the personalized-learnings section and the per-field default visibility. Settings flow `admin.socialConfig.publicProfile` → `SocialProvider` → `selectSocialService` → `OfflineSocialService`. Fresh users get the admin defaults; existing users keep their saved Network-view toggles.
+
+### 8. Email policy
+
+End-to-end policy on top of mem0's `prepare` / `unsubscribe` / `track-open` endpoints. `flushQueue` was rewritten as a five-step plan-prepare-inject-send-reconcile pipeline: `planEmailFlush` groups by recipient, applies cap + supersede + unsubscribe + pause; mem0 mints signed URLs for each survivor; the unsubscribe footer + open-tracking pixel are injected; the configured provider sends with `unsubscribeUrl` set so Resend / smtp-relay / smtp-our-server emit the right `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers (RFC 8058 → Gmail's native pill); blocked rows surface their reason as a status badge (`superseded` / `rate-limited` / `paused` / `unsubscribed`) so the admin sees why each one moved.
+
+After every queue mutation, an auto-flush debouncer schedules a flush for `autoFlushDebounceSeconds` later (default 30 s) — competing transactionals collapse to the highest-priority survivor. Open-tracking drives a pause-on-unread cooldown: after N unread sends in 24 h (default 2), the recipient is paused for `pauseDurationDays` (default 30). All knobs live in `app/src/admin/emailPolicy.ts` and surface in **Admin → Emails → Email policy**. The `/unsubscribe` SPA route is public, branded with the EmDash mascot, and POSTs to mem0's unsubscribe endpoint.
 
 ---
 
@@ -211,6 +259,9 @@ Per-device fields (session JWT, demo-mode Client ID, local API key) are delibera
 | Container rebuild | **Nothing lost.** Postgres survives the rebuild; sessions stay valid (JWT_SECRET is a stable env var); user state and memories all in DB. | n/a |
 | `JWT_SECRET` rotation | All active sessions invalidate; users sign in again | Intentional — the nuclear option for operator security |
 | `:latest` upstream surprise | Behavior drift after rebuild | Pin to a SHA in your image config |
+| social-svc sidecar down | `/u/<handle>` returns 5xx (or a stale nginx cache); `/v1/social/*` calls fail; SPA Network features degrade | Sidecar restart on the same container restores both surfaces. Signed-in SPA users never depended on SSR for profile pages. |
+| `/unsubscribe` token expired | The branded SPA route renders the `expired` state | Email policy already passes `RFC 8058` headers; the user can reply STOP or ignore further sends — pause-on-unread eventually catches them. |
+| Email-provider rate-limit | `flushQueue` reconciliation surfaces `rate-limited` or `superseded` reasons in the admin queue | The 24 h cap + auto-flush debouncer make this rare; operator can flip the master switch off to revert to original behavior. |
 
 ---
 
