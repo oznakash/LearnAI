@@ -321,6 +321,18 @@ export function AdminEmails() {
         />
       </section>
 
+      <section className="card p-5 space-y-4">
+        <header>
+          <h3 className="font-display font-semibold text-white">Email policy</h3>
+          <p className="text-xs text-white/60">
+            Anti-spam rules applied to every send. Cap, dedupe by priority,
+            auto-flush, unsubscribe, open-tracking, pause-on-unread. All
+            persisted in the admin config.
+          </p>
+        </header>
+        <PolicyControls />
+      </section>
+
       {config.emailQueue.length > 0 && (
         <section className="card p-4">
           <h3 className="font-display font-semibold text-white">Queue (latest 50)</h3>
@@ -346,6 +358,12 @@ export function AdminEmails() {
                           q.status === "sent"
                             ? "bg-good/10 text-good border-good/30"
                             : q.status === "failed"
+                            ? "bg-bad/10 text-bad border-bad/30"
+                            : q.status === "superseded" ||
+                              q.status === "rate-limited" ||
+                              q.status === "paused"
+                            ? "bg-white/5 text-white/60 border-white/15"
+                            : q.status === "unsubscribed"
                             ? "bg-bad/10 text-bad border-bad/30"
                             : "bg-warn/10 text-warn border-warn/30"
                         }`}
@@ -495,4 +513,150 @@ function apiKeyPlaceholder(p: EmailProvider): string {
     case "ses": return "AWS access key id";
     default: return "API key";
   }
+}
+
+function PolicyControls() {
+  const { config, setConfig } = useAdmin();
+  const policy = config.emailPolicy;
+  const set = (mut: (p: typeof policy) => typeof policy) =>
+    setConfig((c) => ({ ...c, emailPolicy: mut(c.emailPolicy) }));
+  return (
+    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+      <Toggle
+        label="Master switch"
+        hint="When off, every queued email sends immediately with no policy applied."
+        value={policy.enabled}
+        onChange={(v) => set((p) => ({ ...p, enabled: v }))}
+      />
+      <Toggle
+        label="Auto-flush queue"
+        hint="When on, queued emails send automatically after the debounce window. When off, only the manual button sends."
+        value={policy.autoFlushEnabled}
+        onChange={(v) => set((p) => ({ ...p, autoFlushEnabled: v }))}
+      />
+      <NumberInput
+        label="Cap per recipient (hours)"
+        hint="At most one email per recipient per this many hours."
+        min={1}
+        max={720}
+        value={policy.capPerWindowHours}
+        onChange={(v) => set((p) => ({ ...p, capPerWindowHours: v }))}
+      />
+      <NumberInput
+        label="Auto-flush debounce (s)"
+        hint="Wait this long after the last queue event before sending. Lets us pick the best of competing sends."
+        min={0}
+        max={600}
+        value={policy.autoFlushDebounceSeconds}
+        onChange={(v) => set((p) => ({ ...p, autoFlushDebounceSeconds: v }))}
+      />
+      <Toggle
+        label="Transactional bypasses cap"
+        hint="When on, welcome / first-spark / level-up / boss-beaten / streak-save can send even inside the rate-limit window. Off by default — operator caution."
+        value={policy.transactionalBypass}
+        onChange={(v) => set((p) => ({ ...p, transactionalBypass: v }))}
+      />
+      <Toggle
+        label="Append unsubscribe link"
+        hint="One-click unsubscribe footer + RFC 8058 List-Unsubscribe header (so Gmail's native pill shows up)."
+        value={policy.appendUnsubscribe}
+        onChange={(v) => set((p) => ({ ...p, appendUnsubscribe: v }))}
+      />
+      <Toggle
+        label="Append open-tracking pixel"
+        hint="1×1 transparent PNG that records email opens. Used to drive the pause-on-unread cooldown."
+        value={policy.appendOpenPixel}
+        onChange={(v) => set((p) => ({ ...p, appendOpenPixel: v }))}
+      />
+      <Toggle
+        label="Pause sends on N unreads"
+        hint="If the user gets N consecutive emails without opening any, pause sends to them for `pauseDurationDays`."
+        value={policy.pauseOnUnreadEnabled}
+        onChange={(v) => set((p) => ({ ...p, pauseOnUnreadEnabled: v }))}
+      />
+      <NumberInput
+        label="Unread count to pause"
+        min={1}
+        max={10}
+        value={policy.pauseOnUnreadCount}
+        onChange={(v) => set((p) => ({ ...p, pauseOnUnreadCount: v }))}
+      />
+      <NumberInput
+        label="Pause duration (days)"
+        min={1}
+        max={365}
+        value={policy.pauseDurationDays}
+        onChange={(v) => set((p) => ({ ...p, pauseDurationDays: v }))}
+      />
+      <div className="sm:col-span-2 text-xs text-white/50 border-t border-white/5 pt-3">
+        Priority order (highest first):{" "}
+        <code className="text-white/70">{policy.priorityOrder.join(" › ")}</code>
+        <div className="text-white/40 mt-1">
+          When two templates queue for the same recipient inside one flush window,
+          the one earlier in this list wins; the rest are marked superseded.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Toggle({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex items-start gap-3 p-3 rounded-xl border border-white/5 bg-white/[0.02] cursor-pointer">
+      <input
+        type="checkbox"
+        checked={value}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5"
+      />
+      <div className="flex-1">
+        <div className="text-sm text-white">{label}</div>
+        {hint && <div className="text-[11px] text-white/50 mt-0.5">{hint}</div>}
+      </div>
+    </label>
+  );
+}
+
+function NumberInput({
+  label,
+  hint,
+  min,
+  max,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  min: number;
+  max: number;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1 p-3 rounded-xl border border-white/5 bg-white/[0.02]">
+      <span className="text-sm text-white">{label}</span>
+      <input
+        type="number"
+        className="input"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, n)));
+        }}
+      />
+      {hint && <span className="text-[11px] text-white/50">{hint}</span>}
+    </label>
+  );
 }
