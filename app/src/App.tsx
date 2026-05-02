@@ -60,8 +60,18 @@ function Shell() {
   // for one frame before re-rendering as the real signed-in user.
   if (!hydrated) return null;
   if (view.name === "unsubscribe") return <Unsubscribe />;
-  if (!state.identity) return <SignIn />;
-  if (!state.profile) return <Onboarding />;
+
+  // Public profile (`/u/<handle>`) is the one route an anonymous visitor
+  // can land on without bouncing through sign-in — that's the contract
+  // for SEO + share-link unfurls + recruiter / collaborator drive-bys.
+  // The hard SSR version is served by social-svc at the same URL on a
+  // cold load (nginx routes `/u/*` there); this branch covers the case
+  // where a signed-in user signs out while parked on a profile, or any
+  // SPA-internal navigation that lands on a profile without identity.
+  const isPublicView = view.name === "profile";
+
+  if (!isPublicView && !state.identity) return <SignIn />;
+  if (!isPublicView && state.identity && !state.profile) return <Onboarding />;
 
   const go = (next: View) => {
     setView(next);
@@ -75,9 +85,11 @@ function Shell() {
     window.scrollTo({ top: 0, left: 0 });
   };
 
+  const isAnonymous = !state.identity;
+
   return (
     <div className="min-h-screen flex flex-col">
-      <TopBar onNav={go} />
+      {isAnonymous ? <AnonymousHeader onNav={go} /> : <TopBar onNav={go} />}
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28">
         {view.name === "home" && <Home onNav={go} />}
         {view.name === "topic" && <TopicView topicId={view.topicId} onNav={go} />}
@@ -100,8 +112,44 @@ function Shell() {
         {view.name === "stream" && <SparkStream onNav={go} />}
         {view.name === "admin" && <AdminConsole onExit={() => go({ name: "home" })} />}
       </main>
-      <TabBar view={view} onNav={go} />
+      {!isAnonymous && <TabBar view={view} onNav={go} />}
     </div>
+  );
+}
+
+/**
+ * Stripped-down header for the anonymous /u/<handle> case. Drops the
+ * TopBar's XP / streak / focus pills (which assume signed-in state) in
+ * favor of a brand mark + a "Sign in" CTA that routes back to home — which
+ * the gate then renders as <SignIn />.
+ */
+function AnonymousHeader({ onNav }: { onNav: (v: View) => void }) {
+  return (
+    <header className="sticky top-0 z-30 backdrop-blur-md bg-ink/70 border-b border-white/5">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            onNav({ name: "home" });
+          }}
+          className="flex items-center gap-2 hover:opacity-90"
+        >
+          <div className="w-9 h-9 rounded-xl grid place-items-center text-white font-bold shadow-glow bg-gradient-to-br from-accent to-accent2">
+            🚀
+          </div>
+          <div className="hidden sm:block">
+            <div className="font-display font-bold text-white leading-none">LearnAI</div>
+            <div className="text-[11px] uppercase tracking-wider text-white/40 leading-none mt-0.5">
+              The AI-native learning network
+            </div>
+          </div>
+        </a>
+        <button className="btn-primary text-sm" onClick={() => onNav({ name: "home" })}>
+          Sign in to start
+        </button>
+      </div>
+    </header>
   );
 }
 
