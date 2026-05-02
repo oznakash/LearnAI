@@ -122,6 +122,24 @@ export function renderProfileHtml(opts: RenderOpts): string {
         .filter((s): s is NonNullable<typeof s> => !!s)
     : [];
 
+  // Extended metadata fields (PR #112). Each is optional; we only render
+  // the section if (a) the value is set AND (b) the owner has `show*` on.
+  // Closed profiles never render any of this.
+  const showBio = !isClosed && profile.showBio !== false && profile.bio;
+  const showPronouns = !isClosed && profile.showPronouns !== false && profile.pronouns;
+  const showLocation = !isClosed && profile.showLocation !== false && profile.location;
+  const showSkill = !isClosed && profile.showSkillLevel !== false && profile.skillLevel;
+  const showHero = !isClosed && profile.showHero !== false && profile.heroUrl;
+  const showLinks = !isClosed && profile.showLinks !== false && profile.links;
+  const linkValues = showLinks
+    ? [
+        profile.links?.linkedin,
+        profile.links?.github,
+        profile.links?.twitter,
+        profile.links?.website,
+      ].filter((v): v is string => !!v && /^https:\/\//.test(v))
+    : [];
+
   const head = renderHead({
     title: `${displayName} (@${handle}) — ${SITE_NAME}`,
     description,
@@ -132,6 +150,8 @@ export function renderProfileHtml(opts: RenderOpts): string {
     handle,
     displayName,
     signalSnippets: signalSnippetsForLd,
+    bio: showBio ? profile.bio : undefined,
+    sameAs: linkValues,
   });
 
   const body = isClosed
@@ -145,6 +165,12 @@ export function renderProfileHtml(opts: RenderOpts): string {
         streak,
         aggregate,
         signals: profile.signals,
+        bio: showBio ? profile.bio : undefined,
+        pronouns: showPronouns ? profile.pronouns : undefined,
+        location: showLocation ? profile.location : undefined,
+        skillLevel: showSkill ? profile.skillLevel : undefined,
+        heroUrl: showHero ? profile.heroUrl : undefined,
+        links: linkValues.length > 0 ? linkValues : undefined,
       });
 
   return `<!doctype html>
@@ -201,6 +227,14 @@ function renderHead(opts: {
    * for the not-found and closed-gate paths.
    */
   signalSnippets?: import("./topic-snippets.js").TopicSnippet[];
+  /** Owner-supplied bio. Surfaced on the Person JSON-LD `description`. */
+  bio?: string;
+  /**
+   * External self-managed profile links to surface in the JSON-LD
+   * `sameAs` array. Already host-validated before reaching here — this
+   * function trusts the caller and only embeds them as-is.
+   */
+  sameAs?: string[];
 }): string {
   const safeTitle = escape(opts.title);
   const safeDesc = escape(opts.description);
@@ -250,6 +284,8 @@ function renderHead(opts: {
       name: SITE_NAME,
       url: "https://learnai.cloud-claude.com",
     },
+    ...(opts.bio ? { description: opts.bio } : {}),
+    ...(opts.sameAs && opts.sameAs.length > 0 ? { sameAs: opts.sameAs } : {}),
     ...(courses.length > 0 ? { knowsAbout: courses.map((c) => c["@id"]) } : {}),
   };
   const jsonLd = JSON.stringify({
@@ -338,7 +374,23 @@ function renderHead(opts: {
       background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 16px; padding: 1.25rem 1.5rem; margin: 1rem 0;
     }
-    .header-card { display: flex; gap: 1.25rem; align-items: flex-start; }
+    .header-card { display: flex; gap: 1.25rem; align-items: flex-start; position: relative; padding-top: 4.5rem; }
+    .hero-banner {
+      position: absolute; inset: 0 0 auto 0; height: 88px;
+      border-top-left-radius: 16px; border-top-right-radius: 16px;
+      opacity: 0.85;
+    }
+    .pronouns { font-size: 0.85rem; color: rgba(255,255,255,0.5); font-weight: 400; }
+    .location { font-style: normal; }
+    .bio { margin: 0.65rem 0 0; line-height: 1.45; opacity: 0.9; }
+    .pill.skill { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
+    .links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.7rem; }
+    .link-chip {
+      padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.78rem;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      color: #fff; text-decoration: none;
+    }
+    .link-chip:hover { border-color: #7c5cff; text-decoration: none; }
     .avatar {
       width: 80px; height: 80px; border-radius: 50%;
       background: linear-gradient(135deg, #7c5cff, #28e0b3);
@@ -381,6 +433,36 @@ function renderHead(opts: {
 </head>`;
 }
 
+const SKILL_LABEL_SSR: Record<string, string> = {
+  starter: "🌱 Curious starter",
+  explorer: "🔭 Hobby explorer",
+  builder: "🛠️ Active builder",
+  architect: "🏛️ Senior architect",
+  visionary: "🌌 Frontier visionary",
+};
+
+function renderLinkRow(links?: string[]): string {
+  if (!links || links.length === 0) return "";
+  const items = links
+    .map((href) => {
+      let display = href;
+      try {
+        const u = new URL(href);
+        const host = u.hostname.replace(/^www\./, "");
+        if (/^(linkedin\.com|github\.com|x\.com|twitter\.com)$/.test(host)) {
+          display = `${host}${u.pathname}`.replace(/\/$/, "");
+        } else {
+          display = host;
+        }
+      } catch {
+        // fall back to raw href
+      }
+      return `<a class="link-chip" href="${escapeAttr(href)}" target="_blank" rel="noopener nofollow ugc">${escape(display)}</a>`;
+    })
+    .join("");
+  return `<div class="links">${items}</div>`;
+}
+
 function renderOpenProfile(opts: {
   handle: string;
   displayName: string;
@@ -390,11 +472,21 @@ function renderOpenProfile(opts: {
   streak: number;
   aggregate: AggregateRecord | null;
   signals: string[];
+  bio?: string;
+  pronouns?: string;
+  location?: string;
+  skillLevel?: string;
+  heroUrl?: string;
+  links?: string[];
 }): string {
   const initials = computeInitials(opts.displayName);
   const avatar = opts.picture
     ? `<img src="${escapeAttr(opts.picture)}" alt="" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">`
     : `<span>${escape(initials)}</span>`;
+  const heroBg = opts.heroUrl
+    ? `background-image:url(${JSON.stringify(opts.heroUrl)});background-size:cover;background-position:center;`
+    : `background:linear-gradient(135deg,rgba(124,92,255,0.4),rgba(40,224,179,0.3));`;
+  const skillChip = opts.skillLevel ? SKILL_LABEL_SSR[opts.skillLevel] : undefined;
 
   // Currently working on
   const currentTopicId = opts.aggregate?.currentTopicId;
@@ -488,15 +580,19 @@ function renderOpenProfile(opts: {
   <main>
     <article>
       <section class="card header-card">
+        <div class="hero-banner" style="${heroBg}"></div>
         <div class="avatar">${avatar}</div>
         <div style="flex:1;min-width:0;">
-          <h1>${opts.displayName}</h1>
-          <div class="handle">@${opts.handle}</div>
+          <h1>${opts.displayName}${opts.pronouns ? ` <span class="pronouns">(${escape(opts.pronouns)})</span>` : ""}</h1>
+          <div class="handle">@${opts.handle}${opts.location ? ` · <span class="location">${escape(opts.location)}</span>` : ""}</div>
+          ${opts.bio ? `<p class="bio">${escape(opts.bio)}</p>` : ""}
           <div class="pills">
             <span class="pill xp">⚡ ${escape(opts.xp)}</span>
             ${opts.streak > 0 ? `<span class="pill streak">🔥 ${escape(opts.streak)}-day streak</span>` : ""}
             <span class="pill tier">🏅 ${escape(opts.tier)}</span>
+            ${skillChip ? `<span class="pill skill">${escape(skillChip)}</span>` : ""}
           </div>
+          ${renderLinkRow(opts.links)}
         </div>
       </section>
 
