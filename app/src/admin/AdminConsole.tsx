@@ -11,6 +11,7 @@ import { AdminCreators } from "./AdminCreators";
 import { AdminPromptStudio } from "./AdminPromptStudio";
 import { AdminMemory } from "./AdminMemory";
 import { AdminModeration } from "./AdminModeration";
+import { AdminPublicProfile } from "./AdminPublicProfile";
 import { Mascot } from "../visuals/Mascot";
 
 type Tab =
@@ -23,12 +24,14 @@ type Tab =
   | "creators"
   | "prompt"
   | "memory"
-  | "moderation";
+  | "moderation"
+  | "publicProfile";
 
 const TABS: { id: Tab; label: string; emoji: string; gated?: "social" }[] = [
   { id: "users", label: "Users", emoji: "👥" },
   { id: "analytics", label: "Analytics", emoji: "📊" },
   { id: "memory", label: "Memory", emoji: "🧠" },
+  { id: "publicProfile", label: "Public Profile", emoji: "🪪", gated: "social" },
   { id: "moderation", label: "Moderation", emoji: "⚖️", gated: "social" },
   { id: "emails", label: "Emails", emoji: "📧" },
   { id: "tuning", label: "Tuning", emoji: "🎮" },
@@ -98,6 +101,7 @@ export function AdminConsole({ onExit }: { onExit: () => void }) {
       {tab === "prompt" && <AdminPromptStudio apiKey={player.apiKey} apiProvider={player.apiProvider} />}
       {tab === "memory" && <AdminMemory />}
       {tab === "moderation" && <AdminModeration />}
+      {tab === "publicProfile" && <AdminPublicProfile />}
     </div>
   );
 }

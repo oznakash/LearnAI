@@ -115,6 +115,17 @@ export function loadAdminConfig(): AdminConfig {
           ...base.socialConfig.streamWeights,
           ...(parsed.socialConfig?.streamWeights ?? {}),
         },
+        // Forward-compat: older saved configs predate `publicProfile`.
+        // Deep-merge defaults so a hand-edited blob can override one
+        // toggle without losing the rest.
+        publicProfile: {
+          ...base.socialConfig.publicProfile,
+          ...(parsed.socialConfig?.publicProfile ?? {}),
+          defaults: {
+            ...base.socialConfig.publicProfile.defaults,
+            ...(parsed.socialConfig?.publicProfile?.defaults ?? {}),
+          },
+        },
       },
       serverAuth: { ...base.serverAuth, ...(parsed.serverAuth ?? {}) },
     };

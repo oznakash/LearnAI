@@ -85,6 +85,33 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   const identityName = player.identity?.name ?? "";
   const identityPicture = player.identity?.picture ?? "";
 
+  // Operator-level public-profile defaults from /admin → Public Profile.
+  // Applied only when a fresh user's offline state is created — existing
+  // users keep their saved Network-view toggles untouched.
+  const ppDefaults = config.socialConfig.publicProfile;
+  const profileDefaults = useMemo(
+    () => ({
+      defaultProfileMode: ppDefaults.defaultProfileMode,
+      showFullName: ppDefaults.defaults.showFullName,
+      showCurrent: ppDefaults.defaults.showCurrent,
+      showMap: ppDefaults.defaults.showMap,
+      showActivity: ppDefaults.defaults.showActivity,
+      showBadges: ppDefaults.defaults.showBadges,
+      showSignup: ppDefaults.defaults.showSignup,
+      signalsGlobal: ppDefaults.defaults.signalsGlobal,
+    }),
+    [
+      ppDefaults.defaultProfileMode,
+      ppDefaults.defaults.showFullName,
+      ppDefaults.defaults.showCurrent,
+      ppDefaults.defaults.showMap,
+      ppDefaults.defaults.showActivity,
+      ppDefaults.defaults.showBadges,
+      ppDefaults.defaults.showSignup,
+      ppDefaults.defaults.signalsGlobal,
+    ],
+  );
+
   // Socials live behind the same server-auth shape as memories. In
   // production we point at the social-svc URL via the upstream proxy; in
   // demo / fork mode the operator can configure their own URL. For now
@@ -106,6 +133,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
         bearerToken,
         identityName,
         identityPicture,
+        profileDefaults,
       }),
     [
       email,
@@ -115,6 +143,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
       bearerToken,
       identityName,
       identityPicture,
+      profileDefaults,
     ],
   );
 

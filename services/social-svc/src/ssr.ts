@@ -113,6 +113,15 @@ export function renderProfileHtml(opts: RenderOpts): string {
     ? `${safeName} is a builder on ${SITE_NAME}. This profile is closed — sign in and request to follow to see their progress.`
     : buildDescription(displayName, tier, xp, streak, profile.signals, aggregate);
 
+  // Signal topics power the JSON-LD `Course` + `LearningResource`
+  // structured data that ChatGPT / Claude / Perplexity ingestion bots
+  // weight heavily. Closed profiles skip this block (no leakage).
+  const signalSnippetsForLd = !isClosed
+    ? profile.signals
+        .map((id) => getTopicSnippet(id))
+        .filter((s): s is NonNullable<typeof s> => !!s)
+    : [];
+
   const head = renderHead({
     title: `${displayName} (@${handle}) — ${SITE_NAME}`,
     description,
@@ -122,6 +131,7 @@ export function renderProfileHtml(opts: RenderOpts): string {
     profileUrl,
     handle,
     displayName,
+    signalSnippets: signalSnippetsForLd,
   });
 
   const body = isClosed
@@ -184,6 +194,13 @@ function renderHead(opts: {
   handle: string;
   displayName: string;
   noindex?: boolean;
+  /**
+   * Topic snippets for the user's Signals — used by the JSON-LD
+   * `LearningResource` items to give AI ingestion bots a structured
+   * map of "this person is learning these things". Empty / undefined
+   * for the not-found and closed-gate paths.
+   */
+  signalSnippets?: import("./topic-snippets.js").TopicSnippet[];
 }): string {
   const safeTitle = escape(opts.title);
   const safeDesc = escape(opts.description);
@@ -199,21 +216,53 @@ function renderHead(opts: {
   // `<script>` block and execute arbitrary code. Replace the `</` byte
   // pair with `<\/` — JSON parsers ignore the backslash, browsers no
   // longer see a closing tag. Same defense as React, Express helmet, etc.
+  // The JSON-LD graph: ProfilePage → Person, with the user's Signal
+  // topics as `Course` nodes hanging off the Person via
+  // `knowsAbout`. Each Course carries a `hasPart` array of
+  // LearningResource items (the sample sparks). This is the structure
+  // ChatGPT-search / Claude / Perplexity / Google Knowledge Graph
+  // weight heaviest — they prefer rich `@graph` over plain `mainEntity`.
+  const courses = (opts.signalSnippets ?? []).map((s) => ({
+    "@type": "Course",
+    "@id": `${opts.profileUrl}#topic-${s.id}`,
+    name: s.name,
+    description: s.intro,
+    provider: { "@type": "Organization", name: SITE_NAME, url: "https://learnai.cloud-claude.com" },
+    hasPart: s.sampleSparks.map((sp) => ({
+      "@type": "LearningResource",
+      name: sp.title,
+      description: sp.teaser,
+      learningResourceType: "article",
+      educationalLevel: "beginner",
+      inLanguage: "en",
+      about: s.name,
+    })),
+  }));
+  const personNode = {
+    "@type": "Person",
+    "@id": `${opts.profileUrl}#person`,
+    name: opts.displayName,
+    alternateName: `@${opts.handle}`,
+    url: opts.profileUrl,
+    image: opts.ogImage,
+    memberOf: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: "https://learnai.cloud-claude.com",
+    },
+    ...(courses.length > 0 ? { knowsAbout: courses.map((c) => c["@id"]) } : {}),
+  };
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    mainEntity: {
-      "@type": "Person",
-      name: opts.displayName,
-      alternateName: `@${opts.handle}`,
-      url: opts.profileUrl,
-      image: opts.ogImage,
-      memberOf: {
-        "@type": "Organization",
-        name: SITE_NAME,
-        url: "https://learnai.cloud-claude.com",
+    "@graph": [
+      {
+        "@type": "ProfilePage",
+        url: opts.profileUrl,
+        mainEntity: { "@id": `${opts.profileUrl}#person` },
       },
-    },
+      personNode,
+      ...courses,
+    ],
   })
     // Escape any `<` in the JSON payload to its `<` form. Pure
     // defense-in-depth: this also kills the `</script>` breakout vector
@@ -362,25 +411,52 @@ function renderOpenProfile(opts: {
       </section>`
     : "";
 
-  // Topic map (Signals)
+  // Personalized learning text per Signal topic. Three goals:
+  //   1. SEO content density: each `<details>` block carries the
+  //      topic intro, the longer "what you'd learn" rundown, AND
+  //      4-5 sample-spark titles with teasers. Real keyword content,
+  //      ~600 indexable words on a typical multi-signal profile.
+  //   2. Personalization for AI ingestion: the per-topic XP from
+  //      `aggregate.topicXp` shows up in the section header so each
+  //      profile renders unique (-> deduplication-safe).
+  //   3. JSON-LD `LearningResource` items (emitted in `renderHead`)
+  //      give Google rich-result + GPTBot/ClaudeBot a structured map
+  //      of "this person is learning these things in these places".
+  const topicXp = opts.aggregate?.topicXp ?? {};
   const signalSnippets = opts.signals
     .map((id) => getTopicSnippet(id))
     .filter((s): s is NonNullable<typeof s> => !!s);
   const signalsBlock = signalSnippets.length > 0
     ? `<section class="card">
-        <h2>Signals — topics @${opts.handle} is learning</h2>
-        ${signalSnippets.map((s) => `
+        <h2>What @${opts.handle} is learning</h2>
+        <p style="margin:0 0 0.85rem;opacity:0.7;font-size:0.92rem;">
+          ${escape(opts.displayName)} has signaled discoverability in ${signalSnippets.length}
+          ${signalSnippets.length === 1 ? "topic" : "topics"}.
+          Each section below is a sample of the curriculum on ${SITE_NAME} — open to read what they're working through.
+        </p>
+        ${signalSnippets.map((s) => {
+          const xp = topicXp[s.id] ?? 0;
+          const xpHint = xp > 0
+            ? `<span class="pill" style="font-size:0.7rem;background:rgba(124,92,255,0.1);color:#7c5cff;border-color:rgba(124,92,255,0.3);">⚡ ${escape(xp)} earned here</span>`
+            : "";
+          return `
           <details>
-            <summary>${escape(s.emoji)} ${escape(s.name)} — ${escape(s.tagline)}</summary>
-            <p>${escape(s.intro)}</p>
+            <summary>${escape(s.emoji)} ${escape(s.name)} — ${escape(s.tagline)} ${xpHint}</summary>
+            <p style="margin-top:0.85rem;">${escape(s.intro)}</p>
+            <p style="opacity:0.85;font-size:0.95rem;">${escape(s.whatYoudLearn)}</p>
+            <div style="margin-top:1rem;font-weight:600;font-size:0.88rem;opacity:0.85;">Sample Sparks</div>
             ${s.sampleSparks.map((sp) => `
-              <div class="spark">
-                <div class="spark-title">${escape(sp.title)}</div>
-                <div class="spark-teaser">${escape(sp.teaser)}</div>
-              </div>
+              <article class="spark" itemscope itemtype="https://schema.org/LearningResource">
+                <div class="spark-title" itemprop="name">${escape(sp.title)}</div>
+                <div class="spark-teaser" itemprop="description">${escape(sp.teaser)}</div>
+                <meta itemprop="learningResourceType" content="article">
+                <meta itemprop="about" content="${escapeAttr(s.name)}">
+                <meta itemprop="educationalLevel" content="beginner">
+                <meta itemprop="inLanguage" content="en">
+              </article>
             `).join("")}
-          </details>
-        `).join("")}
+          </details>`;
+        }).join("")}
       </section>`
     : "";
 
