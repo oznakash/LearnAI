@@ -28,6 +28,12 @@ function bareProfile(overrides: Partial<PublicProfile> = {}): PublicProfile {
       showBadges: false,
       showSignup: false,
       signalsGlobal: false,
+      showBio: false,
+      showPronouns: false,
+      showLocation: false,
+      showHero: false,
+      showSkillLevel: false,
+      showLinks: false,
     },
     ...overrides,
   };
