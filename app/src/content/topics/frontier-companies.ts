@@ -18,6 +18,8 @@ export const frontierCompanies: Topic = {
         body: "Anthropic (Claude, safety-first), OpenAI (GPT, ChatGPT scale), Google DeepMind (Gemini, research depth), Meta AI (Llama open weights), xAI (Grok, fast), Mistral (open + premium). Each has a distinct philosophy: research-led vs scale-led, closed vs open, safety-first vs capability-first. Smart builders match labs to their values + use cases.",
         takeaway: "Six labs, six philosophies. Pick by fit, not hype.",
         visual: "rocket",
+        category: "company",
+        addedAt: "2026-02-01",
       }),
       spark("Why alignment is a now problem", {
         type: "podcastnugget",
@@ -42,11 +44,15 @@ export const frontierCompanies: Topic = {
         title: "Why Anthropic exists",
         body: "Anthropic was founded in 2021 by ex-OpenAI researchers focused on AI safety. Mission: build reliable, interpretable, steerable AI. Models: Claude family (Haiku/Sonnet/Opus, latest 4.x). Products: Claude.ai, API, Claude Code. Distinctive: Constitutional AI, deep red-teaming, transparent model cards. Loved by enterprises for safety posture + clear policies.",
         takeaway: "Safety-first frontier lab. Strong with regulated buyers.",
+        category: "company",
+        addedAt: "2026-02-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "When pitching to enterprise, lead with safety: model cards, no-train-on-customer-data clause, audit logs. Anthropic + Claude is a great anchor for that conversation.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
       spark("Mission > offer", {
         type: "podcastnugget",
@@ -71,6 +77,8 @@ export const frontierCompanies: Topic = {
         title: "Scale, distribution, breadth",
         body: "OpenAI ships GPT-class models, ChatGPT (huge consumer reach), Whisper (audio), DALL-E (image), Sora (video), agents, structured outputs, batch APIs. Strategy: be the broadest API surface, with biggest ecosystem. Builder takeaway: easy to start, hard to leave (lock-in via fine-tunes + APIs).",
         takeaway: "Broadest surface. Plan for lock-in if you go deep.",
+        category: "company",
+        addedAt: "2026-02-01",
       }),
     ]),
     level(T, 4, "Google DeepMind", "Research depth + integration.", 4, [
@@ -79,6 +87,8 @@ export const frontierCompanies: Topic = {
         title: "Research-meets-scale",
         body: "Google DeepMind merged Brain + DeepMind in 2023. Strengths: deep research (AlphaFold, Gemini), giant infrastructure (TPUs), integration into Workspace + Android + Search. Models: Gemini family, including thinking variants and Nano (on-device). Builder note: best multimodal + tightest integration with Google Cloud + Workspace.",
         takeaway: "Research depth + ecosystem reach. Pick if you live in Google land.",
+        category: "company",
+        addedAt: "2026-02-01",
       }),
     ]),
     level(T, 5, "Meta + open weights", "Llama and beyond.", 4, [
@@ -87,6 +97,8 @@ export const frontierCompanies: Topic = {
         title: "Why Meta gives weights away",
         body: "Meta open-sources frontier-class weights (Llama series). Strategic logic: drive ecosystem standards, hire from the field that uses your tools, undermine closed-API moats. Effect: thousands of fine-tunes, research acceleration, enterprise on-prem options. The open ecosystem is now serious infrastructure.",
         takeaway: "Open weights = real production option, especially regulated.",
+        category: "company",
+        addedAt: "2026-02-01",
       }),
     ]),
     level(T, 6, "xAI, Mistral, Cohere, Inflection", "The serious challengers.", 4, [
@@ -95,6 +107,8 @@ export const frontierCompanies: Topic = {
         title: "Beyond the big three",
         body: "xAI (Grok, fast iteration), Mistral (Euro-based, mix of open + premium), Cohere (enterprise/RAG focus), Inflection (consumer voice). They occupy niches: speed, region, vertical, modality. Smart builders watch them — sometimes you find a better cost/perf fit than the giants.",
         takeaway: "Don't ignore mid-tier. Niches sometimes win on price/perf.",
+        category: "company",
+        addedAt: "2026-02-01",
       }),
     ]),
     level(T, 7, "AI-native frontier startups", "The picks-and-shovels & apps.", 4, [
@@ -103,6 +117,8 @@ export const frontierCompanies: Topic = {
         title: "Infra + apps",
         body: "Frontier AI startups split into infra (Modal, Replicate, Together, Fireworks, Pinecone, Weaviate, Helicone) and apps (Cursor, Perplexity, Harvey, Glean, Decagon). Infra companies battle on latency + price + DX. App companies battle on retention + workflow lock-in. Both have minted unicorns rapidly.",
         takeaway: "Infra battles on DX. Apps battle on workflow lock-in.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
     ]),
     level(T, 8, "How to read a model release", "Spec, eval, vibe.", 4, [
@@ -111,11 +127,15 @@ export const frontierCompanies: Topic = {
         title: "How to read launches",
         body: "When a lab ships a new model, read in this order: (1) capability table — what's actually new. (2) eval scores — but only on benchmarks you trust. (3) pricing — token cost, context size. (4) latency — TPS for streaming. (5) vibes — community demos. Skip the hype thread; it lies. Always test on YOUR eval set before switching production.",
         takeaway: "Capabilities → evals → price → vibes. Never just vibes.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Keep a 30-case 'house eval' you run on every new model release. You'll know in 20 min whether it's actually better for YOUR use case.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
       spark("The Challenger disaster of AI", {
         type: "podcastnugget",
@@ -140,6 +160,8 @@ export const frontierCompanies: Topic = {
         title: "People are the signal",
         body: "Lab quality follows people. When senior researchers move (e.g. Anthropic founders left OpenAI, then later moves), expect ripples. Watch ICML/NeurIPS papers, lab blog posts, key Twitter accounts (Karpathy, Demis, Dario, Sam). Also watch arxiv-sanity for papers cited by frontier labs.",
         takeaway: "Follow people, not hype. Diasporas predict shifts.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
     ]),
     level(T, 10, "Boss: frontier check", "Final gate.", 6, [
