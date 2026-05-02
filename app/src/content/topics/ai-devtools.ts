@@ -21,7 +21,9 @@ export const aiDevtools: Topic = {
           kid: "AI in your code editor comes in three flavors. (1) Suggest — it finishes your sentences as you type, like autocomplete. (2) Chat — a little assistant on the side you can ask questions. (3) Agent — a helper that does whole jobs by itself (read files, run things, edit code). Pick the one that matches the kind of thinking you're doing.",
           teen: "AI dev tools come in three flavors. Suggest = autocomplete on steroids (Copilot, Cursor Tab). Chat = a sidebar where you ask questions while you code (Cursor Chat). Agent = a teammate that edits multiple files on its own (Claude Code, Cursor Agent, Devin). Match the tool to the kind of work you're doing.",
         },
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
       spark("Pattern match", {
         type: "patternmatch",
         prompt: "Match each task to the best mode",
@@ -60,12 +62,16 @@ export const aiDevtools: Topic = {
         title: "How Claude Code thinks",
         body: "Claude Code is an agent: it reads files, runs commands, edits code, asks for permission on risky things. Best results come from clear briefs ('we're trying to X, here's a relevant file'), small diffs ('add only the function, no refactors'), and active verification ('run the test, show me output'). Treat it like a sharp pair partner, not an oracle.",
         takeaway: "Brief tightly. Verify often. Small diffs.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Add a CLAUDE.md to your repo with the project's conventions. Claude Code reads it on startup and follows your house style without you repeating yourself.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
       spark("Build it", {
         type: "buildcard",
         title: "Build: tiny utility with Claude Code",
@@ -81,7 +87,9 @@ export const aiDevtools: Topic = {
         title: "Quick comparison",
         body: "Cursor: VS Code fork with deep AI (Tab completion, Composer for multi-file). Windsurf (Codeium): similar territory, strong autocomplete. JetBrains AI: native to IntelliJ family. Claude Code: terminal-first, agent-strong. GitHub Copilot: ubiquitous, integrates everywhere. Try 2-3 in a real workflow before committing — your taste matters more than reviews.",
         takeaway: "Try a few. Pick what fits your flow.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
     ]),
     level(T, 4, "Vibe coding vs spec coding", "When to lean which way.", 4, [
       spark("Two modes", {
@@ -89,7 +97,9 @@ export const aiDevtools: Topic = {
         title: "Vibe vs spec",
         body: "Vibe coding: 'just make it work', iterate by feel — great for prototypes, throwaways, exploration. Spec coding: write the contract first (types, tests, docstrings), let AI fill the body — great for production, libraries, maintained systems. Mixing them blindly creates messes. Pick mode per task.",
         takeaway: "Vibe to explore. Spec to ship.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 5, "Tests as the AI's compass", "TDD finally easy.", 4, [
       spark("AI loves tests", {
@@ -97,12 +107,16 @@ export const aiDevtools: Topic = {
         title: "Tests = clarity for the AI",
         body: "Tests give the AI an unambiguous signal: pass or fail. Write the test first, hand it to the agent, let it iterate against red. AI burnout? Bad tests. AI shipping clean code? Good tests. TDD never had a more natural partner.",
         takeaway: "Test-first. AI iterates faster than you ever could.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "When the AI gets stuck, don't help directly — write one more test that exposes the bug. The AI will fix it itself.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 6, "Code review with AI", "Faster, fairer, deeper.", 4, [
       spark("Pre-PR scan", {
@@ -110,7 +124,9 @@ export const aiDevtools: Topic = {
         title: "AI review = first pass",
         body: "Run AI review on your diff before opening the PR. Most catch typos, missing error handling, security smells, weak tests. Saves humans from boring nits and lets them focus on architecture/intent. Tools: GitHub Copilot Review, CodeRabbit, custom Claude Code workflows.",
         takeaway: "AI does the boring review. Humans do the hard.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
     ]),
     level(T, 7, "MCP servers & extensions", "Plug AI into your tools.", 4, [
       spark("Model Context Protocol", {
@@ -118,12 +134,16 @@ export const aiDevtools: Topic = {
         title: "What MCP unlocks",
         body: "MCP (Model Context Protocol) is an open standard for plugging tools into AI clients. Build once, work in Claude Code, Cursor, others. Common MCPs: Postgres, GitHub, Linear, Slack, filesystem, browser. Building one is ~50 lines. Suddenly your agent can query prod, file tickets, send messages.",
         takeaway: "MCP = USB-C for AI tools.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Build a tiny MCP server for your team's internal docs/wiki. Suddenly Claude Code can answer 'where do we store user emails' from your real source of truth.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
     ]),
     level(T, 8, "Agent feedback loops", "Watch and adjust.", 4, [
       spark("Don't go silent", {
@@ -131,7 +151,9 @@ export const aiDevtools: Topic = {
         title: "Stay in the loop",
         body: "Agents drift. After every agent run: skim the diff, run the tests, check the changed-files list. If it touched things you didn't expect, ask why. Catching drift early is the difference between '10x faster' and 'broken codebase by Friday'.",
         takeaway: "Skim every diff. Trust slowly.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 9, "Prompt files & templates", "Reusable AI context.", 4, [
       spark("Promptbooks", {
@@ -139,7 +161,9 @@ export const aiDevtools: Topic = {
         title: "Make your prompts reusable",
         body: "If you keep typing the same brief ('refactor X but keep API stable'), put it in a prompt file. Cursor has .cursorrules, Claude Code has CLAUDE.md and slash-commands. Treat prompts like code — version, share, refine across the team. The team that systematizes prompts ships 2x.",
         takeaway: "Promptbook your repo. Share across team.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
     ]),
     level(T, 10, "Boss: dev tools check", "Final gate.", 6, [
       spark("Boss Cell", {
