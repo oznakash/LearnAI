@@ -613,10 +613,65 @@ export function createApp(opts: AppOpts) {
     res.status(204).end();
   });
 
-  // -- Boards (placeholder; full ranking lands in a follow-up) -------------
-  app.get("/v1/social/boards/:scope", requireUser, (_req, res) => {
-    // MVP: empty array. The SPA's mock filler keeps screens alive.
-    res.json([]);
+  // -- Boards ---------------------------------------------------------------
+  // Scope path forms produced by the SPA (`app/src/social/online.ts`):
+  //   "global"             → every Open profile, top-XP first
+  //   "following"          → profiles the viewer follows (approved + unmuted)
+  //   "topic:<topicId>"    → Open profiles whose Signals include the topic
+  // Period (`week | month | all`) is accepted on the wire for future use;
+  // today the aggregate carries only `xpTotal` (all-time), so all three
+  // periods rank by the same field. When per-period XP lands in the
+  // aggregate, switch the sort key here.
+  // Filters applied in every scope: not banned/bannedSocial, not blocked
+  // either-way, kid-vs-adult separation (symmetric), and self exclusion.
+  app.get("/v1/social/boards/:scope", requireUser, (req, res) => {
+    const me = (req as Request & { profile: ProfileRecord }).profile;
+    const meLc = me.email.toLowerCase();
+    const meIsKid = me.ageBand === "kid";
+    const blocked = new Set(store.listBlocked(me.email).map((s) => s.toLowerCase()));
+
+    const scopeRaw = req.params.scope ?? "global";
+    let topicFilter: string | null = null;
+    let followingOnly = false;
+    if (scopeRaw === "following") {
+      followingOnly = true;
+    } else if (scopeRaw.startsWith("topic:")) {
+      topicFilter = scopeRaw.slice("topic:".length);
+    }
+
+    const followingApproved = followingOnly
+      ? new Set(
+          store
+            .listFollowing(me.email)
+            .filter((e) => e.status === "approved" && !e.muted)
+            .map((e) => e.target.toLowerCase()),
+        )
+      : null;
+
+    const candidates = store.listProfiles().filter((p) => {
+      const lc = p.email.toLowerCase();
+      if (lc === meLc) return false;
+      if (blocked.has(lc)) return false;
+      if (p.banned || p.bannedSocial) return false;
+      if (meIsKid !== (p.ageBand === "kid")) return false;
+      if (followingApproved) {
+        if (!followingApproved.has(lc)) return false;
+      } else {
+        // Global + topic boards expose only Open profiles. Closed users
+        // are searchable by handle but never auto-listed.
+        if (p.profileMode !== "open") return false;
+      }
+      if (topicFilter && !p.signals.includes(topicFilter)) return false;
+      return true;
+    });
+
+    const ranked = candidates
+      .map((p) => ({ p, agg: store.getAggregate(p.email) }))
+      .sort((a, b) => (b.agg?.xpTotal ?? 0) - (a.agg?.xpTotal ?? 0))
+      .slice(0, 20)
+      .map(({ p, agg }) => projectProfile(p, agg, me.email));
+
+    res.json(ranked);
   });
 
   // -- Stream --------------------------------------------------------------

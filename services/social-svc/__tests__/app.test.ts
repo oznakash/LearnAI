@@ -622,3 +622,76 @@ describe("Sprint 2.5 fixes", () => {
     });
   });
 });
+
+describe("/v1/social/boards/:scope", () => {
+  beforeEach(async () => {
+    for (const email of ["me@gmail.com", "alpha@gmail.com", "bravo@gmail.com", "closed@gmail.com"]) {
+      await request(app).get("/v1/social/me").set(userHeaders(email));
+    }
+    await request(app)
+      .put("/v1/social/me")
+      .set(userHeaders("closed@gmail.com"))
+      .send({ profileMode: "closed" });
+    await request(app)
+      .put("/v1/social/me/signals")
+      .set(userHeaders("alpha@gmail.com"))
+      .send({ topics: ["ai-foundations"] });
+    store.upsertAggregate({
+      email: "alpha@gmail.com",
+      xpTotal: 500,
+      streak: 1,
+      guildTier: "Builder",
+      badges: [],
+      activity14d: [],
+      topicXp: { "ai-foundations": 500 },
+      updatedAt: Date.now(),
+    });
+    store.upsertAggregate({
+      email: "bravo@gmail.com",
+      xpTotal: 200,
+      streak: 1,
+      guildTier: "Builder",
+      badges: [],
+      activity14d: [],
+      topicXp: {},
+      updatedAt: Date.now(),
+    });
+  });
+
+  it("returns Open profiles ranked by xpTotal on global scope, excluding self + closed", async () => {
+    const r = await request(app)
+      .get("/v1/social/boards/global?period=all")
+      .set(userHeaders("me@gmail.com"));
+    expect(r.status).toBe(200);
+    const handles = (r.body as Array<{ handle: string }>).map((p) => p.handle);
+    expect(handles).toEqual(["alpha", "bravo"]);
+  });
+
+  it("filters topic boards to profiles whose Signals include the topic", async () => {
+    const r = await request(app)
+      .get("/v1/social/boards/topic%3Aai-foundations?period=all")
+      .set(userHeaders("me@gmail.com"));
+    expect(r.status).toBe(200);
+    const handles = (r.body as Array<{ handle: string }>).map((p) => p.handle);
+    expect(handles).toEqual(["alpha"]);
+  });
+
+  it("following scope returns approved+unmuted follows only", async () => {
+    await request(app)
+      .post("/v1/social/follow/alpha")
+      .set(userHeaders("me@gmail.com"));
+    await request(app)
+      .post("/v1/social/follow/bravo")
+      .set(userHeaders("me@gmail.com"));
+    await request(app)
+      .put("/v1/social/follow/bravo/mute")
+      .set(userHeaders("me@gmail.com"))
+      .send({ muted: true });
+    const r = await request(app)
+      .get("/v1/social/boards/following?period=all")
+      .set(userHeaders("me@gmail.com"));
+    expect(r.status).toBe(200);
+    const handles = (r.body as Array<{ handle: string }>).map((p) => p.handle);
+    expect(handles).toEqual(["alpha"]);
+  });
+});

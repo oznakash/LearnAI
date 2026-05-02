@@ -40,6 +40,12 @@ export interface Store {
   getProfileByEmail(email: string): ProfileRecord | null;
   getProfileByHandle(handle: string): ProfileRecord | null;
   isHandleTaken(handle: string): boolean;
+  /**
+   * Enumerate profiles for board ranking, admin lists, etc. Returns a
+   * snapshot copy — callers can filter / sort without mutating store
+   * state.
+   */
+  listProfiles(): ProfileRecord[];
 
   // Aggregates
   upsertAggregate(a: AggregateRecord): AggregateRecord;
@@ -182,6 +188,9 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
     },
     isHandleTaken(handle) {
       return state.profiles.some((p) => lc(p.handle) === lc(handle));
+    },
+    listProfiles() {
+      return state.profiles.slice();
     },
 
     // Aggregates -----------------------------------------------------------
