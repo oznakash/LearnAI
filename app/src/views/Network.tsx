@@ -4,10 +4,18 @@ import { baseHandleFromEmail } from "../social/handles";
 import { useAdmin } from "../admin/AdminContext";
 import { usePlayer } from "../store/PlayerContext";
 import { TOPICS } from "../content";
-import type { FollowEdge, PublicProfile, ProfileMode } from "../social/types";
-import type { TopicId } from "../types";
+import type { FollowEdge, ProfileLinks, PublicProfile, ProfileMode } from "../social/types";
+import type { SkillLevel, TopicId } from "../types";
 import type { View } from "../App";
 import { profileCompleteness, profileCompletenessSlots } from "../profile/completeness";
+
+const SKILL_LABELS: { id: SkillLevel; label: string }[] = [
+  { id: "starter", label: "🌱 Curious starter" },
+  { id: "explorer", label: "🔭 Hobby explorer" },
+  { id: "builder", label: "🛠️ Active builder" },
+  { id: "architect", label: "🏛️ Senior architect" },
+  { id: "visionary", label: "🌌 Frontier visionary" },
+];
 
 type PeopleTab = "summary" | "following" | "followers" | "pending" | "blocked";
 
@@ -98,11 +106,37 @@ export function Network({ onNav }: Props) {
   };
 
   const flipFlag = async (
-    key: "showFullName" | "showCurrent" | "showMap" | "showActivity" | "showBadges" | "showSignup" | "signalsGlobal",
+    key:
+      | "showFullName"
+      | "showCurrent"
+      | "showMap"
+      | "showActivity"
+      | "showBadges"
+      | "showSignup"
+      | "signalsGlobal"
+      | "showBio"
+      | "showPronouns"
+      | "showLocation"
+      | "showHero"
+      | "showSkillLevel"
+      | "showLinks",
     value: boolean,
   ) => {
     const next = await social.updateProfile({ [key]: value });
     if (next) setMe(next);
+  };
+
+  const saveDetails = async (patch: {
+    fullName?: string;
+    bio?: string;
+    pronouns?: string;
+    location?: string;
+    heroUrl?: string;
+    skillLevel?: SkillLevel;
+    links?: ProfileLinks;
+  }) => {
+    const next = await social.updateProfile(patch);
+    setMe(next);
   };
 
   const toggleSignal = (id: TopicId) => {
@@ -147,6 +181,9 @@ export function Network({ onNav }: Props) {
       </header>
 
       <CompletenessCard profile={me} fallbackPicture={player.identity?.picture} />
+
+      {/* 1.5 Profile details editor */}
+      <ProfileDetailsEditor profile={me} onSave={saveDetails} />
 
       {/* 1. Profile visibility + panic switch */}
       <section className="card p-5 space-y-3">
@@ -231,6 +268,36 @@ export function Network({ onNav }: Props) {
               label="Show me on the Global Leaderboard"
               checked={me.ownerPrefs.signalsGlobal}
               onChange={(v) => flipFlag("signalsGlobal", v)}
+            />
+            <FieldToggle
+              label="My bio"
+              checked={me.ownerPrefs.showBio}
+              onChange={(v) => flipFlag("showBio", v)}
+            />
+            <FieldToggle
+              label="My pronouns"
+              checked={me.ownerPrefs.showPronouns}
+              onChange={(v) => flipFlag("showPronouns", v)}
+            />
+            <FieldToggle
+              label="My location"
+              checked={me.ownerPrefs.showLocation}
+              onChange={(v) => flipFlag("showLocation", v)}
+            />
+            <FieldToggle
+              label="My hero banner"
+              checked={me.ownerPrefs.showHero}
+              onChange={(v) => flipFlag("showHero", v)}
+            />
+            <FieldToggle
+              label="My skill level"
+              checked={me.ownerPrefs.showSkillLevel}
+              onChange={(v) => flipFlag("showSkillLevel", v)}
+            />
+            <FieldToggle
+              label="My external links"
+              checked={me.ownerPrefs.showLinks}
+              onChange={(v) => flipFlag("showLinks", v)}
             />
           </div>
           <p className="text-[11px] text-white/40">
@@ -666,5 +733,254 @@ function CompletenessCard({
         ))}
       </ul>
     </section>
+  );
+}
+
+// -- Profile details editor ---------------------------------------------
+
+interface DraftState {
+  fullName: string;
+  bio: string;
+  pronouns: string;
+  location: string;
+  heroUrl: string;
+  skillLevel: SkillLevel | "";
+  linkedin: string;
+  github: string;
+  twitter: string;
+  website: string;
+}
+
+function draftFromProfile(p: PublicProfile): DraftState {
+  return {
+    fullName: p.ownerPrefs?.fullName ?? "",
+    bio: p.bio ?? "",
+    pronouns: p.pronouns ?? "",
+    location: p.location ?? "",
+    heroUrl: p.heroUrl ?? "",
+    skillLevel: p.skillLevel ?? "",
+    linkedin: p.links?.linkedin ?? "",
+    github: p.links?.github ?? "",
+    twitter: p.links?.twitter ?? "",
+    website: p.links?.website ?? "",
+  };
+}
+
+function ProfileDetailsEditor({
+  profile,
+  onSave,
+}: {
+  profile: PublicProfile;
+  onSave: (patch: {
+    fullName?: string;
+    bio?: string;
+    pronouns?: string;
+    location?: string;
+    heroUrl?: string;
+    skillLevel?: SkillLevel;
+    links?: ProfileLinks;
+  }) => Promise<void>;
+}) {
+  const seed = draftFromProfile(profile);
+  const [draft, setDraft] = useState<DraftState>(seed);
+  const [busy, setBusy] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  // Re-seed when the upstream profile changes (after a save round-trip,
+  // or after a parallel write from another surface).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => setDraft(draftFromProfile(profile)), [
+    profile.handle,
+    profile.bio,
+    profile.pronouns,
+    profile.location,
+    profile.heroUrl,
+    profile.skillLevel,
+    profile.ownerPrefs?.fullName,
+    profile.links?.linkedin,
+    profile.links?.github,
+    profile.links?.twitter,
+    profile.links?.website,
+  ]);
+
+  const dirty =
+    draft.fullName !== seed.fullName ||
+    draft.bio !== seed.bio ||
+    draft.pronouns !== seed.pronouns ||
+    draft.location !== seed.location ||
+    draft.heroUrl !== seed.heroUrl ||
+    draft.skillLevel !== seed.skillLevel ||
+    draft.linkedin !== seed.linkedin ||
+    draft.github !== seed.github ||
+    draft.twitter !== seed.twitter ||
+    draft.website !== seed.website;
+
+  const save = async () => {
+    if (busy || !dirty) return;
+    setBusy(true);
+    try {
+      await onSave({
+        fullName: draft.fullName.trim() || undefined,
+        bio: draft.bio.trim() || undefined,
+        pronouns: draft.pronouns.trim() || undefined,
+        location: draft.location.trim() || undefined,
+        heroUrl: draft.heroUrl.trim() || undefined,
+        skillLevel: draft.skillLevel || undefined,
+        links: {
+          linkedin: draft.linkedin.trim() || undefined,
+          github: draft.github.trim() || undefined,
+          twitter: draft.twitter.trim() || undefined,
+          website: draft.website.trim() || undefined,
+        },
+      });
+      setSavedAt(Date.now());
+      setTimeout(() => setSavedAt(null), 2000);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card p-5 space-y-4" data-testid="network-profile-details">
+      <div>
+        <h2 className="h2">Profile details</h2>
+        <p className="muted text-xs mt-1">
+          What viewers actually see on <code className="text-white/80">/u/{profile.handle}</code>. Each field has its own visibility toggle in the section below — fill it once, then decide whether to expose it.
+        </p>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field
+          label="Full name"
+          placeholder={profile.displayName}
+          value={draft.fullName}
+          onChange={(v) => setDraft((d) => ({ ...d, fullName: v }))}
+          maxLength={64}
+        />
+        <Field
+          label="Pronouns"
+          placeholder="she/her"
+          value={draft.pronouns}
+          onChange={(v) => setDraft((d) => ({ ...d, pronouns: v }))}
+          maxLength={30}
+        />
+        <Field
+          label="Location"
+          placeholder="Tel Aviv"
+          value={draft.location}
+          onChange={(v) => setDraft((d) => ({ ...d, location: v }))}
+          maxLength={60}
+        />
+        <div>
+          <div className="label">Skill level</div>
+          <select
+            className="input"
+            value={draft.skillLevel}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, skillLevel: e.target.value as SkillLevel | "" }))
+            }
+          >
+            <option value="">— pick one —</option>
+            {SKILL_LABELS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="label">Bio (one sentence)</div>
+          <span className="text-[11px] text-white/40 tabular-nums">{draft.bio.length}/160</span>
+        </div>
+        <textarea
+          className="input min-h-[64px]"
+          placeholder="What you're building or curious about. One sentence."
+          value={draft.bio}
+          onChange={(e) => setDraft((d) => ({ ...d, bio: e.target.value }))}
+          maxLength={200}
+        />
+        {draft.bio.length > 160 && (
+          <p className="text-[11px] text-bad mt-1">Keep it under 160 characters.</p>
+        )}
+      </div>
+      <div>
+        <div className="label">Hero / banner image URL</div>
+        <input
+          className="input"
+          placeholder="https://… (https only)"
+          value={draft.heroUrl}
+          onChange={(e) => setDraft((d) => ({ ...d, heroUrl: e.target.value }))}
+        />
+        <p className="text-[11px] text-white/40 mt-1">
+          Image upload ships with the CDN sprint. Until then: paste a public https URL. Falls back to a topic-tinted gradient when blank.
+        </p>
+      </div>
+      <div>
+        <div className="label">External links</div>
+        <p className="text-[11px] text-white/40 mb-2">
+          Host-checked per kind. We strip query strings — your saved value is the canonical URL.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          <Field
+            label="LinkedIn"
+            placeholder="https://linkedin.com/in/…"
+            value={draft.linkedin}
+            onChange={(v) => setDraft((d) => ({ ...d, linkedin: v }))}
+          />
+          <Field
+            label="GitHub"
+            placeholder="https://github.com/…"
+            value={draft.github}
+            onChange={(v) => setDraft((d) => ({ ...d, github: v }))}
+          />
+          <Field
+            label="X / Twitter"
+            placeholder="https://x.com/…"
+            value={draft.twitter}
+            onChange={(v) => setDraft((d) => ({ ...d, twitter: v }))}
+          />
+          <Field
+            label="Personal website"
+            placeholder="https://…"
+            value={draft.website}
+            onChange={(v) => setDraft((d) => ({ ...d, website: v }))}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="btn-primary text-sm" disabled={!dirty || busy} onClick={save}>
+          {busy ? "Saving…" : "Save profile details"}
+        </button>
+        {savedAt && <span className="text-xs text-good">✓ Saved</span>}
+      </div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  placeholder,
+  value,
+  onChange,
+  maxLength,
+}: {
+  label: string;
+  placeholder?: string;
+  value: string;
+  onChange: (v: string) => void;
+  maxLength?: number;
+}) {
+  return (
+    <div>
+      <div className="label">{label}</div>
+      <input
+        className="input"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={maxLength}
+      />
+    </div>
   );
 }
