@@ -23,6 +23,7 @@ import type { TopicId } from "./types";
 import { TopBar } from "./components/TopBar";
 import { TabBar } from "./components/TabBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Unsubscribe } from "./views/Unsubscribe";
 
 export type View =
   | { name: "home" }
@@ -37,7 +38,8 @@ export type View =
   | { name: "admin" }
   | { name: "profile"; handle: string }
   | { name: "network" }
-  | { name: "stream" };
+  | { name: "stream" }
+  | { name: "unsubscribe" };
 
 function Shell() {
   const { state, hydrated } = usePlayer();
@@ -57,6 +59,7 @@ function Shell() {
   // runs, `state.identity` is `undefined` and we'd otherwise flash <SignIn />
   // for one frame before re-rendering as the real signed-in user.
   if (!hydrated) return null;
+  if (view.name === "unsubscribe") return <Unsubscribe />;
   if (!state.identity) return <SignIn />;
   if (!state.profile) return <Onboarding />;
 

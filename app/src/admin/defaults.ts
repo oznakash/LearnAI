@@ -255,6 +255,32 @@ export function defaultAdminConfig(): AdminConfig {
       fromName: "LearnAI",
       fromEmail: "no-reply@example.com",
     },
+    emailPolicy: {
+      enabled: true,
+      capPerWindowHours: 24,
+      transactionalBypass: false,
+      autoFlushDebounceSeconds: 30,
+      autoFlushEnabled: true,
+      appendUnsubscribe: true,
+      appendOpenPixel: true,
+      pauseOnUnreadEnabled: true,
+      pauseOnUnreadCount: 2,
+      pauseDurationDays: 30,
+      // Highest priority first. Operator-tunable in
+      // Admin → Emails → Email policy. When competing transactionals
+      // race (welcome + first-spark fire 2s apart), first-spark wins
+      // (more contextual, more recent), welcome is superseded.
+      priorityOrder: [
+        "streak-save",
+        "boss-beaten",
+        "level-up",
+        "first-spark",
+        "welcome",
+        "weekly-digest",
+        "re-engagement",
+        "daily-reminder",
+      ],
+    },
     emailTemplates: { ...DEFAULT_TEMPLATES },
     emailQueue: [],
     tuning: { ...DEFAULT_TUNING, xp: { ...DEFAULT_TUNING.xp }, focus: { ...DEFAULT_TUNING.focus }, tiers: { ...DEFAULT_TUNING.tiers } },
