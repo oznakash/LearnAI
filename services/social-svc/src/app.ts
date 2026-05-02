@@ -936,6 +936,78 @@ export function createApp(opts: AppOpts) {
     res.json({ ok: true, messageId: r.messageId });
   });
 
+  // -- Admin: profile audit + cleanup --------------------------------------
+  // Operator surface for "what's actually in the social-svc store" + a
+  // delete-by-handle to remove smoke-test profiles left over from
+  // automated test runs. Without this the only way to clean was to
+  // shell into the /data volume + edit social.db.json by hand.
+  app.get("/v1/social/admin/profiles", requireUser, requireAdmin, (_req, res) => {
+    const allProfiles = store.listProfiles();
+    const eventsByEmail = new Map<string, number>();
+    for (const ev of store.listEventsSince(0)) {
+      const lc = ev.email.toLowerCase();
+      eventsByEmail.set(lc, (eventsByEmail.get(lc) ?? 0) + 1);
+    }
+    const profiles = allProfiles.map((p) => {
+      const agg = store.getAggregate(p.email);
+      const lcEmail = p.email.toLowerCase();
+      const isAdminProfile = admins.includes(lcEmail);
+      // Mask non-admin emails so the wire payload doesn't echo them
+      // verbatim. Operator's own email shows in full so they can spot
+      // themselves at a glance.
+      const masked = isAdminProfile
+        ? p.email
+        : (() => {
+            const [u, d] = p.email.split("@");
+            const left = (u ?? "").slice(0, 3) || "?";
+            return `${left}***@${d ?? "?"}`;
+          })();
+      return {
+        emailMasked: masked,
+        emailHash: emailHash(p.email),
+        handle: p.handle,
+        ageBand: p.ageBand,
+        profileMode: p.profileMode,
+        banned: p.banned,
+        bannedSocial: p.bannedSocial,
+        createdAt: p.createdAt,
+        isAdmin: isAdminProfile,
+        xpTotal: agg?.xpTotal ?? 0,
+        signalCount: p.signals.length,
+        eventsAuthored: eventsByEmail.get(lcEmail) ?? 0,
+      };
+    });
+    res.json({ count: profiles.length, profiles });
+  });
+
+  app.delete(
+    "/v1/social/admin/profiles/by-handle/:handle",
+    requireUser,
+    requireAdmin,
+    (req, res) => {
+      const handle = String(req.params.handle ?? "").trim();
+      if (!handle) return res.status(400).json({ error: "missing_handle" });
+      const target = store.getProfileByHandle(handle);
+      if (!target) return res.status(404).json({ error: "not_found" });
+      // Refuse to delete an admin profile via this endpoint — operator
+      // must remove the email from SOCIAL_ADMIN_EMAILS first if they
+      // really mean it. "rm -rf" safety guard.
+      if (admins.includes(target.email.toLowerCase())) {
+        return res.status(403).json({ error: "cannot_delete_admin" });
+      }
+      const removed = store.deleteProfileCascade(target.email);
+      log.warn("admin_profile_deleted", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        deleted_handle: handle,
+        deleted_email_hash: emailHash(target.email),
+        actor_email_hash: emailHash(
+          (req as Request & { profile: ProfileRecord }).profile.email,
+        ),
+      });
+      res.json({ ok: removed });
+    },
+  );
+
   // -- Admin: telemetry ----------------------------------------------------
   // One JSON blob the AdminAnalytics social panel polls. Cheap to compute
   // since the in-memory store walks once. Postgres adapter provides the

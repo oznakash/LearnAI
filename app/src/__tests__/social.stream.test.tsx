@@ -127,12 +127,19 @@ describe("Spark Stream view", () => {
 });
 
 describe("TabBar respects social / stream / boards flags", () => {
-  it("shows 3 tabs (Home / Tasks / Progress) when all social flags are off (the default)", async () => {
-    // Updated 2026-05-01: Boards used to show unconditionally, but a
-    // dead-link Boards tab is the worst kind of FTUE friction (clicking
-    // a tab whose backing surface doesn't render). Now Boards is gated
-    // by `socialEnabled && boardsEnabled`. See docs/aha-and-network.md
-    // §5.3 + first-time-builder-findings.md #41.
+  it("shows 3 tabs (Home / Tasks / Progress) when all social flags are explicitly off", async () => {
+    // PR #113 flipped social / stream / boards defaults to true. To
+    // exercise the no-social FTUE path (forks running without the
+    // sidecar), we explicitly disable. Boards is gated by both
+    // socialEnabled && boardsEnabled, so any false hides it.
+    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
+    cfg.flags = {
+      ...(cfg.flags ?? {}),
+      socialEnabled: false,
+      streamEnabled: false,
+      boardsEnabled: false,
+    };
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
     mountTabBar({ name: "home" });
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /Stream/i })).toBeNull();

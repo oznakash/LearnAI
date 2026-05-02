@@ -56,7 +56,7 @@ describe("profileCompletenessSlots", () => {
       pictureUrl: "https://example.com/p.png",
       signals: ["ai-foundations"],
       // Extended metadata fields added in PR #112.
-      bio: "Building things at the edge.",
+      bio: "Builder learning in public.",
       skillLevel: "builder",
       location: "Tel Aviv",
       links: { github: "https://github.com/maya" },

@@ -10,11 +10,14 @@ afterEach(() => {
 });
 
 describe("AdminConfig social flags + socialConfig", () => {
-  it("default flags are off; defaults populate sensible socialConfig values", () => {
+  it("default flags are on now that social-svc is provisioned; defaults populate sensible socialConfig values", () => {
     const cfg = defaultAdminConfig();
-    expect(cfg.flags.socialEnabled).toBe(false);
-    expect(cfg.flags.streamEnabled).toBe(false);
-    expect(cfg.flags.boardsEnabled).toBe(false);
+    // PR #113 flipped these from false → true. Forks without social-svc
+    // can override in their own config; the SPA falls back to the
+    // offline service when the sidecar is unreachable.
+    expect(cfg.flags.socialEnabled).toBe(true);
+    expect(cfg.flags.streamEnabled).toBe(true);
+    expect(cfg.flags.boardsEnabled).toBe(true);
     expect(cfg.flags.defaultProfileMode).toBe("open");
     expect(cfg.socialConfig.signalsMaxPerUser).toBe(5);
     expect(cfg.socialConfig.followsMaxOutbound).toBe(500);
@@ -35,9 +38,13 @@ describe("AdminConfig social flags + socialConfig", () => {
     };
     window.localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(legacy));
     const cfg = loadAdminConfig();
-    expect(cfg.flags.socialEnabled).toBe(false);
-    expect(cfg.flags.streamEnabled).toBe(false);
-    expect(cfg.flags.boardsEnabled).toBe(false);
+    // After PR #113 the social flag defaults flipped to true. A legacy
+    // config that doesn't carry these keys gets the new defaults; saved
+    // configs that explicitly set false still keep their saved value
+    // (covered by the round-trip test below).
+    expect(cfg.flags.socialEnabled).toBe(true);
+    expect(cfg.flags.streamEnabled).toBe(true);
+    expect(cfg.flags.boardsEnabled).toBe(true);
     expect(cfg.flags.defaultProfileMode).toBe("open");
     expect(cfg.socialConfig.signalsMaxPerUser).toBe(5);
     expect(cfg.socialConfig.streamWeights.follow).toBe(1.0);
