@@ -726,21 +726,41 @@ export function createApp(opts: AppOpts) {
         )
       : null;
 
-    const candidates = store.listProfiles().filter((p) => {
+    // Collect filter drop-reasons so we can debug the "no humans on the
+    // leaderboard" symptom without instrumenting every device.
+    const allProfiles = store.listProfiles();
+    const drops = {
+      self: 0,
+      blocked: 0,
+      banned: 0,
+      ageBandMismatch: 0,
+      notFollowing: 0,
+      closedProfile: 0,
+      topicMiss: 0,
+    };
+    const candidates = allProfiles.filter((p) => {
       const lc = p.email.toLowerCase();
-      if (lc === meLc) return false;
-      if (blocked.has(lc)) return false;
-      if (p.banned || p.bannedSocial) return false;
-      if (meIsKid !== (p.ageBand === "kid")) return false;
+      if (lc === meLc) { drops.self++; return false; }
+      if (blocked.has(lc)) { drops.blocked++; return false; }
+      if (p.banned || p.bannedSocial) { drops.banned++; return false; }
+      if (meIsKid !== (p.ageBand === "kid")) { drops.ageBandMismatch++; return false; }
       if (followingApproved) {
-        if (!followingApproved.has(lc)) return false;
+        if (!followingApproved.has(lc)) { drops.notFollowing++; return false; }
       } else {
         // Global + topic boards expose only Open profiles. Closed users
         // are searchable by handle but never auto-listed.
-        if (p.profileMode !== "open") return false;
+        if (p.profileMode !== "open") { drops.closedProfile++; return false; }
       }
-      if (topicFilter && !p.signals.includes(topicFilter)) return false;
+      if (topicFilter && !p.signals.includes(topicFilter)) { drops.topicMiss++; return false; }
       return true;
+    });
+
+    log.info("boards_query", {
+      req_id: (req as Request & { _reqId: string })._reqId,
+      scope: scopeRaw,
+      profile_total: allProfiles.length,
+      candidate_count: candidates.length,
+      ...drops,
     });
 
     const ranked = candidates
