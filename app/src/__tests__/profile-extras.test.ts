@@ -49,6 +49,11 @@ describe("profileCompletenessSlots", () => {
     const full = bareProfile({
       pictureUrl: "https://example.com/p.png",
       signals: ["ai-foundations"],
+      // Extended metadata fields added in PR #112.
+      bio: "Building things at the edge.",
+      skillLevel: "builder",
+      location: "Tel Aviv",
+      links: { github: "https://github.com/maya" },
       ownerPrefs: {
         fullName: "Maya Patel",
         showFullName: true,
@@ -58,6 +63,12 @@ describe("profileCompletenessSlots", () => {
         showBadges: true,
         showSignup: true,
         signalsGlobal: true,
+        showBio: true,
+        showPronouns: true,
+        showLocation: true,
+        showHero: true,
+        showSkillLevel: true,
+        showLinks: true,
       },
     });
     expect(profileCompleteness(full)).toBe(100);
