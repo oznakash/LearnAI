@@ -51,6 +51,18 @@ interface RealUserSummary {
   /** 14 ints, sparks/day, oldest-first. Mirrors the SPA's own
    *  computeActivity14d so admin charts agree with player Dashboard. */
   activity_14d?: number[];
+  /** Email policy state (added by mem0#15 onwards). All optional —
+   *  flushQueue's policy engine treats missing values as "no
+   *  unsubscribe / no pause / no recent log". */
+  email_unsubscribed_at?: number | null;
+  email_pause_until?: number | null;
+  email_log?: Array<{
+    id?: string;
+    tpl?: string;
+    sent_at?: number | null;
+    opened_at?: number | null;
+    is_transactional?: boolean;
+  }>;
 }
 interface RealUsersResponse {
   count: number;
