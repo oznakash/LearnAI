@@ -630,7 +630,7 @@ export function createApp(opts: AppOpts) {
     const meIsKid = me.ageBand === "kid";
     const blocked = new Set(store.listBlocked(me.email).map((s) => s.toLowerCase()));
 
-    const scopeRaw = req.params.scope ?? "global";
+    const scopeRaw = String(req.params.scope ?? "global");
     let topicFilter: string | null = null;
     let followingOnly = false;
     if (scopeRaw === "following") {
