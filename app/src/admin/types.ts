@@ -228,6 +228,46 @@ export interface PromptStudioState {
   customNote?: string;
 }
 
+/**
+ * Operator-tunable rate-limit / dedup / pause / opt-out settings for
+ * the email pipeline. flushQueue consults these before any provider
+ * call. Defaults are anti-spam: cap on, 24h window, debounced auto-
+ * flush, unsubscribe + open-pixel auto-injected.
+ */
+export interface EmailPolicy {
+  /** Master switch. When false, the queue behaves like the original
+   *  manual-flush, no-cap, no-injection version. */
+  enabled: boolean;
+  /** Cap window in hours. Default 24. */
+  capPerWindowHours: number;
+  /** When true, transactional templates (`first-spark`, `welcome`,
+   *  `level-up`, `boss-beaten`, `streak-save`) bypass the cap.
+   *  Default false — operator-side caution beats operator-side trust. */
+  transactionalBypass: boolean;
+  /** Auto-flush debounce. Time in seconds we wait after the last
+   *  queue event before sending. Lets us collect competing
+   *  transactionals (welcome + first-spark fired 2s apart) and pick
+   *  one. Default 30. */
+  autoFlushDebounceSeconds: number;
+  /** When true, the queue auto-flushes on a debounced timer. When
+   *  false, only manual "Mark all sent" sends. Default true. */
+  autoFlushEnabled: boolean;
+  /** Append a one-click unsubscribe link to every send. Default true. */
+  appendUnsubscribe: boolean;
+  /** Embed a 1×1 open-tracking pixel in every send. Default true. */
+  appendOpenPixel: boolean;
+  /** When N consecutive emails are sent without an open and the most
+   *  recent is at least 24h old, pause sending to that user for
+   *  `pauseDurationDays`. Default {2 unread, 30 days}. */
+  pauseOnUnreadEnabled: boolean;
+  pauseOnUnreadCount: number;
+  pauseDurationDays: number;
+  /** Highest priority first. When the same recipient has multiple
+   *  queued sends in a single flush window, the lowest-index one wins
+   *  and the rest are marked superseded. */
+  priorityOrder: EmailTemplateId[];
+}
+
 export interface AdminConfig {
   bootstrapped: boolean;
   admins: string[];               // gmail addresses
@@ -235,6 +275,7 @@ export interface AdminConfig {
   flags: FeatureFlags;
   defaultDailyMinutes: number;
   emailConfig: EmailConfig;
+  emailPolicy: EmailPolicy;
   emailTemplates: Record<EmailTemplateId, EmailTemplate>;
   perUserDailyTokenCap: number;   // 0 = unlimited
   emailQueue: QueuedEmail[];
@@ -262,8 +303,40 @@ export interface QueuedEmail {
   subjectRendered: string;
   bodyRendered: string;
   queuedAt: number;
-  status: "queued" | "sent" | "failed";
+  /**
+   * `queued` — waiting for the next flush (auto or manual).
+   * `sent` / `failed` — terminal, set by the provider call.
+   * `superseded` — another queued email beat this one on priority for
+   *   the same recipient inside one flush window.
+   * `rate-limited` — recipient already received a send inside the
+   *   `capPerWindowHours` window.
+   * `unsubscribed` — recipient has `emailUnsubscribedAt` set.
+   * `paused` — recipient is in the pause-on-unread cooldown.
+   */
+  status:
+    | "queued"
+    | "sent"
+    | "failed"
+    | "superseded"
+    | "rate-limited"
+    | "unsubscribed"
+    | "paused";
   error?: string;
+  /** Server-side log id minted by mem0's `prepare` endpoint when this
+   *  send actually fired. Correlates later opens with this entry. */
+  prepareLogId?: string;
+  /** Server-side decision returned by mem0's `prepare` endpoint. */
+  serverDecision?: string;
+  /**
+   * Signed one-click unsubscribe URL (mem0-minted, HMAC-validated).
+   * sender.ts uses this to build provider-specific
+   * `List-Unsubscribe` + `List-Unsubscribe-Post` headers (RFC 8058)
+   * so Gmail's native Unsubscribe pill shows up.
+   */
+  unsubscribeUrl?: string;
+  /** Open-tracking pixel URL — already injected into the rendered
+   *  body in flushQueue, kept here for diagnosis. */
+  openPixelUrl?: string;
 }
 
 /**
