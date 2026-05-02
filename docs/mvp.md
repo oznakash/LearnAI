@@ -70,7 +70,7 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ### Social layer (Sprint 2 — shipped behind feature flags)
 
-- **Public Profile** at `/u/<handle>` — behavioral résumé: Topic map, Signals, currently-working-on, 14-day activity, badges. No bio, no employer, no email displayed. Closed-mode profiles render a single gated card to non-followers.
+- **Public Profile** at `/u/<handle>` — behavioral résumé: Topic map, Signals, currently-working-on, 14-day activity, badges. No bio, no employer, no email displayed. Closed-mode profiles render a single gated card to non-followers. Display name and avatar auto-sync from the player's Google identity until the user explicitly customizes the profile (the offline service falls back to `identity.name` / `identity.picture` in its viewer projection — explicit `updateProfile` patches still win).
 - **Settings → Network** — Profile mode toggle (Open / Closed), field-level visibility (full name, current Topic, Topic map, activity, badges, sign-up month, Global Leaderboard), Signals picker (max 5 Topics), Take-me-down panic switch.
 - **Follow / Unfollow / Mute / Block / Report** — every Profile (and inline on Stream cards). Asymmetric graph; report auto-mutes; block precedence removes existing edges. 5-reason picker on reports, 280-char note.
 - **Topic Leaderboards (Boards)** — replaces the single Guild leaderboard with tabbed Global / per-Topic / Following + Week/Month/All-time pills. Per-Topic tabs only appear for the player's active Signals (max 5); `+ Topic` button opens an ad-hoc picker for any of the 12 Topics. Mock filler ("sample" tag) below real rows when sparse.

@@ -77,6 +77,13 @@ export function SocialProvider({ children }: { children: ReactNode }) {
 
   const email = player.identity?.email ?? "";
   const ageBandIsKid = player.profile?.ageBand === "kid";
+  // Identity-sync: pass the live Google identity through to the offline
+  // service so the public profile auto-syncs to the latest name + picture
+  // until the user explicitly customizes it. Without this, a freshly
+  // signed-in user's `/u/<handle>` shows email-derived initials instead
+  // of their actual Google avatar — the bug fixed here.
+  const identityName = player.identity?.name ?? "";
+  const identityPicture = player.identity?.picture ?? "";
 
   // Socials live behind the same server-auth shape as memories. In
   // production we point at the social-svc URL via the upstream proxy; in
@@ -97,8 +104,18 @@ export function SocialProvider({ children }: { children: ReactNode }) {
         socialEnabled: !!config.flags.socialEnabled,
         serverUrl,
         bearerToken,
+        identityName,
+        identityPicture,
       }),
-    [email, ageBandIsKid, config.flags.socialEnabled, serverUrl, bearerToken],
+    [
+      email,
+      ageBandIsKid,
+      config.flags.socialEnabled,
+      serverUrl,
+      bearerToken,
+      identityName,
+      identityPicture,
+    ],
   );
 
   // Keep a ref so callbacks don't capture a stale service after a flag

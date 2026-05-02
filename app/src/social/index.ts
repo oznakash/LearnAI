@@ -37,6 +37,16 @@ export interface SelectSocialOpts {
   serverUrl: string;
   /** Bearer for /v1/social — session JWT in production, admin key in demo. */
   bearerToken?: string;
+  /**
+   * Live Google identity values from `player.identity`. The offline
+   * service uses these as the fallback for `displayName` / `pictureUrl`
+   * when the player hasn't explicitly customized their public profile —
+   * so a freshly signed-in user immediately sees their Google name + avatar
+   * on `/u/<handle>` instead of email-derived defaults. The online service
+   * ignores these (the server reads the JWT claims directly).
+   */
+  identityName?: string;
+  identityPicture?: string;
 }
 
 /**
@@ -50,7 +60,12 @@ export interface SelectSocialOpts {
 export function selectSocialService(opts: SelectSocialOpts): SocialService {
   const email = (opts.email ?? "").trim();
   if (!email || !opts.socialEnabled) {
-    return new OfflineSocialService({ email, ageBandIsKid: opts.ageBandIsKid });
+    return new OfflineSocialService({
+      email,
+      ageBandIsKid: opts.ageBandIsKid,
+      identityName: opts.identityName,
+      identityPicture: opts.identityPicture,
+    });
   }
   // Same-origin is the default in production: the social-svc sidecar
   // runs in the same container as the SPA. Pass an empty serverUrl and
@@ -68,7 +83,12 @@ export function selectSocialService(opts: SelectSocialOpts): SocialService {
   const serverUrl = (opts.serverUrl ?? "").trim();
   const bearer = (opts.bearerToken ?? "").trim();
   if (!serverUrl && !bearer) {
-    return new OfflineSocialService({ email, ageBandIsKid: opts.ageBandIsKid });
+    return new OfflineSocialService({
+      email,
+      ageBandIsKid: opts.ageBandIsKid,
+      identityName: opts.identityName,
+      identityPicture: opts.identityPicture,
+    });
   }
   return new OnlineSocialService({
     serverUrl,
