@@ -177,11 +177,7 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
       <section className="card p-5 space-y-3">
         <h2 className="h2">API key (for dynamic content)</h2>
         <p className="muted text-xs">
-          Optional. With an Anthropic or OpenAI key, {adminCfg.branding.appName} can generate fresh Sparks + tips on demand.
-          Your key is stored in this browser only and used to call the provider directly.
-        </p>
-        <p className="text-[11px] text-bad">
-          ⚠ Stored unencrypted in localStorage and used directly from this browser. Use a low-spend, scoped key. Any browser extension or XSS bug on this domain could read it. Erasing local data wipes it.
+          Optional. With an Anthropic or OpenAI key, {adminCfg.branding.appName} can generate fresh Sparks + tips on demand. Your key stays in this browser only and goes straight to the provider — we never see it. Tip: a scoped key with a low monthly cap is plenty.
         </p>
         <div className="grid sm:grid-cols-3 gap-2">
           <select className="input" value={provider} onChange={(e) => setProvider(e.target.value as never)}>
