@@ -145,6 +145,53 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     refreshHealth();
   }, [refreshHealth, service]);
 
+  // ---- identity sync to the online social server ------------------------
+  // PR #94 fixed the offline projection: when the user has no explicit
+  // fullName / pictureUrl set, the offline service falls back to the
+  // values from `player.identity`. The online server has no such
+  // fallback — its `pictureUrl` field stays empty until *something*
+  // calls `updateProfile`. Without a push, the SSR public profile's
+  // `og:image` falls back to the brand default, social-link unfurls
+  // never show the user's real avatar, and the "Hey {name}" copy is
+  // missing on every signed-in screen the operator hasn't manually
+  // edited.
+  //
+  // Strategy: track the last-pushed identity values per email in a
+  // ref; whenever they change (new sign-in, new Google name / avatar),
+  // fire a single fire-and-forget `updateProfile` patch carrying the
+  // delta. `withSocialGuard` swallows network blips; the server's
+  // PUT /v1/social/me is idempotent.
+  const lastPushedIdentityRef = useRef<{
+    email?: string;
+    name?: string;
+    picture?: string;
+  }>({});
+  useEffect(() => {
+    const id = player.identity;
+    if (!id?.email) {
+      lastPushedIdentityRef.current = {};
+      return;
+    }
+    const last = lastPushedIdentityRef.current;
+    if (
+      last.email === id.email &&
+      last.name === id.name &&
+      last.picture === id.picture
+    ) {
+      return;
+    }
+    lastPushedIdentityRef.current = {
+      email: id.email,
+      name: id.name,
+      picture: id.picture,
+    };
+    const patch: ProfilePatch = {};
+    if (id.name && id.name.trim()) patch.fullName = id.name.trim();
+    if (id.picture && id.picture.trim()) patch.pictureUrl = id.picture.trim();
+    if (Object.keys(patch).length === 0) return;
+    void withSocialGuard(() => serviceRef.current.updateProfile(patch), null);
+  }, [player.identity?.email, player.identity?.name, player.identity?.picture]);
+
   // ---- snapshot pipeline (P0-1 fix) -------------------------------------
   // Watch player state. After hydrate, every meaningful state change
   // diffs prev → next via buildSnapshot and fires a fire-and-forget

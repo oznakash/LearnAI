@@ -93,9 +93,16 @@ export function renderProfileHtml(opts: RenderOpts): string {
   const safeName = escape(displayName);
   const safeHandle = escape(handle);
 
-  // Picture: only render if it survives the URL safelist.
+  // Picture: only render if it survives the URL safelist. When the
+  // user has a Google avatar (lh3.googleusercontent.com), use it for
+  // og:image so social-link unfurls show the real face — without this
+  // every share card fell back to the generic LearnAI default.
   const picture = safeUrl(profile.pictureUrl);
   const ogImage = picture || DEFAULT_OG_IMAGE;
+  // og:image:width/height are optional but help LinkedIn pick the
+  // right crop. Google avatars are square; fall back to the 1200x630
+  // default for the brand image.
+  const isSquareOgImage = picture.length > 0;
 
   const tier = aggregate?.guildTier ?? "Builder";
   const xp = aggregate?.xpTotal ?? 0;
@@ -111,6 +118,7 @@ export function renderProfileHtml(opts: RenderOpts): string {
     description,
     canonical: profileUrl,
     ogImage,
+    ogImageIsSquare: isSquareOgImage,
     profileUrl,
     handle,
     displayName,
@@ -170,6 +178,8 @@ function renderHead(opts: {
   description: string;
   canonical: string;
   ogImage: string;
+  /** When true, omit the 1200x630 og:image:width/height (square avatars use auto). */
+  ogImageIsSquare?: boolean;
   profileUrl: string;
   handle: string;
   displayName: string;
@@ -227,16 +237,22 @@ function renderHead(opts: {
   <meta property="og:description" content="${safeDesc}">
   <meta property="og:url" content="${safeCanonical}">
   <meta property="og:image" content="${safeOg}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  ${opts.ogImageIsSquare ? "" : `<meta property="og:image:width" content="1200">\n  <meta property="og:image:height" content="630">`}
   <meta property="profile:username" content="${escapeAttr(opts.handle)}">
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
+  <!-- Twitter Card. summary_large_image for the brand fallback;
+       summary (square thumbnail) when we have a square Google avatar. -->
+  <meta name="twitter:card" content="${opts.ogImageIsSquare ? "summary" : "summary_large_image"}">
   <meta name="twitter:site" content="@learnai">
   <meta name="twitter:title" content="${safeTitle}">
   <meta name="twitter:description" content="${safeDesc}">
   <meta name="twitter:image" content="${safeOg}">
+
+  <!-- Browser-level privacy hints. Reduces the cross-site signal Safari
+       weighs when classifying third-party image fetches (e.g. Google
+       avatar URLs from lh3.googleusercontent.com), which used to trip
+       the iOS "Reduce Protections" prompt on this page. -->
+  <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <!-- Favicon (kept in sync with the SPA shell) -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -328,7 +344,7 @@ function renderOpenProfile(opts: {
 }): string {
   const initials = computeInitials(opts.displayName);
   const avatar = opts.picture
-    ? `<img src="${escapeAttr(opts.picture)}" alt="" loading="lazy">`
+    ? `<img src="${escapeAttr(opts.picture)}" alt="" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">`
     : `<span>${escape(initials)}</span>`;
 
   // Currently working on
@@ -433,7 +449,7 @@ function renderClosedGate(opts: {
 }): string {
   const initials = computeInitials(opts.displayName);
   const avatar = opts.picture
-    ? `<img src="${escapeAttr(opts.picture)}" alt="" loading="lazy">`
+    ? `<img src="${escapeAttr(opts.picture)}" alt="" loading="lazy" referrerpolicy="no-referrer" crossorigin="anonymous">`
     : `<span>${escape(initials)}</span>`;
   return `<body>
   <header class="topbar">

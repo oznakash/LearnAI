@@ -132,7 +132,39 @@ describe("ssr — renderProfileHtml (open profile)", () => {
     expect(html).toContain(
       'property="og:image" content="https://lh3.googleusercontent.com/maya/photo.jpg"',
     );
+    // When the user has a (square) Google avatar, we use Twitter's
+    // `summary` card (square thumbnail) instead of `summary_large_image`
+    // (which expects a 1200x630 image and crops square avatars badly).
+    expect(html).toContain('name="twitter:card" content="summary"');
+  });
+
+  it("falls back to summary_large_image + 1200x630 dims when there's no user picture", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile({ pictureUrl: undefined }),
+      aggregate: makeAggregate(),
+    });
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
+    expect(html).toContain('property="og:image:width" content="1200"');
+    expect(html).toContain('property="og:image:height" content="630"');
+  });
+
+  it("avatar img carries referrerpolicy=no-referrer + crossorigin=anonymous (Safari Reduce Protections mitigation)", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile(),
+      aggregate: makeAggregate(),
+    });
+    expect(html).toMatch(/<img[^>]*referrerpolicy="no-referrer"/);
+    expect(html).toMatch(/<img[^>]*crossorigin="anonymous"/);
+  });
+
+  it("emits a strict-origin-when-cross-origin referrer meta hint", () => {
+    const html = renderProfileHtml({
+      profile: makeProfile(),
+      aggregate: makeAggregate(),
+    });
+    expect(html).toContain(
+      'name="referrer" content="strict-origin-when-cross-origin"',
+    );
   });
 
   it("emits JSON-LD ProfilePage with Person mainEntity", () => {
