@@ -2,9 +2,15 @@
 //
 // `index.html` ships static OG meta for the site as a whole. Open profile
 // pages can usefully give crawlers and unfurlers their own title, OG
-// description, and a `Person` JSON-LD block. We mutate the head from
-// `Profile.tsx` on mount and revert on unmount so internal navigation
-// doesn't leak per-profile meta.
+// description, and a `Person` JSON-LD block.
+//
+// We *update existing meta tags in place* (matched by their property/name
+// selector) and stash their original `content` on a `data-lai-seo-original`
+// attribute so unmount can restore them. If a tag doesn't exist we create
+// one tagged with `data-lai-seo-created="1"` so unmount can remove it.
+// This avoids the duplicate-tag-bug an id-keyed approach would cause:
+// unfurlers (Slack, LinkedIn, Twitter) read the *first* matching tag, so
+// a "create new" approach would leave the static index.html tags winning.
 //
 // Closed profiles, "not found", and the closed-gate view never call
 // setProfileSeo() — only the resolved Open profile does.
@@ -21,51 +27,76 @@ export interface ProfileSeo {
   jsonLd: Record<string, unknown>;
 }
 
-const META_IDS = [
-  "__lai_meta_desc",
-  "__lai_og_title",
-  "__lai_og_desc",
-  "__lai_og_url",
-  "__lai_og_image",
-  "__lai_og_type",
-  "__lai_tw_card",
-  "__lai_tw_title",
-  "__lai_tw_desc",
-] as const;
+const ORIGINAL_ATTR = "data-lai-seo-original";
+const CREATED_ATTR = "data-lai-seo-created";
 const JSON_LD_ID = "__lai_ld_profile";
 const TITLE_BACKUP_ATTR = "data-lai-title-backup";
 
-function setMeta(id: string, attr: "name" | "property", attrValue: string, content: string) {
+interface MetaSpec {
+  attr: "name" | "property";
+  attrValue: string;
+}
+
+const META_KEYS: MetaSpec[] = [
+  { attr: "name", attrValue: "description" },
+  { attr: "property", attrValue: "og:title" },
+  { attr: "property", attrValue: "og:description" },
+  { attr: "property", attrValue: "og:url" },
+  { attr: "property", attrValue: "og:type" },
+  { attr: "property", attrValue: "og:image" },
+  { attr: "name", attrValue: "twitter:card" },
+  { attr: "name", attrValue: "twitter:title" },
+  { attr: "name", attrValue: "twitter:description" },
+];
+
+function applyMeta(spec: MetaSpec, content: string) {
   if (typeof document === "undefined") return;
-  let el = document.getElementById(id) as HTMLMetaElement | null;
+  const sel = `meta[${spec.attr}="${spec.attrValue}"]`;
+  let el = document.head.querySelector(sel) as HTMLMetaElement | null;
   if (!el) {
     el = document.createElement("meta");
-    el.id = id;
-    el.setAttribute(attr, attrValue);
+    el.setAttribute(spec.attr, spec.attrValue);
+    el.setAttribute(CREATED_ATTR, "1");
     document.head.appendChild(el);
+  } else if (!el.hasAttribute(ORIGINAL_ATTR)) {
+    // First touch — remember what was here so we can restore it on unmount.
+    el.setAttribute(ORIGINAL_ATTR, el.getAttribute("content") ?? "");
   }
   el.setAttribute("content", content);
 }
 
+function restoreMeta(spec: MetaSpec) {
+  if (typeof document === "undefined") return;
+  const sel = `meta[${spec.attr}="${spec.attrValue}"]`;
+  const el = document.head.querySelector(sel) as HTMLMetaElement | null;
+  if (!el) return;
+  if (el.getAttribute(CREATED_ATTR) === "1") {
+    el.remove();
+    return;
+  }
+  if (el.hasAttribute(ORIGINAL_ATTR)) {
+    el.setAttribute("content", el.getAttribute(ORIGINAL_ATTR) ?? "");
+    el.removeAttribute(ORIGINAL_ATTR);
+  }
+}
+
 export function setProfileSeo(seo: ProfileSeo) {
   if (typeof document === "undefined") return;
-  // Stash the original <title> exactly once so clearProfileSeo can restore
-  // it. Multiple Profile mounts in a row reuse the same backup.
   const head = document.head;
   if (!head.getAttribute(TITLE_BACKUP_ATTR)) {
     head.setAttribute(TITLE_BACKUP_ATTR, document.title);
   }
   document.title = seo.title;
-  setMeta("__lai_meta_desc", "name", "description", seo.description);
-  setMeta("__lai_og_title", "property", "og:title", seo.title);
-  setMeta("__lai_og_desc", "property", "og:description", seo.description);
-  setMeta("__lai_og_url", "property", "og:url", seo.url);
-  setMeta("__lai_og_type", "property", "og:type", "profile");
-  setMeta("__lai_tw_card", "name", "twitter:card", "summary_large_image");
-  setMeta("__lai_tw_title", "name", "twitter:title", seo.title);
-  setMeta("__lai_tw_desc", "name", "twitter:description", seo.description);
+  applyMeta({ attr: "name", attrValue: "description" }, seo.description);
+  applyMeta({ attr: "property", attrValue: "og:title" }, seo.title);
+  applyMeta({ attr: "property", attrValue: "og:description" }, seo.description);
+  applyMeta({ attr: "property", attrValue: "og:url" }, seo.url);
+  applyMeta({ attr: "property", attrValue: "og:type" }, "profile");
+  applyMeta({ attr: "name", attrValue: "twitter:card" }, "summary_large_image");
+  applyMeta({ attr: "name", attrValue: "twitter:title" }, seo.title);
+  applyMeta({ attr: "name", attrValue: "twitter:description" }, seo.description);
   if (seo.imageUrl) {
-    setMeta("__lai_og_image", "property", "og:image", seo.imageUrl);
+    applyMeta({ attr: "property", attrValue: "og:image" }, seo.imageUrl);
   }
 
   let script = document.getElementById(JSON_LD_ID) as HTMLScriptElement | null;
@@ -86,10 +117,7 @@ export function clearProfileSeo() {
     document.title = original;
     head.removeAttribute(TITLE_BACKUP_ATTR);
   }
-  for (const id of META_IDS) {
-    const el = document.getElementById(id);
-    el?.remove();
-  }
+  for (const spec of META_KEYS) restoreMeta(spec);
   document.getElementById(JSON_LD_ID)?.remove();
 }
 
