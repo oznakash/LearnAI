@@ -195,7 +195,7 @@ export function Network({ onNav }: Props) {
       {/* 2. Field-level visibility */}
       {me.profileMode === "open" && me.ownerPrefs && (
         <section className="card p-5 space-y-3">
-          <h2 className="h2">When my profile is Open, also show:</h2>
+          <h2 className="h2">When my profile is Public, also show:</h2>
           <div className="space-y-2">
             <FieldToggle
               label="My current Topic + level (what I'm working on)"
