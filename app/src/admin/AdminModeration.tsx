@@ -69,6 +69,14 @@ export function AdminModeration() {
   }, [adminEmail, config.socialConfig.apiKey, player.serverSession?.token]);
 
   const refresh = async () => {
+    // Skip until the admin's identity has hydrated — otherwise the
+    // x-user-email header goes out as "" and social-svc 401s. The test
+    // suite + production both rely on this gate.
+    if (!adminEmail) {
+      setLoading(false);
+      setRows([]);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
