@@ -90,6 +90,56 @@ The SPA loads `https://accounts.google.com/gsi/client` and renders an invisible 
 - **Why TypeScript and not a CMS**: version control, code review, rich-typed exercises, zero infra. Forks copy the same shape.
 - **Admin overrides**: `AdminConfig.contentOverrides` lets an admin replace any topic by id at runtime. Lives in admin localStorage today.
 
+### 5a. The content engine (Sprint #2)
+
+The seed curriculum is the cold start; the content engine is what keeps it fresh. Three boxes, all live:
+
+```mermaid
+flowchart LR
+    subgraph Sources["📡 External sources (creators registry)"]
+        AS["AlphaSignal<br/>weekly digest"]
+        SW["Simon Willison<br/>weblog"]
+        HN["Hacker News / YC"]
+        ANT["Anthropic news"]
+        DM["DeepMind blog"]
+        LS["Latent Space"]
+        HF["Hugging Face"]
+        LP["Lenny's Podcast<br/>(319 transcripts)"]
+        YT["YouTube channels<br/>(3Blue1Brown, etc.)"]
+    end
+
+    subgraph Engine["🧪 Content engine"]
+        FRESH["Freshness model<br/>(per-category shelf life)"]
+        CRIT["Critique pattern<br/>(7-chip aggregation)"]
+        AGE["Age-band picker<br/>(kid / teen / adult)"]
+        GEN["Spark generation<br/>(prompt with bias stanzas)"]
+    end
+
+    subgraph Surface["🎯 Player surface"]
+        SPARKS["Sparks<br/>(MicroRead · Tip · PodcastNugget · YoutubeNugget · …)"]
+        CHIP["Freshness chip<br/>(when addedAt + category set)"]
+        VOTE["👎 critique chips<br/>(too-theoretical · outdated · …)"]
+    end
+
+    Sources -->|"attribution + date"| Engine
+    Engine --> SPARKS
+    SPARKS --> CHIP
+    SPARKS --> VOTE
+    VOTE -->|"memory category=critique<br/>(metadata: chip, sparkCategory,<br/>sparkType, vocabAtoms)"| CRIT
+    CRIT -->|"prompt-stanza bias"| GEN
+    GEN --> Sources
+```
+
+| Layer | Where it lives | What it does |
+|---|---|---|
+| **Creators registry** | `app/src/content/creators.ts` | One row per source — id, name, kind (`podcast` / `blog` / `aggregator` / `youtube`), avatar, accent colour, credit URL + label, short bio. Sparks reference the creator id; the renderer surfaces avatar + "via X" without inlining attribution into every Spark body. |
+| **Spark categories + freshness** | `app/src/types.ts` (`SparkCategory`), `app/src/components/Exercise.tsx` (`FreshnessChip`) | Six categories — `principle` (730 d), `pattern` (180 d), `tooling` (90 d), `company` (30 d), `news` (14 d), `frontier` (7 d). When a Spark sets `addedAt` + `category`, the renderer computes age and shows a green / yellow / red chip ("3 d ago" / "stale soon" / "outdated"). |
+| **Age-band tone** | `app/src/types.ts` (`bodyByAgeBand`), `Exercise.tsx` MicroReadView/TipView | MicroRead and Tip Sparks may carry `bodyByAgeBand: { kid?, teen?, adult? }`. The Exercise renderer reads `state.profile.ageBand` and picks the right body, falling back to the default `body` when the band-specific copy is absent. |
+| **Critique chips** | `app/src/components/SparkThumbsRow.tsx` (`CRITIQUE_CHIPS`), `app/src/store/critique.ts` (`aggregateCritiques`, `critiquePatternToPromptStanza`) | A 👎 vote opens 7 chips (too-theoretical, wrong-examples, outdated, too-jargon, watered-down, wrong-level, too-long). Tapping a chip writes a `critique`-category memory whose metadata records `sparkCategory`, `sparkType`, `vocabAtoms`. Aggregation across the user (or, in admin, across users) yields a small **prompt stanza** that biases future generation — "avoid principle Sparks; users find them theoretical" — instead of waiting for per-Spark vote stats to converge. |
+| **Source-anchored variants** | `Exercise.tsx` (`PodcastNuggetView`, `YoutubeNuggetView`) | Two source-anchored Spark types: PodcastNugget (Lenny's Podcast, 12 nuggets seeded) and YoutubeNugget (any video ≥ 5 min, ≤ 60 d old, opens in new tab). Both render with creator attribution + a CTA to "ask Claude" with the quote pre-loaded. |
+
+The engine is **read-write loop**, not a one-time generator: every 👎 chip is a write back into the cognition layer that shapes the next generation cycle. At small N (< 1k users), per-Spark vote counts are statistical noise — but structured chip metadata aggregates into a prompt bias even at N = 50, because the *category* + *teaching shape* + *vocab* dimensions cluster much faster than any single Spark's vote tally. See [`content-freshness.md`](./content-freshness.md) for the full doctrine.
+
 ### 6. The admin console
 
 - 8 tabs: Users · Analytics · Memory · Emails · Tuning · Content · Prompt Studio · Config.

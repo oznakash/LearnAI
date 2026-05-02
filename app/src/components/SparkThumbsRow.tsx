@@ -2,6 +2,27 @@ import { useState } from "react";
 import type { SparkSignal, SparkVote, TopicId } from "../types";
 
 /**
+ * Eight critique chips a user can tap on a 👎 vote. Each maps to a
+ * memory-category `critique` write that aggregates *across Sparks of
+ * the same shape* — biasing future content generation, not just future
+ * ranking of the disliked Spark. See `docs/content-freshness.md` §5.
+ *
+ * Why structured chips beat free text: at small N, per-Spark vote
+ * counts are noisy; structured critique signal aggregates into a
+ * generation prompt bias even with N=50.
+ */
+export const CRITIQUE_CHIPS = [
+  { id: "too-theoretical", emoji: "🪨", label: "Too theoretical" },
+  { id: "wrong-examples", emoji: "🧪", label: "Wrong examples" },
+  { id: "outdated", emoji: "🪦", label: "Outdated" },
+  { id: "too-jargon", emoji: "🧠", label: "Too jargon-heavy" },
+  { id: "watered-down", emoji: "🦠", label: "Watered down" },
+  { id: "wrong-level", emoji: "📏", label: "Wrong level" },
+  { id: "too-long", emoji: "📜", label: "Too long" },
+] as const;
+export type CritiqueChipId = (typeof CRITIQUE_CHIPS)[number]["id"];
+
+/**
  * The Spark action surface — two rows.
  *
  * Top row (quality rating about the Spark itself):
@@ -31,6 +52,7 @@ export function SparkThumbsRow({
   sourceUrl,
   sourceLabel,
   hideSignalRow = false,
+  onCritique,
 }: {
   sparkId: string;
   sparkTitle: string;
@@ -55,10 +77,30 @@ export function SparkThumbsRow({
    * stays hidden until stage `returning`. Default: false (show).
    */
   hideSignalRow?: boolean;
+  /**
+   * Fires when the user taps a critique chip on a 👎 vote. The parent
+   * writes a `critique`-category memory whose aggregate biases future
+   * content generation. See `docs/content-freshness.md` §5.
+   */
+  onCritique?: (chip: CritiqueChipId) => void;
 }) {
   // Quality-rating (👎) reason input state.
   const [showVoteReason, setShowVoteReason] = useState(false);
   const [voteReason, setVoteReason] = useState("");
+  const [tappedChips, setTappedChips] = useState<Set<CritiqueChipId>>(new Set());
+
+  const toggleChip = (id: CritiqueChipId) => {
+    setTappedChips((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        onCritique?.(id);
+      }
+      return next;
+    });
+  };
 
   // Zoom-in panel state.
   const [zoomedIn, setZoomedIn] = useState(false);
@@ -152,28 +194,53 @@ export function SparkThumbsRow({
           </span>
         )}
         {showVoteReason && (
-          <div className="basis-full flex flex-wrap items-center gap-2 mt-1">
-            <input
-              type="text"
-              placeholder="(optional) Tell us why — one line"
-              value={voteReason}
-              onChange={(e) => setVoteReason(e.target.value.slice(0, 200))}
-              className="input flex-1 text-sm"
-              aria-label="Reason for skipping"
-            />
-            <button type="button" onClick={submitVoteReason} className="btn-primary text-xs">
-              {voteReason.trim() ? "Save reason" : "Done"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowVoteReason(false);
-                setVoteReason("");
-              }}
-              className="btn-ghost text-xs"
-            >
-              Cancel
-            </button>
+          <div className="basis-full flex flex-col gap-2 mt-2">
+            {onCritique && (
+              <div className="flex flex-wrap gap-1.5">
+                {CRITIQUE_CHIPS.map((chip) => {
+                  const tapped = tappedChips.has(chip.id);
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => toggleChip(chip.id)}
+                      aria-pressed={tapped}
+                      className={`pill text-[11px] transition ${
+                        tapped
+                          ? "bg-bad/20 border border-bad text-bad"
+                          : "bg-white/5 border border-white/10 text-white/70 hover:border-white/30 hover:text-white"
+                      }`}
+                    >
+                      {chip.emoji} {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="(optional) Tell us why — one line"
+                value={voteReason}
+                onChange={(e) => setVoteReason(e.target.value.slice(0, 200))}
+                className="input flex-1 text-sm"
+                aria-label="Reason for skipping"
+              />
+              <button type="button" onClick={submitVoteReason} className="btn-primary text-xs">
+                {voteReason.trim() ? "Save reason" : "Done"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVoteReason(false);
+                  setVoteReason("");
+                  setTappedChips(new Set());
+                }}
+                className="btn-ghost text-xs"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
         {currentVote === null && (

@@ -59,7 +59,24 @@ export type ExerciseType =
   | "buildcard"
   | "tip"
   | "boss"
-  | "podcastnugget";
+  | "podcastnugget"
+  | "youtubenugget";
+
+/**
+ * The freshness category of a Spark. Drives the shelf-life model in
+ * `docs/content-freshness.md` §2 — `news` ages in 14 days, `pattern`
+ * in 6 months, `principle` in 2 years. The renderer uses this to show
+ * a freshness chip ("📅 Added <date>" / "🕒 Aging" / "⚠️ Stale") and the
+ * sequencer uses it to deprioritize stale Sparks when the admin's
+ * `flags.autoSkipStaleContent` is on.
+ */
+export type SparkCategory =
+  | "principle"   // RAG concept · cost-engineering thesis · eval discipline. 2-year shelf.
+  | "pattern"     // Router pattern · prompt caching · LLM-as-judge. 6-month shelf.
+  | "tooling"     // Cursor / Claude Code / pgvector / Pinecone. 3-month shelf.
+  | "company"     // Anthropic strategy · Stripe Press essays. 30-day shelf.
+  | "news"        // Today's launch · today's release note · today's blog. 14-day shelf.
+  | "frontier";   // arXiv preprints · lab leaks · leadership moves. 7-day shelf.
 
 export type VisualKey =
   | "neural"
@@ -145,6 +162,27 @@ export interface MicroRead {
   vocab?: VocabAtom[];
   /** Optional source attribution. See {@link SparkSource}. */
   source?: SparkSource;
+  /**
+   * Optional freshness category. See {@link SparkCategory} +
+   * `docs/content-freshness.md` §2. When set, the renderer surfaces a
+   * `📅 Added` / `🕒 Aging` / `⚠️ Stale` chip; the sequencer can
+   * deprioritize stale content. Required for time-sensitive sparks
+   * (`tooling`, `company`, `news`, `frontier`).
+   */
+  category?: SparkCategory;
+  /**
+   * ISO date the Spark was authored or last reviewed. Used with
+   * `category` to compute the freshness chip. A `category` without
+   * `addedAt` shows the category badge but no aging signal.
+   */
+  addedAt?: string;
+  /**
+   * Optional age-band-specific body text. The renderer picks
+   * `bodyByAgeBand[profile.ageBand]` first; falls back to `body`. Use
+   * for Sparks whose adult voice is off-key for kids — see
+   * `docs/content-freshness.md` §4 for the kid-voice rules.
+   */
+  bodyByAgeBand?: { kid?: string; teen?: string; adult?: string };
 }
 
 export interface QuickPick {
@@ -203,6 +241,56 @@ export interface Tip {
   vocab?: VocabAtom[];
   /** Optional source attribution. See {@link SparkSource}. */
   source?: SparkSource;
+  /** See {@link SparkCategory} + `docs/content-freshness.md` §2. */
+  category?: SparkCategory;
+  /** ISO date — see {@link MicroRead.addedAt}. */
+  addedAt?: string;
+  /** See {@link MicroRead.bodyByAgeBand} + `docs/content-freshness.md` §4. */
+  bodyByAgeBand?: { kid?: string; teen?: string; adult?: string };
+}
+
+/**
+ * A short, attributed nugget extracted from a YouTube video. Same
+ * compression rubric and curation discipline as `PodcastNugget` (see
+ * `docs/lenny-archive.md` §4); different source. Pilot constraints (per
+ * `docs/content-freshness.md` §7):
+ *   - source video duration ≥ 5 minutes
+ *   - source video published within the last 2 months at curation time
+ *   - quote ≤ 60 words
+ *   - card opens the original video in a new tab on click
+ *
+ * Render shape parallel to `PodcastNugget` — chip → guest line →
+ * blockquote → takeaway → optional CTA → "Watch on YouTube →" link. The
+ * chip is YouTube-red-tinted to set it apart visually.
+ */
+export interface YoutubeNugget {
+  type: "youtubenugget";
+  /** ≤ 60 words. Direct quote or close paraphrase from the video. */
+  quote: string;
+  /** One sentence. The takeaway the user walks away with. */
+  takeaway: string;
+  /** Source attribution — never empty. */
+  source: {
+    platform: "youtube";
+    /** Direct YouTube URL. Opens in a new tab. */
+    videoUrl: string;
+    videoTitle: string;
+    /** The channel that published the video. */
+    channelName: string;
+    /** ISO date the video was published. Must be ≤ 60 days old at curation. */
+    publishedAt: string;
+    /** Video duration in minutes. Must be ≥ 5 at curation. */
+    durationMinutes: number;
+    /** Approximate timestamp inside the video for the quote (mm:ss). */
+    timestamp?: string;
+  };
+  /** Optional follow-up the user can do — keeps Build-Don't-Just-Read alive. */
+  ctaPrompt?: string;
+  /** See {@link SparkCategory}. Most YouTube nuggets are `news` or `tooling`. */
+  category?: SparkCategory;
+  /** ISO date this Spark was authored / last reviewed. */
+  addedAt?: string;
+  visual?: VisualKey;
 }
 
 /**
@@ -309,7 +397,8 @@ export type Exercise =
   | BuildCard
   | Tip
   | Boss
-  | PodcastNugget;
+  | PodcastNugget
+  | YoutubeNugget;
 
 export interface Spark {
   id: string;

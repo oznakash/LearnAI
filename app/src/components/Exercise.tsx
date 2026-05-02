@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Creator, Exercise, VisualKey } from "../types";
+import type { AgeBand, Creator, Exercise, VisualKey } from "../types";
 import { Illustration } from "../visuals/Illustrations";
 import { VocabBody } from "./VocabBody";
 import { getCreator } from "../admin/runtime";
@@ -11,6 +11,13 @@ interface Props {
   /** True once this Spark has been answered; the renderer disables further input. */
   locked?: boolean;
   onAnswer: (correct: boolean, explain?: string) => void;
+  /**
+   * Optional age band — `kid` / `teen` / `adult`. Used by `MicroRead`
+   * and `Tip` to pick `bodyByAgeBand[ageBand]` over the default `body`
+   * when an alternate framing is authored. See `docs/content-freshness.md`
+   * §4 for the kid-voice rules. Defaults to `"adult"` when unset.
+   */
+  ageBand?: AgeBand;
   /**
    * Fires when the user taps an inline vocabulary term in a Spark body.
    * Lets the parent record a `vocabulary`-category memory.
@@ -24,12 +31,12 @@ interface Props {
   onVocabZoom?: (term: string) => void;
 }
 
-export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswer, onVocabTap, onVocabZoom }: Props) {
+export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswer, onVocabTap, onVocabZoom, ageBand }: Props) {
   switch (exercise.type) {
     case "microread":
-      return <MicroReadView ex={exercise} title={title} topicVisual={topicVisual} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} />;
+      return <MicroReadView ex={exercise} title={title} topicVisual={topicVisual} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} ageBand={ageBand} />;
     case "tip":
-      return <TipView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} />;
+      return <TipView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} onVocabTap={onVocabTap} onVocabZoom={onVocabZoom} ageBand={ageBand} />;
     case "quickpick":
       return <QuickPickView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
     case "fillstack":
@@ -44,6 +51,8 @@ export function ExerciseRenderer({ exercise, title, topicVisual, locked, onAnswe
       return <BossView ex={exercise} title={title} onAnswer={onAnswer} />;
     case "podcastnugget":
       return <PodcastNuggetView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
+    case "youtubenugget":
+      return <YoutubeNuggetView ex={exercise} title={title} locked={locked} onAnswer={onAnswer} />;
   }
 }
 
@@ -55,6 +64,7 @@ function MicroReadView({
   onAnswer,
   onVocabTap,
   onVocabZoom,
+  ageBand,
 }: {
   ex: Extract<Exercise, { type: "microread" }>;
   title: string;
@@ -63,7 +73,12 @@ function MicroReadView({
   onAnswer: (correct: boolean, explain?: string) => void;
   onVocabTap?: (term: string, definition: string) => void;
   onVocabZoom?: (term: string) => void;
+  ageBand?: AgeBand;
 }) {
+  // Age-band picker: kids, teens, and adults can each get a tonally-
+  // calibrated body. Falls back to the default `body` when no variant
+  // is authored — fully back-compat for the existing 480 Sparks.
+  const body = ex.bodyByAgeBand?.[ageBand ?? "adult"] ?? ex.body;
   const [taken, setTaken] = useState(false);
   const click = () => {
     if (taken || locked) return;
@@ -84,11 +99,12 @@ function MicroReadView({
           <Illustration k={ex.visual ?? topicVisual ?? "spark"} className="w-full h-full" />
         </div>
       </div>
-      <VocabBody body={ex.body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
+      <VocabBody body={body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
       <div className="mt-4 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
         💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
       </div>
       {ex.source && <SourceChip source={ex.source} />}
+      {ex.addedAt && <FreshnessChip addedAt={ex.addedAt} category={ex.category} />}
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
       <button className="btn-primary mt-4" disabled={taken || locked} onClick={click}>
         {taken || locked ? "✓ Logged" : "I got it ⚡"}
@@ -104,6 +120,7 @@ function TipView({
   onAnswer,
   onVocabTap,
   onVocabZoom,
+  ageBand,
 }: {
   ex: Extract<Exercise, { type: "tip" }>;
   title: string;
@@ -111,6 +128,7 @@ function TipView({
   onAnswer: (correct: boolean, explain?: string) => void;
   onVocabTap?: (term: string, definition: string) => void;
   onVocabZoom?: (term: string) => void;
+  ageBand?: AgeBand;
 }) {
   const [taken, setTaken] = useState(false);
   const click = () => {
@@ -118,12 +136,15 @@ function TipView({
     setTaken(true);
     onAnswer(true);
   };
+  // See MicroReadView for the age-band fallback rationale.
+  const body = ex.bodyByAgeBand?.[ageBand ?? "adult"] ?? ex.body;
   return (
     <div>
       <div className="chip mb-2 bg-warn/10 border-warn/30 text-warn">💡 Tip & Trick</div>
       <h2 className="h2 mb-2">{ex.title}</h2>
-      <VocabBody body={ex.body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
+      <VocabBody body={body} vocab={ex.vocab} onTermTap={onVocabTap} onZoom={onVocabZoom} />
       {ex.source && <SourceChip source={ex.source} />}
+      {ex.addedAt && <FreshnessChip addedAt={ex.addedAt} category={ex.category} />}
       <div className="text-xs text-white/40 mt-3">Spark: {title}</div>
       <button className="btn-primary mt-4" disabled={taken || locked} onClick={click}>
         {taken || locked ? "✓ Logged" : "Got the trick ⚡"}
@@ -625,4 +646,146 @@ function SourceChip({ source }: { source: { name: string; url: string } }) {
       <span aria-hidden="true">→</span>
     </a>
   );
+}
+
+/**
+ * Video-anchored Spark — same compression rubric and curation
+ * discipline as `PodcastNugget`, different source. Pilot constraints
+ * (per `docs/content-freshness.md` §7): video duration ≥ 5 min, video
+ * published ≤ 60 days at curation, quote ≤ 60 words, link opens the
+ * original video in a new tab.
+ *
+ * Render parallel to PodcastNuggetView. The chip is YouTube-red so it
+ * reads visually distinct from a podcast nugget at a glance.
+ */
+function YoutubeNuggetView({
+  ex,
+  title,
+  locked,
+  onAnswer,
+}: {
+  ex: Extract<Exercise, { type: "youtubenugget" }>;
+  title: string;
+  locked?: boolean;
+  onAnswer: (correct: boolean, explain?: string) => void;
+}) {
+  const [taken, setTaken] = useState(false);
+  const click = () => {
+    if (taken || locked) return;
+    setTaken(true);
+    onAnswer(true);
+  };
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <a
+          href={ex.source.videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="chip bg-bad/10 border-bad/30 text-bad hover:bg-bad/20 transition"
+          aria-label={`Watch on YouTube — ${ex.source.channelName}`}
+        >
+          🎥 YouTube · {ex.source.channelName}
+        </a>
+      </div>
+      <div className="text-[11px] uppercase tracking-wider text-white/50 mb-1">
+        {ex.source.videoTitle}
+        {ex.source.timestamp && (
+          <span className="text-white/40 ml-2">@ {ex.source.timestamp}</span>
+        )}
+      </div>
+      <h2 className="h2 mb-3 leading-snug">{title}</h2>
+      <blockquote className="border-l-4 border-bad/60 pl-3 sm:pl-4 italic text-white/90 text-[15px] leading-relaxed break-words">
+        “{ex.quote}”
+      </blockquote>
+      <div className="mt-4 p-3 rounded-xl bg-accent/10 border border-accent/30 text-sm">
+        💡 <span className="text-white">Takeaway:</span> {ex.takeaway}
+      </div>
+      {ex.ctaPrompt && (
+        <div className="mt-3 p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white/85">
+          <span className="text-accent2 font-semibold">Try this →</span> {ex.ctaPrompt}
+        </div>
+      )}
+      {ex.addedAt && <FreshnessChip addedAt={ex.addedAt} category={ex.category} />}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button className="btn-primary" disabled={taken || locked} onClick={click}>
+          {taken || locked ? "✓ Logged" : "Got it ⚡"}
+        </button>
+        <a
+          href={ex.source.videoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-bad hover:underline"
+        >
+          Watch on YouTube →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A small chip that surfaces the freshness state of a Spark — "fresh"
+ * (within shelf life), "aging" (between 0.5× and 1×), or "stale" (past
+ * 1×). Quiet by default; only shown when both `addedAt` and `category`
+ * are set on the host Spark. See `docs/content-freshness.md` §2.2.
+ *
+ * The shelf life lookup is local — keeping the renderer pure and
+ * avoiding a runtime dep on the admin config.
+ */
+function FreshnessChip({
+  addedAt,
+  category,
+}: {
+  addedAt: string;
+  category?: import("../types").SparkCategory;
+}) {
+  if (!category) {
+    // Without a category we can't apply a shelf life. Just show the
+    // addedAt date as a neutral fact — useful provenance, no warning.
+    return (
+      <div className="mt-3 text-[11px] text-white/45">
+        📅 Added {formatDate(addedAt)}
+      </div>
+    );
+  }
+
+  // Shelf-life table (in days), per docs/content-freshness.md §2.1.
+  const SHELF_DAYS: Record<import("../types").SparkCategory, number> = {
+    principle: 730,
+    pattern: 180,
+    tooling: 90,
+    company: 30,
+    news: 14,
+    frontier: 7,
+  };
+  const shelf = SHELF_DAYS[category];
+  const ageDays = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(addedAt).getTime()) / (1000 * 60 * 60 * 24)),
+  );
+  const ratio = shelf > 0 ? ageDays / shelf : 0;
+
+  let label: string;
+  let className: string;
+  if (ratio < 0.5) {
+    label = `📅 Added ${formatDate(addedAt)}`;
+    className = "text-white/45";
+  } else if (ratio < 1) {
+    label = `🕒 Aging — added ${formatDate(addedAt)}`;
+    className = "text-warn/85";
+  } else {
+    label = `⚠️ May be stale — added ${formatDate(addedAt)}`;
+    className = "text-bad/85";
+  }
+  return <div className={`mt-3 text-[11px] ${className}`}>{label}</div>;
+}
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  } catch {
+    return iso;
+  }
 }
