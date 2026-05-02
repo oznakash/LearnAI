@@ -29,6 +29,28 @@ export interface SnapshotContext {
 
 const STREAK_MILESTONES = new Set([7, 30, 100]);
 
+/**
+ * Extract the numeric level index from a `levelId`. Levels are encoded
+ * by the content `level()` helper as `<topicId>-l<index>` — e.g.
+ * `ai-builder-l3`. The trailing segment carries a literal `l` prefix
+ * AND the topicId itself can contain dashes, so a naive
+ * `split("-").pop()` returns `"l3"` which `parseInt` reads as `NaN`,
+ * collapsing every level to `0`.
+ *
+ * Symptom this fixes: the public profile rendered "Currently working
+ * on … — Level 0" for every signed-in player, and `level_up` events
+ * never fired (because `prevLevelFor < currentLevel` was always
+ * `0 < 0` → false).
+ *
+ * Returns `0` only when there is genuinely no level data to extract,
+ * so callers that compare against a previous `0` still behave.
+ */
+export function parseLevelIndex(levelId: string | undefined | null): number {
+  if (!levelId) return 0;
+  const m = /-l(\d+)$/i.exec(levelId);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
 /** Hash-stable clientId so retries collapse server-side. */
 function clientId(parts: (string | number | undefined)[]): string {
   return parts.filter((p) => p !== undefined && p !== "").join("|");
@@ -90,7 +112,7 @@ export function buildSnapshot(ctx: SnapshotContext): PlayerSnapshot | null {
       events.push({
         kind: "boss_beaten",
         topicId: last?.topicId,
-        level: last?.levelId ? parseInt(last.levelId.split("-").pop() ?? "0", 10) : undefined,
+        level: last?.levelId ? parseLevelIndex(last.levelId) : undefined,
         clientId: clientId([email, "boss_beaten", last?.topicId, last?.levelId]),
       });
     }
@@ -158,18 +180,14 @@ function mostRecentTopic(state: PlayerState):
   | null {
   const last = state.history?.[state.history.length - 1];
   if (!last) return null;
-  // levelId looks like `<topicId>-<n>`; extract the trailing integer.
-  const parts = last.levelId?.split("-") ?? [];
-  const levelIndex = parseInt(parts[parts.length - 1] ?? "0", 10) || 0;
-  return { topicId: last.topicId, levelIndex };
+  return { topicId: last.topicId, levelIndex: parseLevelIndex(last.levelId) };
 }
 
 function prevLevelFor(state: PlayerState, topicId: TopicId): number {
   let max = 0;
   for (const s of state.history ?? []) {
     if (s.topicId !== topicId) continue;
-    const parts = s.levelId?.split("-") ?? [];
-    const level = parseInt(parts[parts.length - 1] ?? "0", 10) || 0;
+    const level = parseLevelIndex(s.levelId);
     if (level > max) max = level;
   }
   return max;

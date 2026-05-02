@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSnapshot, snapshotSignature } from "../social/snapshot";
+import { buildSnapshot, parseLevelIndex, snapshotSignature } from "../social/snapshot";
 import type { PlayerState } from "../types";
 import type { PlayerSnapshot } from "../social/types";
 
@@ -50,7 +50,7 @@ describe("buildSnapshot", () => {
         {
           ts: Date.now() - 1000,
           topicId: "ai-pm",
-          levelId: "ai-pm-1",
+          levelId: "ai-pm-l1",
           sparkIds: ["s1"],
           correct: 1,
           total: 1,
@@ -70,7 +70,7 @@ describe("buildSnapshot", () => {
         {
           ts: Date.now(),
           topicId: "ai-pm",
-          levelId: "ai-pm-2",
+          levelId: "ai-pm-l2",
           sparkIds: ["s2"],
           correct: 1,
           total: 1,
@@ -80,6 +80,13 @@ describe("buildSnapshot", () => {
     });
     const snap = buildSnapshot({ prev, next });
     expect(snap!.events.some((e) => e.kind === "level_up")).toBe(true);
+    // Pin the actual level value so the parser regression can't sneak
+    // back in: with the old `parseInt(parts[parts.length-1])` parser,
+    // both `ai-pm-l1` and `ai-pm-l2` resolved to `0`, so the level_up
+    // event silently fired with `level: 0` (or never fired at all
+    // because `0 < 0`).
+    const ev = snap!.events.find((e) => e.kind === "level_up")!;
+    expect(ev.level).toBe(2);
   });
 
   it("emits a streak_milestone at 7/30/100, idempotent across re-runs", () => {
@@ -107,7 +114,7 @@ describe("buildSnapshot", () => {
     const next = makeState({
       progress: {
         completed: {},
-        bossPassed: { "ai-pm-3": true },
+        bossPassed: { "ai-pm-l3": true },
         topicXP: {},
         topicLastTouched: {},
       },
@@ -115,7 +122,7 @@ describe("buildSnapshot", () => {
         {
           ts: Date.now(),
           topicId: "ai-pm",
-          levelId: "ai-pm-3",
+          levelId: "ai-pm-l3",
           sparkIds: ["boss"],
           correct: 4,
           total: 4,
@@ -124,7 +131,36 @@ describe("buildSnapshot", () => {
       ],
     });
     const snap = buildSnapshot({ prev, next });
-    expect(snap!.events.some((e) => e.kind === "boss_beaten")).toBe(true);
+    const ev = snap!.events.find((e) => e.kind === "boss_beaten");
+    expect(ev).toBeDefined();
+    // Same regression pin as the level_up case — previously this was 0.
+    expect(ev!.level).toBe(3);
+  });
+
+  it("currentLevel reflects the canonical -l<n> levelId format produced by content/helpers.ts", () => {
+    // Reproduces the user-reported "Currently working on ... — Level 0" bug.
+    // The content `level()` helper builds ids like `ai-builder-l3`. The
+    // pre-fix parser called `parseInt(parts[parts.length-1])` which read
+    // "l3" → NaN → 0, so every signed-in player's public profile pinned
+    // their currently-working-on level at 0.
+    const snap = buildSnapshot({
+      prev: null,
+      next: makeState({
+        history: [
+          {
+            ts: Date.now(),
+            topicId: "ai-builder",
+            levelId: "ai-builder-l3",
+            sparkIds: ["s1"],
+            correct: 1,
+            total: 1,
+            minutes: 1,
+          },
+        ],
+      }),
+    });
+    expect(snap!.currentTopicId).toBe("ai-builder");
+    expect(snap!.currentLevel).toBe(3);
   });
 
   it("activity14d has 14 entries with today at the end", () => {
@@ -134,7 +170,7 @@ describe("buildSnapshot", () => {
         {
           ts: now - 1000,
           topicId: "ai-pm",
-          levelId: "ai-pm-1",
+          levelId: "ai-pm-l1",
           sparkIds: ["a", "b", "c"],
           correct: 3,
           total: 3,
@@ -271,5 +307,40 @@ describe("snapshotSignature", () => {
       clientWindow: { from: before.clientWindow.from + 1000, to: before.clientWindow.to + 60_000 },
     };
     expect(snapshotSignature(before)).toBe(snapshotSignature(afterRegen));
+  });
+});
+
+describe("parseLevelIndex", () => {
+  // Regression unit-tests for the "Currently working on … — Level 0" bug.
+  // The content `level()` helper produces ids of the form
+  // `<topicId>-l<index>` and the topicId itself can contain dashes.
+  it("parses the canonical -l<n> suffix produced by content/helpers.ts", () => {
+    expect(parseLevelIndex("ai-pm-l1")).toBe(1);
+    expect(parseLevelIndex("ai-pm-l9")).toBe(9);
+    expect(parseLevelIndex("ai-pm-l10")).toBe(10);
+  });
+
+  it("handles topicIds that themselves contain dashes (the actual prod case)", () => {
+    expect(parseLevelIndex("ai-builder-l3")).toBe(3);
+    expect(parseLevelIndex("memory-safety-l7")).toBe(7);
+  });
+
+  it("returns 0 when the levelId is missing or shape-broken", () => {
+    expect(parseLevelIndex(undefined)).toBe(0);
+    expect(parseLevelIndex(null)).toBe(0);
+    expect(parseLevelIndex("")).toBe(0);
+    expect(parseLevelIndex("ai-pm")).toBe(0); // no level suffix
+    expect(parseLevelIndex("ai-pm-foo")).toBe(0); // unknown suffix
+  });
+
+  it("is case-insensitive on the `l` prefix", () => {
+    expect(parseLevelIndex("ai-pm-L4")).toBe(4);
+  });
+
+  it("does NOT silently accept the legacy bare-number suffix (forces canonical format)", () => {
+    // `ai-pm-2` was the format used by the old (broken) test fixtures;
+    // it is NOT what the runtime helper produces. Treating it as 2
+    // would mask the real bug, so we explicitly fall through to 0.
+    expect(parseLevelIndex("ai-pm-2")).toBe(0);
   });
 });
