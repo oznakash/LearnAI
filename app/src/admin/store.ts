@@ -77,6 +77,16 @@ export function loadAdminConfig(): AdminConfig {
       branding: migrateLegacyBranding(parsed.branding, base.branding),
       flags: migrateLegacyFlags({ ...base.flags, ...(parsed.flags ?? {}) }),
       emailConfig: migrateLegacyEmail(parsed.emailConfig, base.emailConfig),
+      // Forward-compat for the email policy added in #93. Saved configs
+      // from before the rate-limit work get the defaults filled in.
+      // Operator's own knobs win on collisions. priorityOrder is replaced
+      // wholesale (not merged) when set so operators can drop a template.
+      emailPolicy: {
+        ...base.emailPolicy,
+        ...(parsed.emailPolicy ?? {}),
+        priorityOrder:
+          parsed.emailPolicy?.priorityOrder ?? base.emailPolicy.priorityOrder,
+      },
       emailTemplates: { ...base.emailTemplates, ...(parsed.emailTemplates ?? {}) },
       admins: parsed.admins ?? [],
       emailQueue: parsed.emailQueue ?? [],
