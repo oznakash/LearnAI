@@ -29,6 +29,7 @@ export function viewFromPath(pathname: string): View {
     case "admin":
     case "network":
     case "stream":
+    case "unsubscribe":
       return { name: head };
     case "topic": {
       const topicId = parts[1];
@@ -72,6 +73,7 @@ export function pathForView(v: View): string {
     case "admin":
     case "network":
     case "stream":
+    case "unsubscribe":
       return `/${v.name}`;
     case "profile":
       return `/u/${encodeURIComponent(v.handle)}`;
