@@ -46,6 +46,13 @@ export interface Store {
    * state.
    */
   listProfiles(): ProfileRecord[];
+  /**
+   * Hard-delete a profile + all associated state (aggregate, follows
+   * both directions, blocks, reports, events authored). Used by the
+   * admin "remove smoke-test accounts" surface. Returns true if the
+   * profile existed.
+   */
+  deleteProfileCascade(email: string): boolean;
 
   // Aggregates
   upsertAggregate(a: AggregateRecord): AggregateRecord;
@@ -191,6 +198,25 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
     },
     listProfiles() {
       return state.profiles.slice();
+    },
+    deleteProfileCascade(email) {
+      const lcEmail = lc(email);
+      const idx = state.profiles.findIndex((p) => lc(p.email) === lcEmail);
+      if (idx < 0) return false;
+      state.profiles.splice(idx, 1);
+      state.aggregates = state.aggregates.filter((a) => lc(a.email) !== lcEmail);
+      state.follows = state.follows.filter(
+        (e) => lc(e.follower) !== lcEmail && lc(e.target) !== lcEmail,
+      );
+      state.blocks = state.blocks.filter(
+        (b) => lc(b.blocker) !== lcEmail && lc(b.blocked) !== lcEmail,
+      );
+      state.reports = state.reports.filter(
+        (r) => lc(r.reporter) !== lcEmail && lc(r.reported) !== lcEmail,
+      );
+      state.events = state.events.filter((e) => lc(e.email) !== lcEmail);
+      flush();
+      return true;
     },
 
     // Aggregates -----------------------------------------------------------

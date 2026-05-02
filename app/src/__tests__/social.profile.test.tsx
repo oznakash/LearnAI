@@ -98,19 +98,19 @@ describe("Profile view", () => {
     expect(screen.getByText(/🔒 Private/)).toBeTruthy();
   });
 
-  it("hides the social-off banner when admin has socialEnabled=true", async () => {
-    // socialEnabled defaults to false, so the banner should appear by default.
+  it("shows the social-off banner when admin explicitly disables socialEnabled", async () => {
+    // PR #113 flipped socialEnabled default to true. To exercise the
+    // banner path, we explicitly set false before mounting; the initial
+    // render then shows the "social is offline" banner. (Operators in
+    // production rarely flip this off — fork-without-sidecar is the
+    // main use case.)
+    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
+    cfg.flags = { ...(cfg.flags ?? {}), socialEnabled: false };
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
     mount("maya");
     await settle();
     expect(screen.getByText(/Social network is currently/i)).toBeTruthy();
     expect(screen.getByText(/offline/i)).toBeTruthy();
-
-    // Flip socialEnabled on (without setting a server URL — service stays offline,
-    // but the admin "intent" banner should disappear since the operator is now
-    // explicitly running with social enabled).
-    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
-    cfg.flags = { ...(cfg.flags ?? {}), socialEnabled: true };
-    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
   });
 
   it("View as visitor: hides Follow / Block on own profile, keeps the toggle visible", async () => {

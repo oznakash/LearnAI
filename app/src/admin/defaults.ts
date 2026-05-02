@@ -235,12 +235,15 @@ export function defaultAdminConfig(): AdminConfig {
       // Demo cohort is off by default. Operators turn it on when they
       // want a populated UI for screenshots / demos / glitch hunting.
       showDemoData: false,
-      // Social layer ships behind a flag. Defaults OFF so a fresh clone
-      // works without standing up `social-svc`. The live deploy flips
-      // these on once the backend is provisioned (engineering plan §11).
-      socialEnabled: false,
-      streamEnabled: false,
-      boardsEnabled: false,
+      // Social layer is now provisioned (social-svc deployed alongside
+      // the SPA, same-origin /v1/social/*). Defaults ON so signed-in
+      // users actually get wired into the leaderboard + stream on their
+      // first visit. Forks running without the sidecar can flip these
+      // back to false in their own admin config; the SPA falls back to
+      // the offline service silently.
+      socialEnabled: true,
+      streamEnabled: true,
+      boardsEnabled: true,
       defaultProfileMode: "open",
       // Lenny's Podcast content seam ships ON by default — the curated
       // nuggets are part of the seed content. Operators can flip this
