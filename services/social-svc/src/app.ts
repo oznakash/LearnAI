@@ -460,8 +460,24 @@ export function createApp(opts: AppOpts) {
     if (prev && snap.xpTotal === 0 && prev.xpTotal > 0) {
       return res.json({ ok: true, noop: "fresh_device" });
     }
+    // User-reported regression (private 165 vs public 248): a player
+    // whose local SPA state has a legitimately lower XP than the server
+    // (e.g. local was reset by an admin tool, an account merge, or a
+    // post-bug rebuild) was permanently locked out of fixing the
+    // mismatch — every push got 409 and the public profile pinned on
+    // the stale higher number. The 10%-drop heuristic was meant to
+    // prevent rollback attacks, but the only attacker who can push to
+    // `me.email` is `me` (gated by `requireUser` which authenticates
+    // the JWT). Self-rollback isn't a real attack — the user owns their
+    // public stats. We log the drop for ops visibility but accept it.
     if (prev && snap.xpTotal < prev.xpTotal * 0.9) {
-      return res.status(409).json({ error: "implausible_xp" });
+      log.warn("xp_drop_accepted", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        email_hash: emailHash(me.email),
+        prev_xp: prev.xpTotal,
+        next_xp: snap.xpTotal,
+        drop_pct: Math.round((1 - snap.xpTotal / prev.xpTotal) * 100),
+      });
     }
     store.upsertAggregate({
       email: me.email,

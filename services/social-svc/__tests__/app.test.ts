@@ -249,7 +249,14 @@ describe("snapshot + stream", () => {
     expect(me.body.guildTier).toBe("Architect");
   });
 
-  it("snapshot rejects implausible XP regression with 409", async () => {
+  it("snapshot accepts a >10% XP drop (logs a warning, no 409)", async () => {
+    // Reverses the prior `implausible_xp` 409 contract. A user whose
+    // local SPA legitimately has lower XP than the server (admin reset,
+    // account merge, post-bug rebuild) was permanently locked out — the
+    // public profile pinned on the stale higher number forever. Since
+    // `requireUser` ensures only the user themselves can write to their
+    // own aggregate, a self-rollback isn't a real attack: we accept and
+    // log. See `services/social-svc/src/app.ts` "xp_drop_accepted".
     const now = Date.now();
     await request(app)
       .post("/v1/social/me/snapshot")
@@ -269,7 +276,13 @@ describe("snapshot + stream", () => {
         badges: [], topicXp: {}, activity14d: [], events: [],
         clientWindow: { from: now - 500, to: now + 1000 },
       });
-    expect(r.status).toBe(409);
+    expect(r.status).toBe(204);
+    // The new value should be canonical — the public profile reflects
+    // what the user just pushed, not the stale higher aggregate.
+    const me = await request(app)
+      .get("/v1/social/me")
+      .set(userHeaders("priya@gmail.com"));
+    expect(me.body.xpTotal).toBe(100);
   });
 
   // Regression: a snapshot with xpTotal=0 is the textbook "fresh device"
