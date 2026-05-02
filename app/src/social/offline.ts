@@ -125,10 +125,29 @@ export class OfflineSocialService implements SocialService {
   private readonly storageKey: string;
   private readonly email: string;
   private readonly ageBandIsKid: boolean;
+  /**
+   * Live Google identity values, kept in sync by `SocialProvider` from
+   * `player.identity`. Used as the fallback for `displayName` / `pictureUrl`
+   * when the user hasn't run an explicit `updateProfile` patch — without
+   * this fallback, a freshly signed-in user's public profile would render
+   * the email-derived first name and an initials avatar even though the
+   * Google account already has both. An explicit `updateProfile({ fullName })`
+   * patch still wins (the projection prefers the stored value when it's
+   * truthy).
+   */
+  private readonly identityName?: string;
+  private readonly identityPicture?: string;
 
-  constructor(opts: { email: string; ageBandIsKid?: boolean }) {
+  constructor(opts: {
+    email: string;
+    ageBandIsKid?: boolean;
+    identityName?: string;
+    identityPicture?: string;
+  }) {
     this.email = opts.email || "anon";
     this.ageBandIsKid = !!opts.ageBandIsKid;
+    this.identityName = opts.identityName?.trim() || undefined;
+    this.identityPicture = opts.identityPicture?.trim() || undefined;
     this.storageKey = `${STORAGE_KEY_PREFIX}${this.email}`;
   }
 
@@ -175,16 +194,25 @@ export class OfflineSocialService implements SocialService {
     // P1-9 fix: owner always sees their full name (preview); non-owners
     // see it only when the owner has opted to expose it.
     const showFull = viewerIsOwner ? true : state.profile.showFullName;
+    // Identity-sync fallback: when the user hasn't explicitly set a
+    // fullName / pictureUrl via Network → Edit, fall back to the live
+    // values from the Google sign-in. This keeps the public profile in
+    // sync with whatever Google currently knows about the account
+    // (name change, avatar swap) without requiring a manual edit.
+    // Stored explicit values still win — the user's edit always beats
+    // the auto-sync fallback.
+    const effectiveFullName = state.profile.fullName || this.identityName;
+    const effectivePicture = state.profile.pictureUrl || this.identityPicture;
     return {
       // P0-3 fix: email is owner-only on the wire. Visitors see empty.
       email: viewerIsOwner ? state.profile.email : "",
       handle: state.profile.handle,
       displayName: resolveDisplayName({
-        fullName: state.profile.fullName,
+        fullName: effectiveFullName,
         showFullName: showFull,
         email: state.profile.email,
       }),
-      pictureUrl: safePictureUrl(state.profile.pictureUrl),
+      pictureUrl: safePictureUrl(effectivePicture),
       guildTier: state.aggregate.guildTier,
       streak: state.aggregate.streak,
       xpTotal: state.aggregate.xpTotal,
@@ -214,7 +242,7 @@ export class OfflineSocialService implements SocialService {
         viewerIsOwner || state.profile.showActivity ? state.aggregate.activity14d : undefined,
       ownerPrefs: viewerIsOwner
         ? {
-            fullName: state.profile.fullName,
+            fullName: effectiveFullName,
             showFullName: state.profile.showFullName,
             showCurrent: state.profile.showCurrent,
             showMap: state.profile.showMap,
