@@ -200,7 +200,7 @@ If you have a podcast, newsletter, or talk archive that fits the same shape, ope
 - 🎯 **Personalized onboarding** — age band, skill level, interests, daily minutes, goals.
 - 🔥 **Game mechanics that serve practice** — XP, Focus, Build Streak, Guild Tiers, 14 Badges.
 - 🧠 **Cognition layer (mem0)** — opt-in, self-hosted, inspectable.
-- 👥 **Social layer (NEW)** — Public Profile (`/u/<handle>`), Follow / Unfollow / Block / Mute / Report, per-Topic Leaderboards + Signals, Spark Stream feed, Settings → Network with Profile mode (Open / Closed) + field-level visibility, AdminModeration tab. **Plain-English vocabulary** (Follow, Followers, Following) with a behavioral-résumé profile (no bio, no employer, no email exposed). Ships behind feature flags so a fork pulling main today sees zero behavior change.
+- 👥 **Social layer (NEW)** — Public Profile (`/u/<handle>`), Follow / Unfollow / Block / Mute / Report, per-Topic Leaderboards + Signals, Spark Stream feed, Settings → Network with Public / Private profile visibility + field-level toggles + a profile-completeness gauge, native-share + per-profile SEO / `Person` JSON-LD on the public route, AdminModeration tab. **Plain-English vocabulary** (Follow, Followers, Following) with a behavioral-résumé profile (no bio, no employer, no email exposed). Ships behind feature flags so a fork pulling main today sees zero behavior change.
 - 📚 **"Your Memory" tab** — see, edit, forget, wipe, export.
 - 📊 **Per-topic + global dashboards** — sparkline, radar, ring, bars, 12-week heatmap.
 - ✅ **Tasks tab** — capture YouTube watches, articles, Build Cards.

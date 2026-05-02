@@ -94,8 +94,8 @@ describe("Profile view", () => {
     await settle();
     // The owner sees the owner strip.
     expect(await screen.findByText(/This is your profile/i)).toBeTruthy();
-    // The 🔒 Closed pill appears in the header.
-    expect(screen.getByText(/🔒 Closed/)).toBeTruthy();
+    // The 🔒 Private pill appears in the header.
+    expect(screen.getByText(/🔒 Private/)).toBeTruthy();
   });
 
   it("hides the social-off banner when admin has socialEnabled=true", async () => {
@@ -149,7 +149,7 @@ describe("Profile view", () => {
       fireEvent.click(back);
     });
     expect(screen.getByRole("button", { name: /View as visitor/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Copy share link/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Share profile/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Edit profile/i })).toBeTruthy();
   });
 });

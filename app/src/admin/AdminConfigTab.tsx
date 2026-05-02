@@ -205,7 +205,7 @@ export function AdminConfigTab() {
                     : "bg-white/5 border border-white/10 text-white/70 hover:text-white"
                 }`}
               >
-                {mode === "open" ? "🌐 Open (discoverable)" : "🔒 Closed (approval required)"}
+                {mode === "open" ? "🌐 Public (discoverable)" : "🔒 Private (approval required)"}
               </button>
             ))}
           </div>

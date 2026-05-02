@@ -10,6 +10,8 @@ import type { PublicProfile, ReportReason } from "../social/types";
 import { baseHandleFromEmail } from "../social/handles";
 import type { TopicId } from "../types";
 import type { View } from "../App";
+import { shareProfile, type ShareResult } from "../profile/share";
+import { buildPersonJsonLd, clearProfileSeo, setProfileSeo } from "../profile/seo";
 
 /**
  * Public Profile view — `/u/<handle>`.
@@ -37,6 +39,7 @@ export function Profile({ handle, onNav }: Props) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewing, setPreviewing] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
 
   const myHandle = useMemo(
     // P0-4 fix: use baseHandleFromEmail so dots in the local-part collapse
@@ -67,6 +70,31 @@ export function Profile({ handle, onNav }: Props) {
       cancelled = true;
     };
   }, [handle, isOwner, social]);
+
+  // Per-profile SEO. Only writes when the resolved profile is Public.
+  // Closed profiles, the closed-gate, and "not found" all skip — we never
+  // want a private profile's display name leaking into JSON-LD.
+  useEffect(() => {
+    if (!profile || profile.profileMode !== "open") return;
+    const url = typeof window !== "undefined" ? `${window.location.origin}/u/${profile.handle}` : `/u/${profile.handle}`;
+    const description = profile.signals.length
+      ? `${profile.displayName} on LearnAI — building across ${profile.signals.length} topics.`
+      : `${profile.displayName} on LearnAI.`;
+    setProfileSeo({
+      title: `${profile.displayName} (@${profile.handle}) — LearnAI`,
+      description,
+      url,
+      imageUrl: profile.pictureUrl,
+      jsonLd: buildPersonJsonLd({
+        name: profile.displayName,
+        handle: profile.handle,
+        url,
+        imageUrl: profile.pictureUrl,
+        description,
+      }),
+    });
+    return () => clearProfileSeo();
+  }, [profile?.handle, profile?.profileMode, profile?.displayName, profile?.pictureUrl, profile?.signals.length]);
 
   if (loading) {
     return (
@@ -124,8 +152,15 @@ export function Profile({ handle, onNav }: Props) {
           </button>
           {!previewing && (
             <>
-              <button className="btn-ghost text-xs" onClick={copyShareLink(profile)}>
-                🔗 Copy share link
+              <button
+                className="btn-ghost text-xs"
+                onClick={async () => {
+                  const r = await shareProfile({ handle: profile.handle, displayName: profile.displayName });
+                  setShareToast(toastForShare(r));
+                  window.setTimeout(() => setShareToast(null), 1800);
+                }}
+              >
+                🔗 Share profile
               </button>
               <button
                 className="btn-ghost text-xs"
@@ -135,6 +170,15 @@ export function Profile({ handle, onNav }: Props) {
               </button>
             </>
           )}
+        </div>
+      )}
+      {shareToast && (
+        <div
+          role="status"
+          className="text-xs text-good"
+          data-testid="profile-share-toast"
+        >
+          {shareToast}
         </div>
       )}
 
@@ -206,7 +250,7 @@ function ProfileHeader({ profile }: { profile: PublicProfile }) {
             )}
             <span className="pill bg-good/10 text-good border border-good/30">🏅 {tier}</span>
             {profile.profileMode === "closed" && (
-              <span className="pill bg-white/5 text-white/60 border-white/10">🔒 Closed</span>
+              <span className="pill bg-white/5 text-white/60 border-white/10">🔒 Private</span>
             )}
           </div>
         </div>
@@ -384,7 +428,7 @@ function ClosedProfileGate({
         <h1 className="h2 mt-4">{profile.displayName}</h1>
         <div className="text-xs text-white/50 mt-1">@{profile.handle}</div>
         <p className="text-sm text-white/70 mt-4">
-          🔒 This profile is closed. Send a follow request to see their progress.
+          🔒 This profile is private. Send a follow request to see their progress.
         </p>
         <button
           className="btn-primary mt-4 text-sm"
@@ -692,14 +736,8 @@ function ProfileNotFound({ handle, onNav }: { handle: string; onNav: (v: View) =
 
 // -- Helpers ------------------------------------------------------------
 
-function copyShareLink(profile: PublicProfile) {
-  return () => {
-    if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/u/${profile.handle}`;
-    try {
-      void navigator.clipboard?.writeText(url);
-    } catch {
-      // Fallback: nothing to do — the user can copy from the URL bar.
-    }
-  };
+function toastForShare(r: ShareResult): string {
+  if (r === "shared") return "Shared!";
+  if (r === "copied") return "Link copied to clipboard";
+  return "Couldn't copy — copy from the address bar instead.";
 }

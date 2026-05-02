@@ -77,25 +77,25 @@ export function AdminPublicProfile() {
         </p>
       </header>
 
-      {/* 1. Default profile mode */}
+      {/* 1. Default profile visibility */}
       <section className="card p-5 space-y-3">
-        <h3 className="h2 text-lg">Default profile mode for new sign-ups</h3>
+        <h3 className="h2 text-lg">Default profile visibility for new sign-ups</h3>
         <p className="muted text-xs">
-          Open profiles are discoverable; closed require approval. Kid-band profiles are forced
-          to Closed regardless.
+          Public profiles are discoverable; private require approval. Kid-band profiles are forced
+          to Private regardless.
         </p>
         <div className="flex gap-2">
           <button
             className={`btn ${pp.defaultProfileMode === "open" ? "btn-good" : "btn-ghost"} text-sm`}
             onClick={() => setMode("open")}
           >
-            🌐 Open
+            🌐 Public
           </button>
           <button
             className={`btn ${pp.defaultProfileMode === "closed" ? "btn-good" : "btn-ghost"} text-sm`}
             onClick={() => setMode("closed")}
           >
-            🔒 Closed
+            🔒 Private
           </button>
         </div>
       </section>

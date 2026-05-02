@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useSocial } from "../social/SocialContext";
 import { baseHandleFromEmail } from "../social/handles";
 import { useAdmin } from "../admin/AdminContext";
+import { usePlayer } from "../store/PlayerContext";
 import { TOPICS } from "../content";
 import type { FollowEdge, PublicProfile, ProfileMode } from "../social/types";
 import type { TopicId } from "../types";
 import type { View } from "../App";
+import { profileCompleteness, profileCompletenessSlots } from "../profile/completeness";
 
 type PeopleTab = "summary" | "following" | "followers" | "pending" | "blocked";
 
@@ -13,7 +15,7 @@ type PeopleTab = "summary" | "following" | "followers" | "pending" | "blocked";
  * Settings → Network — the privacy + discoverability cockpit.
  *
  * One screen, owner-only. The five blocks:
- *  1. Profile mode (Open ↔ Closed) + a panic switch.
+ *  1. Profile visibility (Public ↔ Private) + a panic switch.
  *  2. Field-level visibility checkboxes (only meaningful when Open).
  *  3. Signals picker (max 5 Topics this profile is discoverable for).
  *  4. People summary (Following / Followers / Pending / Blocked counts) —
@@ -31,6 +33,7 @@ interface Props {
 export function Network({ onNav }: Props) {
   const social = useSocial();
   const { config } = useAdmin();
+  const { state: player } = usePlayer();
   const [me, setMe] = useState<PublicProfile | null>(null);
   const [counts, setCounts] = useState({
     following: 0,
@@ -143,15 +146,17 @@ export function Network({ onNav }: Props) {
         </button>
       </header>
 
-      {/* 1. Profile mode + panic switch */}
+      <CompletenessCard profile={me} fallbackPicture={player.identity?.picture} />
+
+      {/* 1. Profile visibility + panic switch */}
       <section className="card p-5 space-y-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="h2">Profile mode</h2>
+            <h2 className="h2">Profile visibility</h2>
             <p className="muted text-xs mt-1">
               {isKid
-                ? "Your profile is closed by default — kids' profiles are not discoverable."
-                : "Open profiles are discoverable. Closed profiles require approval before someone can follow you."}
+                ? "Your profile is private by default — kids' profiles are not discoverable."
+                : "Public profiles are discoverable. Private profiles require approval before someone can follow you."}
             </p>
           </div>
           <div className="flex gap-2">
@@ -160,20 +165,20 @@ export function Network({ onNav }: Props) {
               disabled={isKid || busy}
               onClick={() => setMode("open")}
             >
-              🌐 Open
+              🌐 Public
             </button>
             <button
               className={`btn ${me.profileMode === "closed" ? "btn-good" : "btn-ghost"} text-sm`}
               disabled={busy}
               onClick={() => setMode("closed")}
             >
-              🔒 Closed
+              🔒 Private
             </button>
           </div>
         </div>
         <div className="text-xs text-white/50">
-          Currently: <strong className="text-white">{me.profileMode === "open" ? "Open" : "Closed"}</strong>
-          {isKid && <span className="ml-2">(kids profiles are always closed)</span>}
+          Currently: <strong className="text-white">{me.profileMode === "open" ? "Public" : "Private"}</strong>
+          {isKid && <span className="ml-2">(kids profiles are always private)</span>}
         </div>
         {me.profileMode === "open" && !isKid && (
           <div className="pt-2 border-t border-white/5">
@@ -181,7 +186,7 @@ export function Network({ onNav }: Props) {
               ⏸ Take me down (panic switch)
             </button>
             <p className="text-[11px] text-white/40 mt-1">
-              Flips you to Closed and pauses discoverability immediately. Reversible.
+              Flips you to Private and pauses discoverability immediately. Reversible.
             </p>
           </div>
         )}
@@ -589,5 +594,77 @@ function Stat({ label, value }: { label: string; value: number }) {
       <div className="text-2xl font-display font-bold text-white tabular-nums">{value}</div>
       <div className="text-[11px] uppercase tracking-wider text-white/50 mt-1">{label}</div>
     </div>
+  );
+}
+
+function CompletenessCard({
+  profile,
+  fallbackPicture,
+}: {
+  profile: PublicProfile;
+  fallbackPicture?: string;
+}) {
+  const slots = profileCompletenessSlots(profile, fallbackPicture);
+  const score = profileCompleteness(profile, fallbackPicture);
+  const missing = slots.filter((s) => !s.done);
+  if (score >= 100) return null;
+
+  // Stroke-dasharray math for an r=28 ring → circumference ≈ 175.93.
+  const dash = (score / 100) * 175.93;
+
+  return (
+    <section
+      className="card p-4 sm:p-5 space-y-3"
+      data-testid="profile-completeness-card"
+    >
+      <div className="flex items-center gap-4">
+        <div className="relative w-16 h-16 shrink-0">
+          <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
+            <circle
+              cx="32"
+              cy="32"
+              r="28"
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth="6"
+              fill="none"
+            />
+            <circle
+              cx="32"
+              cy="32"
+              r="28"
+              stroke="url(#__lai_completeness_g)"
+              strokeWidth="6"
+              fill="none"
+              strokeDasharray={`${dash} 175.93`}
+              strokeLinecap="round"
+            />
+            <defs>
+              <linearGradient id="__lai_completeness_g" x1="0" x2="1">
+                <stop offset="0%" stopColor="#7c5cff" />
+                <stop offset="100%" stopColor="#28e0b3" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div className="absolute inset-0 grid place-items-center text-xs font-semibold text-white tabular-nums">
+            {score}%
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-white">Finish your profile</div>
+          <div className="text-xs text-white/60">
+            {missing.length === 1
+              ? "1 small thing left."
+              : `${missing.length} small things left.`}
+          </div>
+        </div>
+      </div>
+      <ul className="text-xs text-white/70 space-y-1">
+        {missing.slice(0, 5).map((s) => (
+          <li key={s.id} className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-warn" /> {s.label}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

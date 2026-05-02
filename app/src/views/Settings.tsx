@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { usePlayer } from "../store/PlayerContext";
 import { useAdmin } from "../admin/AdminContext";
+import { useSocial } from "../social/SocialContext";
 import { TOPICS } from "../content";
 import type { TopicId } from "../types";
+import type { PublicProfile } from "../social/types";
 import { eraseAllLocalData } from "../store/reset";
 import type { View } from "../App";
+import { profileCompleteness } from "../profile/completeness";
 
 /** Window in which a second "Erase" click commits. After this, the prompt resets. */
 const ERASE_CONFIRM_WINDOW_MS = 5000;
@@ -12,6 +15,7 @@ const ERASE_CONFIRM_WINDOW_MS = 5000;
 export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
   const { state, signOut, setState, setApiKey, setGoogleClientId, setProfile } = usePlayer();
   const { config: adminCfg, isAdmin, bootstrapAdmin } = useAdmin();
+  const social = useSocial();
   const [apiKeyDraft, setApiKeyDraft] = useState(state.apiKey ?? "");
   const [provider, setProvider] = useState<"anthropic" | "openai">(state.apiProvider ?? "anthropic");
   const [clientIdDraft, setClientIdDraft] = useState(state.googleClientId ?? "");
@@ -19,6 +23,27 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
   const [dailyMins, setDailyMins] = useState(state.profile?.dailyMinutes ?? 10);
   const [eraseArmed, setEraseArmed] = useState(false);
   const eraseTimerRef = useRef<number | null>(null);
+  const [myProfile, setMyProfile] = useState<PublicProfile | null>(null);
+
+  // Load the social profile (best-effort) so we can show the Finish-your-
+  // profile nudge. Failures are silent — the nudge is purely additive.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const got = await social.getMyProfile();
+        if (!cancelled) setMyProfile(got);
+      } catch {
+        // Social-svc unavailable; we just don't render the nudge.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [social.service]);
+
+  const completeness = profileCompleteness(myProfile, state.identity?.picture);
+  const showCompletenessNudge = !!myProfile && completeness < 100;
 
   // Cancel the "click again to erase" prompt if the user navigates away
   // before the window elapses.
@@ -73,6 +98,26 @@ export function Settings({ onNav }: { onNav?: (v: View) => void } = {}) {
         <h1 className="h1">Settings</h1>
         <p className="muted">Profile, API keys, sign-in, preferences.</p>
       </header>
+
+      {showCompletenessNudge && (
+        <button
+          type="button"
+          className="card p-4 w-full text-left flex items-center gap-3 hover:border-accent/40 border border-white/10 transition"
+          onClick={() => onNav?.({ name: "network" })}
+          data-testid="settings-completeness-nudge"
+        >
+          <div className="w-10 h-10 rounded-full bg-accent/15 grid place-items-center text-sm font-semibold text-accent tabular-nums shrink-0">
+            {completeness}%
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-white text-sm">Finish your profile</div>
+            <div className="text-xs text-white/60">
+              A few more clicks unlock a profile worth sharing.
+            </div>
+          </div>
+          <span className="text-white/40 text-xs">→</span>
+        </button>
+      )}
 
       <section className="card p-5 space-y-3">
         <h2 className="h2">Profile</h2>
