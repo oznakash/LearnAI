@@ -16,21 +16,22 @@ export interface SendResult {
  * 2. **smtp-relay** — POST to a URL of your choice (your own backend,
  *    a Cloudflare Worker, n8n, Make, Zapier, etc.) which then speaks
  *    raw SMTP using the credentials you configured server-side.
- *    LearnAI sends the SMTP details in the request body so the
- *    relay can use them, BUT for production you should keep the
- *    password server-side and ignore it here.
  * 3. **EmailJS** — purpose-built for browser → SMTP delivery using
  *    EmailJS's hosted service + your SMTP creds.
- * 4. **none** — no-op, leaves the message in the local queue (admin
- *    can hand-deliver).
+ * 4. **smtp-our-server** — POST to social-svc's /v1/email/send.
+ * 5. **none** — no-op, leaves the message in the local queue.
  *
- * Postmark / SendGrid / SES are accepted in the type but not yet wired
- * — they need backend mediation in production setups.
+ * Postmark / SendGrid / SES are accepted in the type but not yet wired.
+ *
+ * RFC 8058 one-click unsubscribe: when q.unsubscribeUrl is set,
+ * `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click`
+ * are emitted (Resend takes a `headers` map; smtp-our-server has its
+ * own `unsubscribeUrl` field that social-svc converts; smtp-relay
+ * passes the raw URL through for the relay to translate).
  */
 export async function sendEmail(
   cfg: EmailConfig,
   q: QueuedEmail,
-  /** Session JWT for admin auth on the smtp-our-server path. */
   bearerToken?: string,
 ): Promise<SendResult> {
   switch (cfg.provider) {
@@ -38,11 +39,6 @@ export async function sendEmail(
       return { ok: false, error: "No provider configured." };
 
     case "smtp-our-server": {
-      // POST to our own social-svc sidecar's /v1/email/send. The
-      // sidecar uses nodemailer with SMTP creds from env vars
-      // (SMTP_HOST, SMTP_USER, SMTP_PASSWORD, etc.) — never sent from
-      // the browser. Admin-only on the server side, so this requires
-      // a session JWT bearer with an email in SOCIAL_ADMIN_EMAILS.
       if (!bearerToken) {
         return { ok: false, error: "Sign-in required (admin session JWT)." };
       }
@@ -59,6 +55,7 @@ export async function sendEmail(
             html: q.bodyRendered,
             fromName: cfg.fromName,
             replyTo: cfg.replyTo,
+            unsubscribeUrl: q.unsubscribeUrl,
           }),
         });
         const data = await r.json().catch(() => ({}));
@@ -84,12 +81,16 @@ export async function sendEmail(
             subject: q.subjectRendered,
             html: q.bodyRendered,
             reply_to: cfg.replyTo,
+            headers: q.unsubscribeUrl
+              ? {
+                  "List-Unsubscribe": `<${q.unsubscribeUrl}>, <mailto:${cfg.fromEmail}?subject=unsubscribe>`,
+                  "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                }
+              : undefined,
           }),
         });
         const data = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          return { ok: false, error: data?.message ?? `HTTP ${r.status}` };
-        }
+        if (!r.ok) return { ok: false, error: data?.message ?? `HTTP ${r.status}` };
         return { ok: true, providerMessageId: data?.id };
       } catch (e) {
         return { ok: false, error: (e as Error).message };
@@ -106,8 +107,6 @@ export async function sendEmail(
             ...(cfg.webhookAuth ? { authorization: `Bearer ${cfg.webhookAuth}` } : {}),
           },
           body: JSON.stringify({
-            // The relay decides how to use these. For production keep
-            // SMTP creds server-side and ignore the smtp block here.
             from: { name: cfg.fromName, email: cfg.fromEmail },
             replyTo: cfg.replyTo,
             to: q.to,
@@ -116,6 +115,7 @@ export async function sendEmail(
             smtp: cfg.smtp,
             templateId: q.templateId,
             queuedAt: q.queuedAt,
+            unsubscribeUrl: q.unsubscribeUrl,
           }),
         });
         const data = await r.json().catch(() => ({}));
@@ -164,7 +164,7 @@ export async function sendEmail(
     case "ses":
       return {
         ok: false,
-        error: `Provider "${cfg.provider}" needs server-side wiring. Use "Resend", "EmailJS", or your own SMTP relay (smtp-relay) from the browser.`,
+        error: `Provider "${cfg.provider}" needs server-side wiring. Use Resend, EmailJS, or smtp-relay from the browser.`,
       };
   }
 }
