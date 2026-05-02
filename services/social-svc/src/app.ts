@@ -32,6 +32,12 @@ import { log, emailHash } from "./log.js";
 import { verifySessionJwt } from "./verify.js";
 import { DEFAULT_RULES, inMemoryBucket, type RateBucket, type RateRule } from "./rate-limit.js";
 import { sendEmail, smtpStatus } from "./email.js";
+import {
+  renderProfileHtml,
+  renderNotFoundHtml,
+  renderRobotsTxt,
+  renderSitemapXml,
+} from "./ssr.js";
 
 interface AppOpts {
   store: Store;
@@ -288,6 +294,62 @@ export function createApp(opts: AppOpts) {
         : null;
     store.recordVisit({ path, refDomain, source });
     return res.status(204).end();
+  });
+
+  // -- Public SSR surface (SEO + share-link unfurls) -----------------------
+  //
+  // These endpoints are intentionally NOT behind `requireUser`. They serve
+  // crawlers (Googlebot, GPTBot, ClaudeBot, Twitterbot, …) and unfurlers
+  // (Slack, Twitter, LinkedIn) which can't run the SPA. nginx routes
+  // `/u/*`, `/robots.txt`, `/sitemap.xml` to the sidecar so this is what
+  // a cold load of `/u/<handle>` actually returns.
+  //
+  // Privacy guarantees enforced here (defense in depth on top of the
+  // projector):
+  //   - Banned / banned_social → 404 (visitor sees "not found", same as
+  //     a non-existent handle, no leakage).
+  //   - Closed profile → minimal gate page with no aggregate data.
+  //   - Kid profile → forced Closed gate.
+  // The renderer escapes every user-supplied string at the boundary.
+  function ssrOrigin(req: Request): string {
+    // Behind nginx in production, X-Forwarded-Proto / Host carry the
+    // browser-visible origin; fall back to req-derived values otherwise.
+    const proto = (req.headers["x-forwarded-proto"] as string)?.split(",")[0] || req.protocol || "https";
+    const host = (req.headers["x-forwarded-host"] as string)?.split(",")[0] || req.headers.host || "learnai.cloud-claude.com";
+    return `${proto}://${host}`;
+  }
+
+  app.get("/u/:handle", (req, res) => {
+    const raw = String(req.params.handle ?? "").trim();
+    // Cheap shape gate: handles are `[a-z0-9_-]{1,24}`. Anything else is
+    // a 404 without touching the store (cuts probe noise from log).
+    if (!raw || !/^[a-z0-9_-]{1,40}$/i.test(raw)) {
+      res.status(404).type("text/html; charset=utf-8");
+      return res.send(renderNotFoundHtml(raw, ssrOrigin(req)));
+    }
+    const profile = store.getProfileByHandle(raw);
+    if (!profile || profile.banned || profile.bannedSocial) {
+      res.status(404).type("text/html; charset=utf-8");
+      return res.send(renderNotFoundHtml(raw, ssrOrigin(req)));
+    }
+    const aggregate = store.getAggregate(profile.email);
+    res.status(200).type("text/html; charset=utf-8");
+    // Short cache so updates land within a minute on share-link refreshes
+    // but Slack/Twitter unfurl caches still hit while a viral link spreads.
+    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
+    return res.send(renderProfileHtml({ profile, aggregate, origin: ssrOrigin(req) }));
+  });
+
+  app.get("/robots.txt", (req, res) => {
+    res.status(200).type("text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return res.send(renderRobotsTxt(ssrOrigin(req)));
+  });
+
+  app.get("/sitemap.xml", (req, res) => {
+    res.status(200).type("application/xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+    return res.send(renderSitemapXml(store.listProfiles(), ssrOrigin(req)));
   });
 
   // -- /me -----------------------------------------------------------------
@@ -630,7 +692,7 @@ export function createApp(opts: AppOpts) {
     const meIsKid = me.ageBand === "kid";
     const blocked = new Set(store.listBlocked(me.email).map((s) => s.toLowerCase()));
 
-    const scopeRaw = req.params.scope ?? "global";
+    const scopeRaw = String(req.params.scope ?? "global");
     let topicFilter: string | null = null;
     let followingOnly = false;
     if (scopeRaw === "following") {
