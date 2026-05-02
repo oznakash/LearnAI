@@ -30,6 +30,7 @@ export function SparkThumbsRow({
   onSignal,
   sourceUrl,
   sourceLabel,
+  hideSignalRow = false,
 }: {
   sparkId: string;
   sparkTitle: string;
@@ -47,6 +48,13 @@ export function SparkThumbsRow({
   /** When present, surfaces a "📚 See source →" affordance on Zoom-in. */
   sourceUrl?: string;
   sourceLabel?: string;
+  /**
+   * Hide the lower state-of-mind row (🔍 Zoom in / ⏭ Skip for now)
+   * even when `onSignal` is provided. Used by the FTUE progressive
+   * disclosure: 👍/👎 unlock at stage `engaged`, but the signal row
+   * stays hidden until stage `returning`. Default: false (show).
+   */
+  hideSignalRow?: boolean;
 }) {
   // Quality-rating (👎) reason input state.
   const [showVoteReason, setShowVoteReason] = useState(false);
@@ -176,7 +184,7 @@ export function SparkThumbsRow({
         <span className="sr-only" data-testid="spark-id">{sparkId}</span>
       </div>
 
-      {onSignal && (
+      {onSignal && !hideSignalRow && (
         <div
           className="card p-3 sm:p-4 flex flex-wrap items-center gap-3"
           role="group"

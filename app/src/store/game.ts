@@ -123,6 +123,61 @@ export function tierForXP(xp: number): GuildTier {
   return "Builder";
 }
 
+/**
+ * The XP threshold for the *next* tier above the user's current XP, plus
+ * the human-readable tier name. Returns `null` once the user has hit the
+ * top tier ("Singularity"). Used by Home / Progress to show a useful
+ * scale alongside the Tier ring instead of a bare zero.
+ */
+export function nextTierThreshold(xp: number): { xp: number; name: GuildTier } | null {
+  const t = tuning().tiers;
+  if (xp < t.architect) return { xp: t.architect, name: "Architect" };
+  if (xp < t.visionary) return { xp: t.visionary, name: "Visionary" };
+  if (xp < t.founder) return { xp: t.founder, name: "Founder" };
+  if (xp < t.singularity) return { xp: t.singularity, name: "Singularity" };
+  return null;
+}
+
+/**
+ * The user's UX maturity stage. Drives **progressive disclosure** — we
+ * don't show a control until the user has earned a need for it.
+ *
+ *   - `fresh`     : 0–2 Sparks completed. Show only the primary CTA on
+ *                   a Spark; hide 👍/👎, 🔍/⏭, `+ Task`, memory nudge,
+ *                   the 14-day sparkline (empty anyway), and the cohort
+ *                   signal banner.
+ *   - `engaged`   : 3+ Sparks completed, ≤ 1 level cleared, single-day
+ *                   history. Reveal 👍/👎 + `+ Task`. Still hide 🔍/⏭
+ *                   + memory nudge.
+ *   - `returning` : 2+ levels cleared OR multi-day history. Full UI.
+ *
+ * Pure — no globals, no DOM. Only input is `PlayerState`. Trivially
+ * testable. See `docs/aha-and-network.md` §5 for the rationale and full
+ * disclosure table.
+ */
+export type UxStage = "fresh" | "engaged" | "returning";
+
+export function uxStage(s: PlayerState, now = Date.now()): UxStage {
+  const totalSparks = Object.values(s.progress.completed).reduce(
+    (a, ids) => a + ids.length,
+    0,
+  );
+  if (totalSparks < 3) return "fresh";
+
+  const levelsTouched = Object.keys(s.progress.completed).filter(
+    (lvl) => (s.progress.completed[lvl] ?? []).length > 0,
+  ).length;
+  if (levelsTouched >= 2) return "returning";
+
+  if (s.history.length >= 2) {
+    const days = new Set(s.history.map((h) => new Date(h.ts).toDateString()));
+    days.add(new Date(now).toDateString());
+    if (days.size >= 2) return "returning";
+  }
+
+  return "engaged";
+}
+
 export function xpForExercise(ex: Exercise, correct: boolean): number {
   const t = tuning().xp;
   switch (ex.type) {
