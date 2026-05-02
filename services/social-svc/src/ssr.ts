@@ -505,7 +505,7 @@ function renderOpenProfile(opts: {
       ${activityBlock}
 
       <section class="card" style="text-align:center;">
-        <h2>Build your own learning résumé</h2>
+        <h2>Start your own AI learning story</h2>
         <p style="opacity:0.75;margin:0 0 1rem;">Sign in with Google. Pick the AI topics you want to grow in. Get personalized 5-minute Sparks every day.</p>
         <a class="cta" href="/">Start with ${SITE_NAME} →</a>
       </section>
