@@ -190,6 +190,11 @@ export function xpForExercise(ex: Exercise, correct: boolean): number {
       // takeaway. Reuse tip-tier XP so we don't bloat GameTuning with
       // a new knob. Per-nugget bonusXP override stays available.
       return ex.bonusXP ?? t.tip;
+    case "youtubenugget":
+      // Same passive-read shape as PodcastNugget — quote + takeaway,
+      // attributed to a video instead of a podcast. Tip-tier XP, same
+      // rationale: the unit of value is the takeaway, not the medium.
+      return t.tip;
     case "buildcard":
       return t.buildcard;
     case "quickpick":

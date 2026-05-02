@@ -81,6 +81,14 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 → Sprint changelog + open punch list: [`social-mvp-status.md`](./social-mvp-status.md).
 
+### Content engine — Sprint #2 foundation (shipped)
+
+- **Spark categories + freshness chip** — Six categories (`principle` / `pattern` / `tooling` / `company` / `news` / `frontier`) with per-category shelf life. Sparks that set `addedAt` + `category` render an age chip ("3 d ago" / "stale soon" / "outdated"). Doctrine: [`content-freshness.md`](./content-freshness.md).
+- **Age-band tone** — MicroRead and Tip Sparks may carry `bodyByAgeBand: { kid?, teen?, adult? }`. The renderer picks the right body for the user's profile band, falls back to default `body` otherwise. First seeded on the "AI is pattern, not magic" Spark in **AI Foundations**.
+- **YouTube nugget Spark** — Second source-anchored variant after PodcastNugget. Renders with channel name, video title, duration, "watch on YouTube" CTA. Pilot constraint: ≥ 5 min, ≤ 60 d old, 10 max in seed.
+- **External-source creators registry** — 8 new creators (AlphaSignal, Hacker News / YC, Anthropic news, Simon Willison, Hugging Face, Latent Space, DeepMind, Y Combinator). Sparks reference creator id; renderer surfaces avatar + "via X" without inlining attribution.
+- **Critique chips → meta-implicit refinement** — A 👎 vote opens 7 chips (too-theoretical · wrong-examples · outdated · too-jargon · watered-down · wrong-level · too-long). Each tap writes a `critique`-category memory whose aggregation (`app/src/store/critique.ts`) folds into a prompt-bias stanza. Designed to shape generation at small N, where per-Spark vote stats are still noisy.
+
 ### Quality bar
 
 - **310 tests passing**: 266 SPA (Vitest) + 44 social-svc (supertest+vitest). Sprint 2.5 PR 12 added the close-out polish: `/health` startup state, Stream Signal-overlap + spotlight cron, telemetry endpoint, and admin telemetry panel.

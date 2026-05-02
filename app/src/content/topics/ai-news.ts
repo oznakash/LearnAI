@@ -17,6 +17,21 @@ export const aiNews: Topic = {
         title: "Your AI news diet",
         body: "AI news is a firehose of hype. Build a small high-signal feed: 5-8 trusted writers, lab blogs (Anthropic, OpenAI, DeepMind, Meta), one weekly digest (e.g. The Rundown, Latent Space, Import AI), and one paper aggregator. Mute the rest. Quality > quantity. You'll know more, faster, with less anxiety.",
         takeaway: "Small curated feed > infinite scroll.",
+        source: { name: "AlphaSignal", url: "https://alphasignal.ai/archive" },
+        category: "principle",
+        addedAt: "2026-04-20",
+      }),
+      // Sprint #2 seed — external-source nugget from AlphaSignal feed.
+      // Demonstrates the freshness chip on a `news`-category Spark with
+      // a recent addedAt date. SEED — VERIFY before public publish.
+      spark("Long-context is a refactor signal", {
+        type: "microread",
+        title: "Claude Opus 4.7 (1M context) is GA",
+        body: "Anthropic shipped Claude Opus 4.7 with a 1M-token context window, available to API customers and inside Claude Code. That's roughly 750k words — a full mid-size codebase or every email you've sent this year. The pricing tier above 200k tokens is higher per token, so the practical pattern is still RAG for hot paths and 1M context for one-shot codebase reasoning. If you've been chunking aggressively to fit 200k, audit which of those pipelines are now just noise.",
+        takeaway: "Long-context isn't a gimmick anymore — it's a refactor signal for any RAG pipeline you built before 2026.",
+        source: { name: "AlphaSignal", url: "https://alphasignal.ai/archive" },
+        category: "news",
+        addedAt: "2026-04-22",
       }),
     ]),
     level(T, 2, "Press release vs reality", "What labs say vs what shipped.", 4, [

@@ -17,6 +17,15 @@ export const aiFoundations: Topic = {
         title: "AI is pattern, not magic",
         body: "AI is software that learns patterns from examples instead of being told the rules. Show it 100,000 cat photos labeled 'cat' and it learns the statistical fingerprint of 'cat'. New photo arrives — it scores how cat-like it looks. That's it. No spark of consciousness. The 'magic' is scale: huge datasets, huge models, and clever math (gradient descent) that nudges billions of knobs until the predictions get good.",
         takeaway: "AI = learned patterns at scale, not programmed rules.",
+        bodyByAgeBand: {
+          // Sprint #2 seed — proves the kid-voice rules from
+          // docs/content-freshness.md §4 work. Same takeaway, simpler
+          // language and examples (Pokémon vs cat photos), no companies.
+          kid: "AI is just a computer that gets really good at noticing patterns. Imagine you show it 100,000 pictures and tell it which ones are Pokémon and which aren't. After enough examples, it can guess on a new picture all by itself. Nobody had to write rules like 'if it has a tail, it might be Pikachu' — it figured that out by looking. The 'AI' part isn't magic. It's *practice at scale*.",
+          teen: "AI is software that learns patterns from examples, not from rules someone typed. Feed it 100,000 photos of cats and it builds its own fingerprint for what cat-shaped looks like. Then it can score a new photo without anyone teaching it edges, whiskers, or fur. The 'intelligence' is really pattern-matching at huge scale — billions of tiny dials nudged until the guesses get better.",
+        },
+        category: "principle",
+        addedAt: "2026-04-15",
       }),
       spark("Quick check", {
         type: "quickpick",
@@ -35,6 +44,28 @@ export const aiFoundations: Topic = {
         title: "💡 Tip & Trick",
         body: "When an AI surprises you, ask: 'what pattern in the training data would explain this?' That single question demystifies most weird outputs.",
         bonusXP: 5,
+      }),
+      // Sprint #2 seed — YouTube source-anchored Spark. Pilot content
+      // per docs/content-freshness.md §7. Marked SEED — a human must
+      // verify the video URL + timestamp + exact quote before public
+      // ship. The pattern is the deliverable here, not the specific
+      // attribution.
+      spark("3Blue1Brown: why attention works", {
+        type: "youtubenugget",
+        quote:
+          "Attention is doing something deceptively simple. Each token asks every other token a question, gets an answer weighted by relevance, and updates its own meaning. The magic isn't the math — it's that the questions and answers are themselves learned.",
+        takeaway: "Attention is *learned* questions and answers between tokens, not just weighted averaging.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/@3blue1brown", // SEED — VERIFY: replace with actual video URL
+          videoTitle: "Attention, Revisited",
+          channelName: "3Blue1Brown",
+          publishedAt: "2026-04-11",
+          durationMinutes: 24,
+          timestamp: "08:55",
+        },
+        category: "principle",
+        addedAt: "2026-05-01",
       }),
       spark("Match the type", {
         type: "patternmatch",

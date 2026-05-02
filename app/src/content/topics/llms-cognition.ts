@@ -56,6 +56,18 @@ export const llmsCognition: Topic = {
         title: "💡 Tip & Trick",
         body: "Wrap user input in <user_input> tags. Prevents prompt injection from blurring the line between your instructions and what the user typed.",
       }),
+      // Sprint #2 seed — external-source nugget from Simon Willison's blog.
+      // Demonstrates the freshness chip on a `tooling`-category Spark with a
+      // recent addedAt date. SEED — VERIFY URL before public publish.
+      spark("Structured outputs are the lock", {
+        type: "microread",
+        title: "Stop parsing prose. Ask for JSON.",
+        body: "All major frontier models now support structured output modes — Anthropic tool-use, OpenAI response_format, Gemini schema mode. Instead of asking the model for prose and regexing the answer, hand it a JSON schema and let the runtime enforce the shape. Two practical wins: (1) the model can't drift mid-response, and (2) you stop writing brittle parsers that break the next time the model gets chatty. If your pipeline still does `response.split('\\n')`, you're maintaining tech debt that the model providers already solved.",
+        takeaway: "If the model supports schema-constrained output, use it. Free reliability.",
+        source: { name: "Simon Willison's Weblog", url: "https://simonwillison.net/" },
+        category: "tooling",
+        addedAt: "2026-04-15",
+      }),
       spark("Build it", {
         type: "buildcard",
         title: "Build: a prompt eval harness",

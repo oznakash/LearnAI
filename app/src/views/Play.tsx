@@ -394,6 +394,7 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
             topicVisual={topic.visual}
             locked={feedback !== null}
             onAnswer={onAnswer}
+            ageBand={state.profile?.ageBand}
             onVocabTap={(term, definition) => {
               // The user tapped an inline vocab term to see its inline
               // definition. Record a `vocabulary` memory so the
@@ -491,6 +492,32 @@ export function Play({ topicId, levelId, onDone, onSwitchTopic }: Props) {
               });
             }
           }}
+          onCritique={(chip) => {
+            // Structured critique signal — aggregates across Sparks of
+            // the same shape and biases future content generation, not
+            // just future ranking of the disliked Spark. See
+            // `docs/content-freshness.md` §5.
+            const ex = spark.exercise;
+            const vocabAtoms =
+              ex.type === "microread" || ex.type === "tip"
+                ? (ex.vocab ?? []).map((v) => v.term)
+                : undefined;
+            const sparkCategory =
+              "category" in ex ? ex.category : undefined;
+            void remember({
+              text: `User critiqued Spark "${spark.title}" as "${chip}" in ${topic.name} L${activeLevel.index}.`,
+              category: "critique",
+              metadata: {
+                sparkId: spark.id,
+                topicId,
+                levelId: activeLevel.id,
+                chip,
+                sparkType: ex.type,
+                sparkCategory,
+                vocabAtoms,
+              },
+            });
+          }}
           onSignal={(signal, reason) => {
             signalSpark(spark.id, signal, { reason, topicId, levelId: activeLevel.id });
             if (signal === "zoom") {
@@ -576,6 +603,7 @@ function ExerciseSparkView({
   onAnswer,
   onVocabTap,
   onVocabZoom,
+  ageBand,
 }: {
   spark: Spark;
   topicVisual?: import("../types").VisualKey;
@@ -583,6 +611,7 @@ function ExerciseSparkView({
   onAnswer: (correct: boolean, explain?: string) => void;
   onVocabTap?: (term: string, definition: string) => void;
   onVocabZoom?: (term: string) => void;
+  ageBand?: import("../types").AgeBand;
 }) {
   return (
     <ExerciseRenderer
@@ -593,6 +622,7 @@ function ExerciseSparkView({
       onAnswer={onAnswer}
       onVocabTap={onVocabTap}
       onVocabZoom={onVocabZoom}
+      ageBand={ageBand}
     />
   );
 }

@@ -17,6 +17,10 @@ export const aiDevtools: Topic = {
         title: "Suggest, chat, agent",
         body: "AI dev tools come in three flavors: (1) Suggest — inline ghost text (Copilot, Cursor Tab). (2) Chat — a side panel for back-and-forth (Cursor Chat, JetBrains AI). (3) Agent — autonomous, multi-file edits (Claude Code, Cursor Agent, Devin). Each fits a different brain mode. The best teams mix all three across the day.",
         takeaway: "Suggest for typing. Chat for thinking. Agent for grunt work.",
+        bodyByAgeBand: {
+          kid: "AI in your code editor comes in three flavors. (1) Suggest — it finishes your sentences as you type, like autocomplete. (2) Chat — a little assistant on the side you can ask questions. (3) Agent — a helper that does whole jobs by itself (read files, run things, edit code). Pick the one that matches the kind of thinking you're doing.",
+          teen: "AI dev tools come in three flavors. Suggest = autocomplete on steroids (Copilot, Cursor Tab). Chat = a sidebar where you ask questions while you code (Cursor Chat). Agent = a teammate that edits multiple files on its own (Claude Code, Cursor Agent, Devin). Match the tool to the kind of work you're doing.",
+        },
       }),
       spark("Pattern match", {
         type: "patternmatch",
@@ -28,6 +32,26 @@ export const aiDevtools: Topic = {
           { left: "Migrate to a new API", right: "Agent" },
         ],
         explain: "Match the tool to the mental gear.",
+      }),
+      // Sprint #2 seed — first YouTube nugget Spark in a non-foundations topic.
+      // Demonstrates the pilot constraints (≥5 min, ≤60 days old) + the
+      // freshness chip on a `tooling`-category source-anchored Spark.
+      // SEED — VERIFY video URL + duration before public publish.
+      spark("Watching agents work", {
+        type: "youtubenugget",
+        quote: "The mental shift with Claude Code isn't 'how do I write the prompt' — it's 'what's the smallest verifiable diff I can ask for, and what's the test that proves it landed.' Agent quality lives or dies on that loop.",
+        takeaway: "Agent UX is a TDD loop. Smallest verifiable diff in, a test out, repeat.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/@AnthropicAI",
+          videoTitle: "Claude Code in practice",
+          channelName: "Anthropic",
+          publishedAt: "2026-04-10",
+          durationMinutes: 18,
+        },
+        ctaPrompt: "Open Claude Code on a tiny side repo. Ask for one file's worth of code + the test that proves it. Do the loop three times.",
+        category: "tooling",
+        addedAt: "2026-04-22",
       }),
     ]),
     level(T, 2, "Claude Code mental model", "Briefing an autonomous teammate.", 4, [

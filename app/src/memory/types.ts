@@ -25,7 +25,16 @@ export type MemoryCategory =
    *   - bias toward Sparks that use vocab the user is *learning* (mid-
    *     mastery), away from vocab they've over-mastered.
    */
-  | "vocabulary";
+  | "vocabulary"
+  /**
+   * Structured critique on a 👎'd Spark — the *why*. With small N, per-
+   * Spark vote counts are noisy; the critique signal aggregates across
+   * Sparks of the same shape and biases **future content generation**,
+   * not just future ranking of the same Spark. See
+   * `docs/content-freshness.md` §5 for the meta-implicit refinement
+   * loop and the eight critique chips.
+   */
+  | "critique";
 
 export interface MemoryItem {
   id: string;
