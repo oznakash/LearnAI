@@ -20,6 +20,7 @@
 | [`social-mvp-product.md`](./social-mvp-product.md) | Sprint-2 social MVP from a product-exec lens · Follow / Spark Stream / Topic Leaderboards / Signals · privacy posture · UI surface map · success metrics | Reviewing or building the social network layer. |
 | [`social-mvp-engineering.md`](./social-mvp-engineering.md) | Sister doc to the social PRD · Postgres-2 schema · `SocialService` contract · auth-verifying proxy · tests · rollout · risk register | Implementing the social MVP in a single PR. |
 | [`social-mvp-status.md`](./social-mvp-status.md) | Sprint-2 changelog (9 PRs) · open P0/P1 punch list from the post-merge review · what Sprint 2.5 closes | Anyone shipping Sprint 2.5 or asking "is the social layer production-ready?" |
+| [`profile-enhancements.md`](./profile-enhancements.md) | Three additive lifts on top of the public-profile MVP — Public/Private terminology, profile completeness gauge, native-share, per-profile SEO + JSON-LD | Touching `Profile.tsx`, `Network.tsx`, `Settings.tsx`, or anything in `app/src/profile/`. |
 
 ## Technical & operator
 

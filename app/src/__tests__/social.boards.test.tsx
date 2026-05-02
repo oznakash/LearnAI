@@ -7,6 +7,7 @@ import { SocialProvider } from "../social/SocialContext";
 import { Leaderboard } from "../views/Leaderboard";
 import { OfflineSocialService } from "../social/offline";
 import { STORAGE_KEY } from "../store/game";
+import { ADMIN_STORAGE_KEY } from "../admin/store";
 
 function mount() {
   return render(
@@ -57,7 +58,29 @@ describe("Leaderboards (Boards) view", () => {
     expect(screen.getByRole("heading", { name: /^Tiers$/ })).toBeTruthy();
   });
 
-  it("appears with mock filler when there are no real rows (sparse-board recovery)", async () => {
+  it("does NOT show mock filler in production-default config (showDemoData=false)", async () => {
+    mount();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /^Leaderboards$/ })).toBeTruthy();
+    });
+    // Default admin config sets showDemoData=false, so the FAKE_GUILD
+    // never enters the player list. The 'sample' tag is the marker used
+    // by the renderer to label mock rows; its absence confirms the gate.
+    expect(screen.queryAllByText(/sample/i).length).toBe(0);
+    // The first builder ALWAYS sees themselves on the board, so the
+    // empty-state copy ("be the first builder") should render.
+    await waitFor(() => {
+      expect(screen.getByText(/first builder on this board/i)).toBeTruthy();
+    });
+  });
+
+  it("shows mock filler when admin opts in via showDemoData=true", async () => {
+    // Persist the admin override BEFORE mounting so AdminProvider hydrates
+    // with showDemoData=true. Mirrors how the operator would flip the flag
+    // in Admin → Config.
+    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
+    cfg.flags = { ...(cfg.flags ?? {}), showDemoData: true };
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
     mount();
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /^Leaderboards$/ })).toBeTruthy();

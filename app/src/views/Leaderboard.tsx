@@ -126,10 +126,13 @@ export function Leaderboard({ onNav }: Props = {}) {
       isMock: false,
       tier: p.guildTier,
     }));
-    // Mock filler is only used for Global / Topic scopes — never Following
-    // (where empty-state copy is the desired UX, per PRD §4.5 spotlight rules).
+    // Mock filler is gated behind the admin `showDemoData` flag (default
+    // false in production). Without the flag, real users see only real
+    // peers + themselves; the cohort never includes synthetic accounts.
+    // With the flag (dev / screenshots / demos), it fills below 10 real
+    // rows on Global / Topic scopes — never Following.
     const filler =
-      scope !== "following" && real.length < 10
+      config.flags.showDemoData && scope !== "following" && real.length < 10
         ? FAKE_GUILD.map((p, i) => ({
             key: `m-${p.nameKey}-${i}`,
             handle: p.nameKey,
@@ -272,6 +275,26 @@ export function Leaderboard({ onNav }: Props = {}) {
           <p className="text-xs text-white/50">Loading…</p>
         ) : players.length === 0 ? (
           <p className="text-xs text-white/50">No one's on this board yet.</p>
+        ) : players.length === 1 && players[0].isMe ? (
+          <div className="space-y-3">
+            <ol className="space-y-2">
+              <li className="flex items-center gap-3 p-3 rounded-xl border bg-accent/15 border-accent shadow-glow">
+                <div className="w-8 h-8 grid place-items-center rounded-full text-sm font-bold bg-warn text-ink2">1</div>
+                <div className="text-2xl">{players[0].emoji}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white truncate">
+                    {players[0].name}
+                    <span className="chip ml-2">you</span>
+                  </div>
+                  <div className="text-xs text-white/50">{players[0].tier}</div>
+                </div>
+                <div className="font-display tabular-nums text-white">⚡ {players[0].xp}</div>
+              </li>
+            </ol>
+            <div className="text-xs text-white/55 px-1">
+              You're the first builder on this board. Share your profile to invite peers — your cohort grows as more people sign in.
+            </div>
+          </div>
         ) : (
           <ol className="space-y-2">
             {players.slice(0, 100).map((p, i) => (

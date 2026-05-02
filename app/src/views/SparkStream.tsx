@@ -108,7 +108,12 @@ export function SparkStream({ onNav }: Props) {
       iCanFollow: c.iCanFollow,
       isMock: false,
     }));
-    const mock = realDisplay.length === 0
+    // Mock cards are gated behind the admin `showDemoData` flag (default
+    // false in production). Without the flag, an empty stream stays empty
+    // and the EmptyState component handles the cold-start copy. With the
+    // flag (dev / screenshots / demos), it fills the timeline so the page
+    // never looks dead.
+    const mock = config.flags.showDemoData && realDisplay.length === 0
       ? makeMockCards(Date.now(), config.branding.mascotName)
       : [];
     setCards([...realDisplay, ...mock].sort((a, b) => b.createdAt - a.createdAt));

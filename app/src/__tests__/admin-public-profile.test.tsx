@@ -77,18 +77,18 @@ describe("AdminPublicProfile tab", () => {
   it("renders the four operator sections", async () => {
     mountTab();
     await settle();
-    expect(screen.getByText(/Default profile mode for new sign-ups/i)).toBeTruthy();
+    expect(screen.getByText(/Default profile visibility for new sign-ups/i)).toBeTruthy();
     expect(screen.getByText(/SSR personalized learning content/i)).toBeTruthy();
     expect(screen.getByText(/Default field visibility for new users/i)).toBeTruthy();
     expect(screen.getByText(/Preview \+ reset/i)).toBeTruthy();
   });
 
-  it("flipping 'Closed' default persists to admin config", async () => {
+  it("flipping 'Private' default persists to admin config", async () => {
     mountTab();
     await settle();
-    const closedBtn = screen.getByRole("button", { name: /🔒 Closed/i });
+    const privateBtn = screen.getByRole("button", { name: /🔒 Private/i });
     await act(async () => {
-      fireEvent.click(closedBtn);
+      fireEvent.click(privateBtn);
     });
     await waitFor(() => {
       const raw = localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}";

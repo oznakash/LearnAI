@@ -68,7 +68,24 @@ describe("Spark Stream view", () => {
     expect(screen.getByRole("button", { name: /↻ Refresh/ })).toBeTruthy();
   });
 
-  it("falls back to mock cards when getStream returns []", async () => {
+  it("does NOT show mock cards in production-default config (showDemoData=false)", async () => {
+    mountStream();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /^Spark Stream$/ })).toBeTruthy();
+    });
+    // Default admin config sets showDemoData=false, so makeMockCards
+    // never injects synthetic activity. The empty stream surfaces the
+    // EmptyState component instead.
+    expect(screen.queryAllByText(/sample/i).length).toBe(0);
+    // Mock author display names ("Ada", "Priya") should not appear.
+    expect(screen.queryByText("Ada")).toBeNull();
+    expect(screen.queryByText("Priya")).toBeNull();
+  });
+
+  it("falls back to mock cards when getStream returns [] AND showDemoData is on", async () => {
+    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
+    cfg.flags = { ...(cfg.flags ?? {}), showDemoData: true };
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
     mountStream();
     // Mock cards include "sample" tags.
     await waitFor(() => {
@@ -90,7 +107,10 @@ describe("Spark Stream view", () => {
     });
   });
 
-  it("renders headline copy for each card kind", async () => {
+  it("renders headline copy for each card kind (showDemoData on)", async () => {
+    const cfg = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{}");
+    cfg.flags = { ...(cfg.flags ?? {}), showDemoData: true };
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(cfg));
     mountStream();
     await waitFor(() => {
       expect(screen.getAllByText(/sample/i).length).toBeGreaterThan(0);

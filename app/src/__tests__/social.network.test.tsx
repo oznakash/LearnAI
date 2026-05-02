@@ -49,24 +49,24 @@ beforeEach(() => {
 });
 
 describe("Network view", () => {
-  it("renders header + Profile mode toggles + signals picker", async () => {
+  it("renders header + profile visibility toggles + signals picker", async () => {
     mount();
     await settle();
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /^Network$/ })).toBeTruthy();
     });
-    expect(screen.getByRole("heading", { name: /^Profile mode$/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /🌐 Open/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /🔒 Closed/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /^Profile visibility$/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /🌐 Public/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /🔒 Private/ })).toBeTruthy();
     expect(screen.getByRole("heading", { name: /^Signals$/ })).toBeTruthy();
   });
 
-  it("flipping the Closed button persists profileMode=closed", async () => {
+  it("flipping the Private button persists profileMode=closed", async () => {
     mount();
     await settle();
-    const closedButton = await screen.findByRole("button", { name: /🔒 Closed/ });
+    const privateButton = await screen.findByRole("button", { name: /🔒 Private/ });
     await act(async () => {
-      fireEvent.click(closedButton);
+      fireEvent.click(privateButton);
       await new Promise((r) => setTimeout(r, 10));
     });
     const svc = new OfflineSocialService({ email: "maya@gmail.com" });
@@ -74,7 +74,7 @@ describe("Network view", () => {
     expect(me.profileMode).toBe("closed");
   });
 
-  it("kid profiles cannot flip to Open via the toggle (button disabled)", async () => {
+  it("kid profiles cannot flip to Public via the toggle (button disabled)", async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -95,9 +95,9 @@ describe("Network view", () => {
     // Wait for the kid-specific copy that only renders once the player
     // profile has hydrated and the social service has refreshed.
     await waitFor(() => {
-      expect(screen.getByText(/kids profiles are always closed/i)).toBeTruthy();
+      expect(screen.getByText(/kids profiles are always private/i)).toBeTruthy();
     });
-    const openBtn = screen.getByRole("button", { name: /🌐 Open/ });
+    const openBtn = screen.getByRole("button", { name: /🌐 Public/ });
     expect((openBtn as HTMLButtonElement).disabled).toBe(true);
   });
 

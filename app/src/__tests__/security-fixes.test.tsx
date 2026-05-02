@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 
 import { PlayerProvider, usePlayer } from "../store/PlayerContext";
 import { AdminProvider, useAdmin } from "../admin/AdminContext";
+import { MemoryProvider } from "../memory/MemoryContext";
+import { SocialProvider } from "../social/SocialContext";
 import { Settings } from "../views/Settings";
 import { ADMIN_STORAGE_KEY } from "../admin/store";
 import { defaultAdminConfig } from "../admin/defaults";
@@ -34,7 +36,11 @@ function writePlayerState(patch: Partial<PlayerState>) {
 function Providers({ children }: { children: ReactNode }) {
   return (
     <PlayerProvider>
-      <AdminProvider>{children}</AdminProvider>
+      <AdminProvider>
+        <MemoryProvider>
+          <SocialProvider>{children}</SocialProvider>
+        </MemoryProvider>
+      </AdminProvider>
     </PlayerProvider>
   );
 }
