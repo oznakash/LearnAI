@@ -2,7 +2,17 @@ import { useMemo, useState } from "react";
 import { useAdmin } from "./AdminContext";
 import { SEED_TOPICS } from "../content";
 import { SEED_CREATORS } from "../content/creators";
-import type { Creator, CreatorId, CreatorKind, Spark, TopicId } from "../types";
+import { usePlayer } from "../store/PlayerContext";
+import type {
+  Creator,
+  CreatorId,
+  CreatorKind,
+  MicroRead,
+  Spark,
+  SparkCategory,
+  Topic,
+  TopicId,
+} from "../types";
 
 /**
  * Admin → Creators.
@@ -65,24 +75,88 @@ export function AdminCreators() {
 
   const sparksByCreator = useMemo<Record<CreatorId, SparkRef[]>>(() => {
     const out: Record<CreatorId, SparkRef[]> = {};
-    for (const t of SEED_TOPICS) {
+    // Walk the merged topic list (seeds + admin overrides + extras) so a
+    // freshly-drafted Spark appears under its creator immediately. The
+    // helper does the same merging the player runtime does.
+    const overrides = config.contentOverrides;
+    const map: Record<string, Topic> = {};
+    for (const t of SEED_TOPICS) map[t.id] = t;
+    for (const [id, t] of Object.entries(overrides.topics)) {
+      if (t) map[id] = t;
+    }
+    for (const t of overrides.extras) map[t.id] = t;
+    const live = Object.values(map);
+
+    const matchByName = (name: string | undefined, c: Creator): boolean => {
+      if (!name) return false;
+      return name.trim().toLowerCase() === c.name.trim().toLowerCase();
+    };
+    const matchByUrl = (url: string | undefined, c: Creator): boolean => {
+      if (!url) return false;
+      return url.trim() === c.creditUrl.trim();
+    };
+
+    const push = (creatorId: CreatorId, sp: Spark, t: Topic, lvlIndex: number) => {
+      if (!out[creatorId]) out[creatorId] = [];
+      out[creatorId].push({
+        spark: sp,
+        topicId: t.id,
+        topicName: t.name,
+        levelIndex: lvlIndex,
+      });
+    };
+
+    for (const t of live) {
       for (const lvl of t.levels) {
         for (const sp of lvl.sparks) {
-          if (sp.exercise.type !== "podcastnugget") continue;
-          const id = sp.exercise.creatorId;
-          if (!id) continue;
-          if (!out[id]) out[id] = [];
-          out[id].push({
-            spark: sp,
-            topicId: t.id,
-            topicName: t.name,
-            levelIndex: lvl.index,
-          });
+          const ex = sp.exercise;
+          // PodcastNugget: explicit creatorId is the canonical link.
+          if (ex.type === "podcastnugget") {
+            if (ex.creatorId) {
+              push(ex.creatorId, sp, t, lvl.index);
+              continue;
+            }
+            // Back-compat: try to fuzzy-match against creator names.
+            for (const c of Object.values(merged)) {
+              if (
+                matchByName(ex.source?.podcast, c) ||
+                matchByUrl(ex.source?.podcastUrl, c)
+              ) {
+                push(c.id, sp, t, lvl.index);
+                break;
+              }
+            }
+            continue;
+          }
+          // YoutubeNugget: source.channelName / videoUrl match channel-kind creators.
+          if (ex.type === "youtubenugget") {
+            for (const c of Object.values(merged)) {
+              if (
+                matchByName(ex.source.channelName, c) ||
+                matchByUrl(ex.source.videoUrl, c)
+              ) {
+                push(c.id, sp, t, lvl.index);
+                break;
+              }
+            }
+            continue;
+          }
+          // MicroRead / Tip: optional `source` chip on the Spark.
+          if (ex.type === "microread" || ex.type === "tip") {
+            const src = ex.source;
+            if (!src) continue;
+            for (const c of Object.values(merged)) {
+              if (matchByName(src.name, c) || matchByUrl(src.url, c)) {
+                push(c.id, sp, t, lvl.index);
+                break;
+              }
+            }
+          }
         }
       }
     }
     return out;
-  }, []);
+  }, [config.contentOverrides, merged]);
 
   const ids = Object.keys(merged).sort();
   const [activeId, setActiveId] = useState<CreatorId | null>(ids[0] ?? null);
@@ -90,6 +164,7 @@ export function AdminCreators() {
   const [draft, setDraft] = useState<Creator | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [sparkModalFor, setSparkModalFor] = useState<CreatorId | null>(null);
 
   const active = activeId ? merged[activeId] : null;
   const isSeed = (id: CreatorId): boolean => Boolean(SEED_CREATORS[id]);
@@ -223,9 +298,10 @@ export function AdminCreators() {
           <h2 className="h2">🎨 Creators</h2>
           <p className="muted text-sm max-w-3xl">
             External content sources we credit inside Sparks — podcasts, newsletters,
-            channels, blogs, books. Sparks reference creators by id, so changing a
-            credit URL or avatar here updates every Spark that points at it. Delete
-            is blocked while Sparks still reference a creator.
+            channels, blogs, books. Open a creator and paste source content to draft
+            a new Spark attributed to them. Sparks reference creators by id, so
+            changing a credit URL or avatar here updates every Spark that points at
+            it. Delete is blocked while Sparks still reference a creator.
           </p>
         </div>
         <div className="flex gap-2">
@@ -323,7 +399,15 @@ export function AdminCreators() {
                     <p className="text-white/75 text-sm mt-2">{active.bio}</p>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="btn-primary text-xs"
+                    data-testid="add-spark"
+                    onClick={() => setSparkModalFor(active.id)}
+                    title="Paste source content and draft a Spark attributed to this creator."
+                  >
+                    + Add Spark
+                  </button>
                   <button className="btn-ghost text-xs" onClick={startEdit}>
                     ✎ Edit
                   </button>
@@ -509,6 +593,17 @@ export function AdminCreators() {
           )}
         </div>
       </div>
+
+      {sparkModalFor && merged[sparkModalFor] && (
+        <AddSparkModal
+          creator={merged[sparkModalFor]}
+          onClose={() => setSparkModalFor(null)}
+          onSaved={() => {
+            setSparkModalFor(null);
+            setSavedFlash(true);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -524,8 +619,9 @@ function CreatorSparkList({
     return (
       <section className="rounded-xl bg-white/5 border border-white/10 p-3 text-sm text-white/60">
         No Sparks reference <strong className="text-white/80">{creatorName}</strong> yet.
-        Set the <code className="text-white/70">creatorId</code> field on a
-        PodcastNugget Spark in the Content tab to start crediting this creator.
+        Click <strong className="text-white/80">+ Add Spark</strong> above to paste
+        source content and draft one — it'll be attributed to this creator
+        automatically.
       </section>
     );
   }
@@ -551,5 +647,447 @@ function CreatorSparkList({
         Editing a creator here updates every Spark's chip + link in one go.
       </p>
     </section>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// AddSparkModal
+//
+// Paste-and-draft UI. Operator picks a topic + level + category, pastes raw
+// source content (e.g. a podcast transcript chunk, newsletter excerpt, blog
+// paragraph), and either has Claude distill it into a Spark or fills the
+// fields by hand. The resulting MicroRead Spark is appended to the chosen
+// topic via `AdminConfig.contentOverrides.topics[topicId]` — the same store
+// AdminContent + AdminPromptStudio use, so the Spark surfaces immediately
+// in player Topic / Play views.
+//
+// CORS: the Anthropic Messages API supports browser calls when the
+// `anthropic-dangerous-direct-browser-access` header is set (same approach
+// AdminPromptStudio uses via `generateSparks`). If the operator hasn't set
+// an Anthropic key in Settings, the AI button is disabled and the form is
+// fully hand-fillable — the paste→edit→save loop is the load-bearing part.
+// ───────────────────────────────────────────────────────────────────────────
+
+const TOPIC_CHOICES: { id: TopicId; label: string }[] = [
+  { id: "ai-foundations", label: "AI Foundations" },
+  { id: "llms-cognition", label: "LLMs & Cognition" },
+  { id: "memory-safety", label: "Memory & Safety" },
+  { id: "ai-pm", label: "AI PM" },
+  { id: "ai-builder", label: "AI Builder" },
+  { id: "cybersecurity", label: "Cybersecurity" },
+  { id: "cloud", label: "Cloud" },
+  { id: "ai-devtools", label: "AI DevTools" },
+  { id: "ai-trends", label: "AI Trends" },
+  { id: "frontier-companies", label: "Frontier Companies" },
+  { id: "ai-news", label: "AI News" },
+  { id: "open-source", label: "Open Source" },
+];
+
+const CATEGORY_CHOICES: { id: SparkCategory; label: string }[] = [
+  { id: "principle", label: "Principle (2-year shelf)" },
+  { id: "pattern", label: "Pattern (6-month shelf)" },
+  { id: "tooling", label: "Tooling (3-month shelf)" },
+  { id: "company", label: "Company (30-day shelf)" },
+  { id: "news", label: "News (14-day shelf)" },
+  { id: "frontier", label: "Frontier (7-day shelf)" },
+];
+
+interface DraftedSpark {
+  title: string;
+  body: string;
+  takeaway: string;
+  sourceName: string;
+  sourceUrl: string;
+}
+
+const SYSTEM_PROMPT =
+  "You are a content distiller for LearnAI. Take pasted source content and produce ONE high-signal MicroRead Spark in JSON. Schema: { type:\"microread\", title, body, takeaway, source:{name,url}, category, addedAt }. Rules: body ≤ 120 words, takeaway ≤ 90 chars, action-shaped, named products only, no hedging, no academic register, quote ≤ 15 words from the source. Return strict JSON only.";
+
+function AddSparkModal({
+  creator,
+  onClose,
+  onSaved,
+}: {
+  creator: Creator;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { config, setConfig } = useAdmin();
+  const { state: player } = usePlayer();
+  const apiKey = player.apiKey;
+  const apiProvider = player.apiProvider ?? "anthropic";
+
+  const [pasted, setPasted] = useState("");
+  const [sourceUrl, setSourceUrl] = useState(creator.creditUrl);
+  const [topicId, setTopicId] = useState<TopicId>("ai-foundations");
+  const [level, setLevel] = useState(1);
+  const [category, setCategory] = useState<SparkCategory>("pattern");
+  const [drafted, setDrafted] = useState<DraftedSpark | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const canDraft = pasted.trim().length > 20 && Boolean(apiKey) && apiProvider === "anthropic";
+
+  const draftWithAI = async () => {
+    if (!apiKey) {
+      setError("Set your Anthropic API key in Settings first.");
+      return;
+    }
+    setDrafting(true);
+    setError(null);
+    try {
+      const userMsg = JSON.stringify({
+        creator: creator.name,
+        topic: topicId,
+        level,
+        category,
+        addedAt: today,
+        sourceUrl,
+        pastedContent: pasted,
+      });
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: "user", content: userMsg }],
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${txt.slice(0, 200)}`);
+      }
+      const data = (await res.json()) as { content?: { text?: string }[] };
+      const text = data?.content?.[0]?.text ?? "";
+      const cleaned = text
+        .trim()
+        .replace(/^```(?:json)?\s*/, "")
+        .replace(/```\s*$/, "");
+      const parsed = JSON.parse(cleaned) as {
+        title?: string;
+        body?: string;
+        takeaway?: string;
+        source?: { name?: string; url?: string };
+      };
+      setDrafted({
+        title: parsed.title ?? "",
+        body: parsed.body ?? "",
+        takeaway: parsed.takeaway ?? "",
+        sourceName: parsed.source?.name ?? creator.name,
+        sourceUrl: parsed.source?.url ?? sourceUrl,
+      });
+    } catch (e) {
+      setError("Couldn't draft via AI: " + (e as Error).message + ". Fill the form by hand and save.");
+    } finally {
+      setDrafting(false);
+    }
+  };
+
+  const startManualDraft = () => {
+    setDrafted({
+      title: "",
+      body: "",
+      takeaway: "",
+      sourceName: creator.name,
+      sourceUrl,
+    });
+    setError(null);
+  };
+
+  const updateDraft = (patch: Partial<DraftedSpark>) => {
+    setDrafted((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const save = () => {
+    if (!drafted) return;
+    if (!drafted.title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+    if (!drafted.body.trim()) {
+      setError("Body is required.");
+      return;
+    }
+    if (!drafted.takeaway.trim()) {
+      setError("Takeaway is required.");
+      return;
+    }
+    const exercise: MicroRead = {
+      type: "microread",
+      title: drafted.title.trim(),
+      body: drafted.body.trim(),
+      takeaway: drafted.takeaway.trim(),
+      source: {
+        name: drafted.sourceName.trim() || creator.name,
+        url: drafted.sourceUrl.trim() || creator.creditUrl,
+      },
+      category,
+      addedAt: today,
+    };
+    const newSpark: Spark = {
+      id: `creator-${creator.id}-${Date.now()}`,
+      title: drafted.title.trim(),
+      exercise,
+    };
+    setConfig((cfg) => {
+      // Source the topic from any existing override, then any extra,
+      // then fall back to the seed. We need a mutable base or the
+      // overrides won't reach the player runtime (see SEED-only path).
+      const fromOverrides = cfg.contentOverrides.topics[topicId];
+      const fromExtras = cfg.contentOverrides.extras.find((t) => t.id === topicId);
+      const seed = SEED_TOPICS.find((t) => t.id === topicId);
+      const base: Topic | undefined = fromOverrides ?? fromExtras ?? seed;
+      if (!base) return cfg;
+      const targetLevel = base.levels.find((l) => l.index === level);
+      if (!targetLevel) return cfg;
+      const nextLevels = base.levels.map((l) =>
+        l.index === level ? { ...l, sparks: [...l.sparks, newSpark] } : l
+      );
+      return {
+        ...cfg,
+        contentOverrides: {
+          ...cfg.contentOverrides,
+          topics: {
+            ...cfg.contentOverrides.topics,
+            [topicId]: { ...base, levels: nextLevels },
+          },
+        },
+      };
+    });
+    onSaved();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add Spark"
+      onClick={onClose}
+    >
+      <div
+        className="card p-5 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="font-display font-semibold text-white text-lg">
+              Add Spark — {creator.name}
+            </h3>
+            <p className="text-white/55 text-xs mt-1">
+              Paste source content from {creator.name}. We draft a MicroRead
+              Spark, you edit, you save. The Spark lands in the chosen topic +
+              level via content overrides.
+            </p>
+          </div>
+          <button
+            className="btn-ghost text-xs"
+            onClick={onClose}
+            aria-label="Close"
+            data-testid="close-modal"
+          >
+            ✕
+          </button>
+        </header>
+
+        <section className="space-y-2">
+          <div className="label">1. Source content</div>
+          <textarea
+            data-testid="paste-content"
+            className="input min-h-[140px] font-mono text-[12px]"
+            placeholder="Paste a transcript chunk, newsletter excerpt, blog paragraph…"
+            value={pasted}
+            onChange={(e) => setPasted(e.target.value)}
+          />
+          <div className="grid sm:grid-cols-2 gap-2">
+            <label className="block">
+              <span className="label mb-1 block">Source URL</span>
+              <input
+                data-testid="source-url"
+                className="input"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder={creator.creditUrl}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="grid sm:grid-cols-3 gap-2">
+          <label className="block">
+            <span className="label mb-1 block">Topic</span>
+            <select
+              data-testid="topic-select"
+              className="input"
+              value={topicId}
+              onChange={(e) => setTopicId(e.target.value as TopicId)}
+            >
+              {TOPIC_CHOICES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="label mb-1 block">Level</span>
+            <select
+              data-testid="level-select"
+              className="input"
+              value={level}
+              onChange={(e) => setLevel(Number(e.target.value))}
+            >
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  L{n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="label mb-1 block">Category</span>
+            <select
+              data-testid="category-select"
+              className="input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as SparkCategory)}
+            >
+              {CATEGORY_CHOICES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
+
+        <section className="flex flex-wrap items-center gap-2">
+          <button
+            data-testid="draft-with-ai"
+            className="btn-primary text-sm"
+            onClick={draftWithAI}
+            disabled={!canDraft || drafting}
+            title={
+              !apiKey
+                ? "Set your Anthropic API key in Admin → Config first."
+                : apiProvider !== "anthropic"
+                  ? "AI distillation uses the Anthropic API. Switch your provider in Settings."
+                  : pasted.trim().length <= 20
+                    ? "Paste at least 20 chars of source content first."
+                    : "Distill the pasted content into a MicroRead Spark."
+            }
+          >
+            {drafting ? "Drafting…" : "⚡ Draft Spark with AI"}
+          </button>
+          <button
+            data-testid="manual-draft"
+            className="btn-ghost text-sm"
+            onClick={startManualDraft}
+          >
+            ✎ Or fill by hand
+          </button>
+          {!apiKey && (
+            <span
+              data-testid="missing-key-hint"
+              className="text-[11px] text-white/55"
+            >
+              Set your Anthropic API key in Admin → Config first.
+            </span>
+          )}
+        </section>
+
+        {drafted && (
+          <section className="space-y-2 border-t border-white/10 pt-3">
+            <div className="label">Preview · edit before saving</div>
+            <label className="block">
+              <span className="text-[11px] text-white/55">Title</span>
+              <input
+                data-testid="draft-title"
+                className="input"
+                value={drafted.title}
+                onChange={(e) => updateDraft({ title: e.target.value })}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-white/55">Body (≤ 120 words)</span>
+              <textarea
+                data-testid="draft-body"
+                className="input min-h-[120px]"
+                value={drafted.body}
+                onChange={(e) => updateDraft({ body: e.target.value })}
+              />
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-white/55">Takeaway (≤ 90 chars)</span>
+              <input
+                data-testid="draft-takeaway"
+                className="input"
+                value={drafted.takeaway}
+                onChange={(e) => updateDraft({ takeaway: e.target.value })}
+              />
+            </label>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <label className="block">
+                <span className="text-[11px] text-white/55">Source name</span>
+                <input
+                  className="input"
+                  value={drafted.sourceName}
+                  onChange={(e) => updateDraft({ sourceName: e.target.value })}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[11px] text-white/55">Source URL</span>
+                <input
+                  className="input"
+                  value={drafted.sourceUrl}
+                  onChange={(e) => updateDraft({ sourceUrl: e.target.value })}
+                />
+              </label>
+            </div>
+          </section>
+        )}
+
+        {error && <div className="text-bad text-xs" data-testid="error">{error}</div>}
+
+        <footer className="flex items-center justify-end gap-2 border-t border-white/10 pt-3">
+          <button className="btn-ghost text-sm" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            data-testid="save-spark"
+            className="btn-primary text-sm"
+            onClick={save}
+            disabled={!drafted}
+            title={drafted ? "Append the Spark to the chosen topic + level." : "Draft a Spark first."}
+          >
+            Add to seed
+          </button>
+        </footer>
+        {/*
+          Note: total seed-write happens via `setConfig` ↦
+          `contentOverrides.topics[topicId]`. The persistence layer
+          (`saveAdminConfig`) runs on the next render. config.creators
+          is read-only on this screen — we never mutate creator records
+          in this modal.
+        */}
+        <div className="hidden" aria-hidden>
+          {/* Surface live-saved-Sparks count for tests; cheap & local. */}
+          <span data-testid="seed-count">
+            {Object.values(config.contentOverrides.topics).reduce(
+              (acc, t) => acc + (t?.levels.reduce((a, l) => a + l.sparks.length, 0) ?? 0),
+              0
+            )}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
