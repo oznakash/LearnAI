@@ -113,7 +113,7 @@ What landed (9 PRs, 287 tests):
 
 ## Sprint 5 — Stream v2 + content compounding
 
-**Goal:** make the Spark Stream actually compound — user-authored Sparks land here, not just derived events.
+**Goal:** make the Spark Stream actually compound — user-authored Sparks land here, not just derived events. Plus the server-side content fetcher that lets the daily steward pull from any source.
 
 | Item | Why |
 |---|---|
@@ -122,8 +122,9 @@ What landed (9 PRs, 287 tests):
 | Spotlight cron — top mover per Topic per week → emit `kind="spotlight"` rows | Engineering plan §4.5; punted in Sprint 2. |
 | Notifications system (digest email + in-app dot) for new follows, new Spark Stream cards from authors you follow | Demand-gated by Sprint-2 retention curves. |
 | Cross-device push (iOS + Android via PWA push first, native later) | Pairs with mobile shell in Sprint 6. |
+| **Server-side content fetcher** — a small sidecar service that fetches arbitrary URLs (with proper UA + headless-browser fallback for client-rendered sites) and returns plain HTML/text. The daily steward currently uses `WebFetch` directly, which works for RSS / Atom / JSON APIs (see `app/src/content/feeds.ts`) but fails on JS-rendered pages like AlphaSignal, YouTube channel pages, HN homepage. With this sidecar, the steward can ingest any source — not just the ones with a feed. | Lifts the steward from "RSS + JSON only" to "any URL on the open web". Unblocks the literal 5× content corpus path: ingest from any creator, any aggregator, any post URL. |
 
-**Done when:** community-authored Sparks outpace event-derived cards on the median Stream visit.
+**Done when:** community-authored Sparks outpace event-derived cards on the median Stream visit, AND the daily steward can pull from at least one JS-rendered source via the new fetcher.
 
 ---
 
