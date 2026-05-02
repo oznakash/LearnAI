@@ -12,6 +12,20 @@ export type GuildTier =
   | "Founder"
   | "Singularity";
 
+export interface ProfileLinks {
+  linkedin?: string;
+  github?: string;
+  twitter?: string;
+  website?: string;
+}
+
+export type SkillLevel =
+  | "starter"
+  | "explorer"
+  | "builder"
+  | "architect"
+  | "visionary";
+
 export interface ProfileRecord {
   email: string;
   handle: string;
@@ -32,6 +46,20 @@ export interface ProfileRecord {
   bannedSocial: boolean;
   createdAt: number;
   updatedAt: number;
+  // -- extended metadata (SPA #112) -------------------------------------
+  // All optional + ignored if absent; older saved records hydrate fine.
+  bio?: string;
+  pronouns?: string;
+  location?: string;
+  heroUrl?: string;
+  skillLevel?: SkillLevel;
+  links?: ProfileLinks;
+  showBio?: boolean;
+  showPronouns?: boolean;
+  showLocation?: boolean;
+  showHero?: boolean;
+  showSkillLevel?: boolean;
+  showLinks?: boolean;
 }
 
 export interface AggregateRecord {
