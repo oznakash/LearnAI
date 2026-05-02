@@ -255,39 +255,49 @@ A senior engineer can read this page in 15 minutes and ship a feature in an hour
 
 **Sprint 2 — social MVP (shipped behind feature flags, see `docs/social-mvp-status.md`):**
 
-- `services/social-svc/` — Node + Express social-graph backend (profiles, follows, blocks, reports, signals, stream events). 19 REST endpoints, in-memory store with optional JSON-file persistence on a mounted volume. Postgres-2 swap path documented in the service README.
-- **Bundled inside the SPA container as a sidecar.** Single deploy unit (the `learnai` service on cloud-claude); nginx reverse-proxies `/v1/social/*` to the Node sidecar on `localhost:8787`. No separate container, no separate subdomain, no CORS dance, no Cloudflare account.
-- Auth: the sidecar verifies the **mem0-issued session JWT** locally (HS256, same `JWT_SECRET` mem0 uses). No bearer-in-browser issue: the JWT is short-lived and minted server-side by mem0 after Google ID-token verification.
-- SPA: Public Profile (`/u/<handle>`), Settings → Network, Follow / Unfollow / Mute / Block / Report, Topic Leaderboards (Boards), Spark Stream, AdminModeration tab. All gated behind `flags.socialEnabled`, `streamEnabled`, `boardsEnabled`.
+- `services/social-svc/` — Node + Express social-graph backend (profiles, follows, blocks, reports, signals, stream events). 19 REST endpoints + 3 public SSR routes (`/u/:handle`, `/robots.txt`, `/sitemap.xml`), in-memory store with optional JSON-file persistence on a mounted volume. Postgres-2 swap path documented in the service README.
+- **Bundled inside the SPA container as a sidecar.** Single deploy unit (the `learnai` service on cloud-claude); nginx reverse-proxies `/v1/social/*`, `/u/<handle>`, `/robots.txt`, and `/sitemap.xml` to the Node sidecar on `localhost:8787`. No separate container, no separate subdomain, no CORS dance, no Cloudflare account.
+- Auth: the sidecar verifies the **mem0-issued session JWT** locally (HS256, same `JWT_SECRET` mem0 uses) for `/v1/social/*`. The SSR routes (`/u/:handle`, `/robots.txt`, `/sitemap.xml`) are intentionally unauthenticated — they're the SEO + share-link unfurl surface for crawlers (Googlebot, GPTBot, ClaudeBot, Twitterbot, …) and anonymous human visitors.
+- SPA: Public Profile (`/u/<handle>` interactive), Settings → Network, Follow / Unfollow / Mute / Block / Report, Topic Leaderboards (Boards), Spark Stream, AdminModeration tab, Admin → 🪪 Public Profile policy tab. All gated behind `flags.socialEnabled`, `streamEnabled`, `boardsEnabled`.
+- **SSR public-profile surface (`services/social-svc/src/ssr.ts`).** Real per-user HTML emitted by the sidecar on cold load: `<title>` + `<meta description>` + OpenGraph + Twitter card + JSON-LD `@graph` (`ProfilePage` → `Person` → `knowsAbout` → `Course` per Signal → `LearningResource` per sample spark). Body carries the player's display name, achievement chips, "Currently working on", a `<details>` collapsible per Signal topic with "what you'd learn" rundown + 5 sample sparks (with `Schema.org/LearningResource` microdata) + per-topic XP chip, and a 14-day activity sparkline rendered as inline CSS bars (zero JS). Signed-in SPA users still client-side route to `/u/<handle>` and render React `Profile.tsx` — only cold loads / unfurls / crawlers hit the SSR path. Closed / kid / banned profiles fall through to a minimal gate.
 
 ```
-   Browser
+   Browser / crawler / unfurl bot
       │
       │ all calls go to the SPA's own origin
       ▼
-   ┌───────────────────────────────────────────────┐
-   │ learnai container  (cloud-claude)              │
-   │   ┌──────────────────────────────────────┐    │
-   │   │ nginx (port 80)                      │    │
-   │   │   /            → static SPA           │    │
-   │   │   /v1/social/* → reverse-proxy ─┐     │    │
-   │   └─────────────────────────────────│─────┘    │
-   │                                     ▼          │
-   │   ┌──────────────────────────────────────┐    │
-   │   │ Node sidecar (localhost:8787)        │    │
-   │   │   - verify session JWT (jose, HS256) │    │
-   │   │   - rate-limit per email             │    │
-   │   │   - structured JSON logs (stdout)    │    │
-   │   │   - serve /v1/social/* directly      │    │
-   │   └────────────────┬─────────────────────┘    │
-   │                    │                          │
-   │   ┌────────────────▼─────────────────────┐    │
-   │   │ social store                          │    │
-   │   │ (JSON-file on /data volume → P2.5:    │    │
-   │   │  swap in Postgres-2)                  │    │
-   │   └──────────────────────────────────────┘    │
-   └───────────────────────────────────────────────┘
+   ┌─────────────────────────────────────────────────┐
+   │ learnai container  (cloud-claude)                │
+   │   ┌────────────────────────────────────────┐    │
+   │   │ nginx (port 80)                        │    │
+   │   │   /                → static SPA         │    │
+   │   │   /v1/social/*     → reverse-proxy ─┐   │    │
+   │   │   /u/<handle>      → reverse-proxy ─┤   │    │
+   │   │   /robots.txt      → reverse-proxy ─┤   │    │
+   │   │   /sitemap.xml     → reverse-proxy ─┤   │    │
+   │   │   X-Forwarded-Proto preserved ↓     │   │    │
+   │   └─────────────────────────────────────│───┘    │
+   │                                         ▼        │
+   │   ┌────────────────────────────────────────┐    │
+   │   │ Node sidecar (localhost:8787)          │    │
+   │   │   - verify session JWT (jose, HS256)   │    │
+   │   │   - rate-limit per email               │    │
+   │   │   - structured JSON logs (stdout)      │    │
+   │   │   - /v1/social/*  (auth-gated)         │    │
+   │   │   - /u/:handle    (SSR HTML, no auth)  │    │
+   │   │   - /robots.txt   (no auth)            │    │
+   │   │   - /sitemap.xml  (no auth)            │    │
+   │   └────────────────┬───────────────────────┘    │
+   │                    │                            │
+   │   ┌────────────────▼─────────────────────┐      │
+   │   │ social store                          │      │
+   │   │ (JSON-file on /data volume → P2.5:    │      │
+   │   │  swap in Postgres-2)                  │      │
+   │   └──────────────────────────────────────┘      │
+   └─────────────────────────────────────────────────┘
 
+   Cold load on /u/<handle> → sidecar SSR (real HTML).
+   Signed-in SPA navigation → client-side React Profile (no server hit).
    Memory calls go directly to mem0 (unchanged):
    Browser → https://mem0-09b7ea.cloud-claude.com/v1/memories/*
 ```
