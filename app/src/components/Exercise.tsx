@@ -725,60 +725,20 @@ function YoutubeNuggetView({
 }
 
 /**
- * A small chip that surfaces the freshness state of a Spark — "fresh"
- * (within shelf life), "aging" (between 0.5× and 1×), or "stale" (past
- * 1×). Quiet by default; only shown when both `addedAt` and `category`
- * are set on the host Spark. See `docs/content-freshness.md` §2.2.
- *
- * The shelf life lookup is local — keeping the renderer pure and
- * avoiding a runtime dep on the admin config.
+ * A small chip that surfaces the date a Spark was authored — quiet
+ * provenance signal, never a warning. The freshness audit (which
+ * Sparks are stale-soon vs outdated relative to per-category shelf
+ * life) is read directly from `addedAt` by the daily content steward
+ * and the admin Creators tab — both operator-facing surfaces. End
+ * users only ever see the neutral "Added <date>" line so the corpus
+ * never warns its own readers about itself.
  */
-function FreshnessChip({
-  addedAt,
-  category,
-}: {
-  addedAt: string;
-  category?: import("../types").SparkCategory;
-}) {
-  if (!category) {
-    // Without a category we can't apply a shelf life. Just show the
-    // addedAt date as a neutral fact — useful provenance, no warning.
-    return (
-      <div className="mt-3 text-[11px] text-white/45">
-        📅 Added {formatDate(addedAt)}
-      </div>
-    );
-  }
-
-  // Shelf-life table (in days), per docs/content-freshness.md §2.1.
-  const SHELF_DAYS: Record<import("../types").SparkCategory, number> = {
-    principle: 730,
-    pattern: 180,
-    tooling: 90,
-    company: 30,
-    news: 14,
-    frontier: 7,
-  };
-  const shelf = SHELF_DAYS[category];
-  const ageDays = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(addedAt).getTime()) / (1000 * 60 * 60 * 24)),
+function FreshnessChip({ addedAt }: { addedAt: string; category?: import("../types").SparkCategory }) {
+  return (
+    <div className="mt-3 text-[11px] text-white/45">
+      📅 Added {formatDate(addedAt)}
+    </div>
   );
-  const ratio = shelf > 0 ? ageDays / shelf : 0;
-
-  let label: string;
-  let className: string;
-  if (ratio < 0.5) {
-    label = `📅 Added ${formatDate(addedAt)}`;
-    className = "text-white/45";
-  } else if (ratio < 1) {
-    label = `🕒 Aging — added ${formatDate(addedAt)}`;
-    className = "text-warn/85";
-  } else {
-    label = `⚠️ May be stale — added ${formatDate(addedAt)}`;
-    className = "text-bad/85";
-  }
-  return <div className={`mt-3 text-[11px] ${className}`}>{label}</div>;
 }
 
 function formatDate(iso: string): string {
