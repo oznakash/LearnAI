@@ -12,7 +12,7 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ### Core game loop
 
-- 12 Topics × 10 Levels × 4–6 Sparks per level = **~480 hand-authored micro-lessons**.
+- 12 Topics × 10 Levels × 4–6 Sparks per level = **1,150 hand-authored micro-lessons** (2.36× growth from the ~487-Spark seed corpus, via Sprint #4's 6-agent expansion).
 - 8 Spark formats: 📖 MicroRead, 💡 Tip & Trick, 🎯 Quick Pick, 🧩 Fill the Stack, 🔗 Pattern Match, 🧪 Field Scenario, 🛠️ Build Card, 👾 Boss Cell.
 - Game mechanics: XP (display name configurable in admin → Branding; default just "XP"), Focus (lives that regen every 18 min), Build Streak (daily), Guild Tiers (Builder → Architect → Visionary → Founder → Singularity), 14 Badges.
 - Anti-spam lock: each Spark can only award XP once (regression-tested).
@@ -49,15 +49,18 @@ Source: **`https://github.com/oznakash/learnai`**.
 - **Your Memory** player tab — list / filter / edit / forget / wipe / export.
 - TopBar status badge: 📴 / 🧠 / 🟡.
 
-### Admin Console (7 tabs)
+### Admin Console (11 tabs)
 
 - 👥 **Users** — list, search, sort, filter; ban/reset/send-template (mock cohort + the local user).
 - 📊 **Analytics** — onboarding funnel, DAU/WAU/MAU, sparks/user, topic popularity, retention table.
 - 🧠 **Memory** — master switch, mem0 server config, health-check ping, per-user inspector, daily token cap.
-- 📧 **Emails** — provider tiles (Resend / SMTP-relay-webhook / EmailJS / Postmark / SendGrid / SES / none), 8 lifecycle templates with live HTML preview, send-queue + per-message status, "Send test email" form.
+- 📧 **Emails** — provider tiles (Resend / SMTP-relay-webhook / EmailJS / Postmark / SendGrid / SES / none), 8 lifecycle templates with live HTML preview, send-queue + per-message status, "Send test email" form, **Email policy** sub-panel (24 h cap per recipient, debounced auto-flush, RFC 8058 unsubscribe header, open-tracking pixel, pause-on-N-unreads cooldown — see "Email policy" below).
 - 🎮 **Tuning** — every XP value, focus max + regen, tier thresholds, Boss pass ratio. Live-applied.
 - 📚 **Content** — read/edit any topic as JSON, override the seed, reset, export + import (Topic[] or overrides bundle).
 - 📝 **Prompt Studio** — assembles the long content-generation prompt with topic / level / count / audience / custom note. With or without an API key — copy + paste-back works either way.
+- 🛡️ **Moderation** — social-report queue with resolution actions (no-action / warn / ban-from-social / global-ban).
+- 🪪 **Public Profile** — operator policy for `/u/<handle>`: default profile mode for new sign-ups, master switch for the SSR personalized-learnings section, default per-field visibility for new users (`showFullName`, `showCurrent`, `showMap`, `showActivity`, `showBadges`, `showSignup`, `signalsGlobal`), and a preview link. Settings live in `admin.socialConfig.publicProfile` and flow through `SocialProvider` → `OfflineSocialService`.
+- ✍️ **Creators** — list creators with attached-Sparks count and most-recent `addedAt`. The `+ Add Spark` modal accepts pasted source content, calls `claude-haiku-4-5` via the admin `apiKey` to draft a MicroRead, lets the operator edit, then persists to `contentOverrides`. Closes the user-reported "creators created but 0 Sparks visible / no paste-content UI" gap.
 - ⚙️ **Config** — feature flags, branding, defaults, admin allowlist.
 
 ### Deployability
@@ -68,25 +71,47 @@ Source: **`https://github.com/oznakash/learnai`**.
 - Self-hosted mem0 via `docker-compose.mem0.yml` + `.env.example`.
 - One-command Fly deploy: `OPENAI_API_KEY=... npm run deploy:mem0` + `npm run smoke:memory`.
 
+### SSR + SEO public profiles
+
+- **`/u/<handle>` is now server-rendered before the SPA hydrates.** A new social-svc module (`services/social-svc/src/ssr.ts`) emits real per-user HTML — `<title>`, `<meta description>`, OpenGraph + Twitter card, JSON-LD `@graph` (`ProfilePage` → `Person` → `knowsAbout` → one `Course` per Signal → `hasPart[]` of `LearningResource` per sample spark) — plus a semantic body with display name + tier + XP + streak chips, "Currently working on", and Signals as `<details>` collapsibles. nginx routes `/u/*`, `/robots.txt`, and `/sitemap.xml` straight through to the sidecar; signed-in SPA users still navigate between profiles via `pushState` (no server round-trip). Signed-out visitors see the rendered page with an `AnonymousHeader` and a sign-in CTA — every other route still requires auth. Closed / kid / banned / banned_social profiles fall through to a polite minimal gate that emits no `Course` / `LearningResource` leakage. (PR #98)
+- **Personalized topic learnings.** A `topic-snippets.ts` module duplicates a tight slice of the 12 Constellations: emoji, tagline, 3-4-sentence keyword-dense `whatYoudLearn` rundown, and **5 sample-spark titles + teasers** marked up with `Schema.org/LearningResource` microdata. A typical multi-Signal profile renders ~600 indexable words. When `aggregate.topicXp[signal] > 0`, an `⚡ N earned here` chip per Signal makes every profile uniquely deduplication-safe for Google + AI bots. (PR #103)
+- **Hardening.** og:image now uses the user's Google avatar (square Twitter `summary` card) so Slack / LinkedIn / Twitter unfurls show a real face. Canonical URL honors `X-Forwarded-Proto` from the outer LB, so `<link rel="canonical">` and og:url are `https://`. Avatar `<img>` tags carry `referrerpolicy="no-referrer"` + `crossorigin="anonymous"` (and a page-level `<meta name="referrer" content="strict-origin-when-cross-origin">`) to keep iOS Safari "Reduce Protections" off. The `/v1/social/me/snapshot` endpoint logs + accepts >10% XP drops instead of returning `409 implausible_xp`, fixing the "TopBar shows 165, public profile shows 248" drift. A new `SocialContext` effect calls `updateProfile({ fullName, pictureUrl })` once per identity change so the online server's projection stays in sync with Google. (PR #101)
+- **`robots.txt`** explicitly allows the AI-ingestion bots (GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, Claude-Web, anthropic-ai, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot, cohere-ai) plus the classic search + unfurl set (Googlebot, Bingbot, DuckDuckBot, Twitterbot, facebookexternalhit, Slackbot, LinkedInBot). Disallows `/admin`, `/settings`, `/memory`, `/tasks`, `/dashboard`, `/play`. **`sitemap.xml`** lists every `profileMode=open` adult profile with `<lastmod>` from `updatedAt`; closed / kid / banned profiles are skipped. (PR #98)
+- **Anonymous-profile fallback** — visiting `/u/<handle>` for a handle that doesn't exist renders a polite empty state with sign-up CTA rather than a 404. (PR #98)
+
+### Email policy (24 h cap, RFC 8058 unsubscribe, pause-on-unread)
+
+- **24-hour cap per recipient** with a debounced auto-flush (default 30 s window). Competing transactionals collapse to the highest-priority survivor; blocked rows surface their reason as a status badge (`superseded` / `rate-limited` / `paused` / `unsubscribed`) so the admin sees why each one moved. Priority order: streak-save › boss-beaten › level-up › first-spark › welcome › weekly-digest › re-engagement › daily-reminder.
+- **RFC 8058 one-click unsubscribe** — sends emit `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers, lighting up Gmail's native pill. Resend gets the pair via its `headers` field; smtp-our-server passes `unsubscribeUrl` to social-svc's existing `buildListUnsubHeaders`; smtp-relay forwards to the relay. Only emitted on non-transactional sends.
+- **Open-tracking pixel + pause-on-unread** — after N unread sends (default 2, configurable) a recipient is paused for `pauseDurationDays` (default 30). Threshold check is recency-windowed (24 h).
+- **Branded `/unsubscribe` SPA route** — public, no sign-in needed. Lands with `?token=...`, POSTs to mem0's unsubscribe endpoint, renders one of `submitting / ok / expired / error` states with the EmDash mascot.
+- All knobs live in `app/src/admin/emailPolicy.ts` and surface in **Admin → Emails → Email policy**: master switch, cap-hours, auto-flush toggle + debounce, transactional-bypasses-cap, append-unsubscribe-link, append-open-tracking-pixel, pause-on-N-unreads, pause-duration-days, priority order. (PR #93)
+
 ### Social layer (Sprint 2 — shipped behind feature flags)
 
 - **Public Profile** at `/u/<handle>` — behavioral résumé: Topic map, Signals, currently-working-on, 14-day activity, badges. No bio, no employer, no email displayed. Closed-mode profiles render a single gated card to non-followers. Display name and avatar auto-sync from the player's Google identity until the user explicitly customizes the profile (the offline service falls back to `identity.name` / `identity.picture` in its viewer projection — explicit `updateProfile` patches still win, and the `SocialProvider` mirrors identity-deltas into `social-svc` via a fire-and-forget `updateProfile` so unfurls + the SSR `og:image` carry the real avatar).
 - **`/u/<handle>` SSR + SEO surface (`services/social-svc/src/ssr.ts`)** — anonymous, no-JS, no-auth HTML rendered server-side by the social-svc sidecar. Carries `<title>`, `<meta description>`, OpenGraph, Twitter card, `Schema.org` JSON-LD `@graph` (`ProfilePage` → `Person` → `knowsAbout` → one `Course` per Signal → `hasPart[]` of `LearningResource` per sample spark). Renders the player's currently-working-on, achievement chips, 14-day activity sparkline (CSS bars, no JS), and a "What @&lt;handle&gt; is learning" section with a `<details>` collapsible per Signal containing topic intro + a 3-4 sentence "what you'd learn" rundown + 5 sample spark titles & teasers (each marked up with `Schema.org/LearningResource` microdata). Per-topic XP chip personalizes each profile so two users with the same Signals don't render byte-identical content. Closed / kid / banned profiles fall through to a minimal gate. Anonymous viewers see the SSR page on cold load via nginx route `/u/<handle> → social-svc`; signed-in SPA users still navigate client-side via `history.pushState` and get the React `Profile.tsx` interactive view.
 - **`/robots.txt` + `/sitemap.xml`** — served by `social-svc`. `robots.txt` welcomes the AI ingestion bots explicitly (GPTBot, ChatGPT-User, ClaudeBot, anthropic-ai, PerplexityBot, OAI-SearchBot, Google-Extended, Applebot-Extended, CCBot, cohere-ai) plus the classic crawl + unfurl set (Googlebot, Bingbot, DuckDuckBot, Twitterbot, facebookexternalhit, Slackbot, LinkedInBot). Disallows the private SPA-only routes (`/admin`, `/settings`, `/memory`, `/tasks`, `/dashboard`, `/play`). `sitemap.xml` lists every open adult profile with `<lastmod>`; closed / kid / banned profiles never appear.
+- **Snapshot levelId parser** correctly extracts the level from canonical `<topicId>-l<n>` ids (was `parseInt("l3") = NaN → 0`, which made every profile read "Level 0"). The fix also unblocks `level_up` Stream events, which previously never fired. (PR #97)
+- **Boards endpoint** now returns real ranked users — `/v1/social/boards/:scope` was a hard-coded `[]` placeholder; replaced with real ranking logic (Global / Topic / Following) over `profileMode=open` profiles, filtered for self / banned / banned_social / blocked-either-way / kid-vs-adult mismatch, sorted by `xpTotal` desc, top 20. Period (`week | month | all`) is accepted but the aggregate doesn't track per-period XP yet — swap the sort key when it does. PR #96 (with diagnostic logging follow-up in PR #105).
+- **Hardening (PR #101).** og:image switched to the user's Google avatar (square Twitter `summary` card). `<link rel="canonical">` and og:url honor `X-Forwarded-Proto` from the outer LB (so they render `https://`). Avatar `<img>` tags carry `referrerpolicy="no-referrer"` + `crossorigin="anonymous"` and a page-level `<meta name="referrer" content="strict-origin-when-cross-origin">` to keep iOS Safari "Reduce Protections" off. The `/v1/social/me/snapshot` endpoint logs + accepts >10% XP drops instead of returning `409 implausible_xp`, fixing the "TopBar shows 165, public profile shows 248" drift.
 - **Settings → Network** — Profile mode toggle (Open / Closed), field-level visibility (full name, current Topic, Topic map, activity, badges, sign-up month, Global Leaderboard), Signals picker (max 5 Topics), Take-me-down panic switch.
 - **Follow / Unfollow / Mute / Block / Report** — every Profile (and inline on Stream cards). Asymmetric graph; report auto-mutes; block precedence removes existing edges. 5-reason picker on reports, 280-char note.
 - **Topic Leaderboards (Boards)** — replaces the single Guild leaderboard with tabbed Global / per-Topic / Following + Week/Month/All-time pills. Per-Topic tabs only appear for the player's active Signals (max 5); `+ Topic` button opens an ad-hoc picker for any of the 12 Topics. Mock filler ("sample" tag) below real rows when sparse.
 - **Spark Stream** — auto-derived feed (level-up / boss-beaten / streak-milestone / spotlight cards). Per-card actions: Follow, Try this Topic, Mute author. "All / Only people I follow" filter. **No engagement-feedback term in ranking** (vision §4).
 - **Admin → Moderation tab** — report queue (Open / Resolved). Resolution actions: ✓ No action / ⚠ Warn / 🚫 Ban from social / 🚷 Global ban. Optimistic removal + audit on resolve.
 - **Admin → 🪪 Public Profile tab** — operator-level policy for `/u/<handle>`. Sets the *default* `profileMode` for new sign-ups (Open / Closed; kid-band still forced Closed), the *default* per-field visibility toggles new users start from (`showFullName`, `showCurrent`, `showMap`, `showActivity`, `showBadges`, `showSignup`, `signalsGlobal`), a master switch for the SSR personalized-learnings section, and a preview link to the operator's own `/u/<handle>` SSR page. Existing users keep their saved Network-view toggles; this is policy-for-new-users, not retroactive. Stored in `admin.socialConfig.publicProfile`; flows through `SocialProvider → selectSocialService → OfflineSocialService` so a fresh user's offline state is created from the policy. Server-side enforcement + per-field force-overrides queued for v2.
-- **`services/social-svc/`** — Node + Express + TypeScript social-graph backend. 19 REST endpoints, in-memory store with optional JSON-file persistence, viewer-aware projection. **Bundled inside the SPA container as a sidecar** (single deploy unit on cloud-claude); nginx reverse-proxies `/v1/social/*` to `localhost:8787`. Auth: verifies the mem0-issued session JWT locally with the shared `JWT_SECRET` — no separate proxy, no Cloudflare account, no bearer-in-browser issue. Production migration to Postgres-2 is one module swap (documented in the service README).
+- **`services/social-svc/`** — Node + Express + TypeScript social-graph backend. 21 endpoints (19 REST + the new `GET /u/:handle` SSR endpoint and `GET /sitemap.xml` for SEO), in-memory store with optional JSON-file persistence, viewer-aware projection. **Bundled inside the SPA container as a sidecar** (single deploy unit on cloud-claude); nginx reverse-proxies `/v1/social/*` to `localhost:8787`. Auth: verifies the mem0-issued session JWT locally with the shared `JWT_SECRET` — no separate proxy, no Cloudflare account, no bearer-in-browser issue. Production migration to Postgres-2 is one module swap (documented in the service README).
 - **All flags default OFF** in `defaults.ts` so a fork pulling main today sees zero behavior change. Live deploy flips them on via admin localStorage.
 
 → Sprint changelog + open punch list: [`social-mvp-status.md`](./social-mvp-status.md).
 
 ### Content engine — Sprint #2 foundation (shipped)
 
-- **Spark categories + freshness chip** — Six categories (`principle` / `pattern` / `tooling` / `company` / `news` / `frontier`) with per-category shelf life. Sparks that set `addedAt` + `category` render an age chip ("3 d ago" / "stale soon" / "outdated"). Doctrine: [`content-freshness.md`](./content-freshness.md).
+- **Spark categories + freshness chip** — Six categories (`principle` / `pattern` / `tooling` / `company` / `news` / `frontier`) with per-category shelf life. Sparks that set `addedAt` + `category` render a quiet provenance line — `📅 Added <date>` — without any "Aging" or "May be stale" warnings to end users (PR #102 flattened the three-state warning to neutral). Operator tools still read the full age signal: the daily content steward picks stale-first refresh candidates, and the Admin → Creators tab surfaces "most recent `addedAt`" per creator. Doctrine: [`content-freshness.md`](./content-freshness.md). PR #92, refined by #102.
+- **Empty-illustration-slot rule** — when a Spark has no `visual` field, the renderer hides the illustration slot entirely instead of falling back to the generic topic-level shape (which on dark theme read as visual noise rather than illustration). Sparks that deliberately picked a shape — `"robot"`, `"shield"`, `"build"`, `"embed"`, `"lock"`, … — keep their content-tied illustration. PR #104.
+- **Full-corpus freshness coverage** — every MicroRead/Tip Spark across all 12 topic files carries `category` + `addedAt`; the freshness chip renders everywhere; the daily content steward has a real audit population. PR #95 backfilled 144 Sparks; PR #99 carried the convention through the 2.36× expansion.
+- **Critique chips loop** — A 👎 vote opens 7 structured chips (too-theoretical · wrong-examples · outdated · too-jargon · watered-down · wrong-level · too-long). Each tap writes a `critique`-category memory whose metadata records `chip`, `sparkCategory`, `sparkType`, and `vocabAtoms`; aggregation across the user (or, in admin, across users) produces a small **prompt stanza** that biases the next generation cycle ("avoid principle Sparks; users find them theoretical") even at N = 50 where per-Spark vote stats are still noise. PR #92.
 - **Age-band tone** — MicroRead and Tip Sparks may carry `bodyByAgeBand: { kid?, teen?, adult? }`. The renderer picks the right body for the user's profile band, falls back to default `body` otherwise. First seeded on the "AI is pattern, not magic" Spark in **AI Foundations**.
 - **YouTube nugget Spark** — Second source-anchored variant after PodcastNugget. Renders with channel name, video title, duration, "watch on YouTube" CTA. Pilot constraint: ≥ 5 min, ≤ 60 d old, 10 max in seed.
 - **External-source creators registry** — 8 new creators (AlphaSignal, Hacker News / YC, Anthropic news, Simon Willison, Hugging Face, Latent Space, DeepMind, Y Combinator). Sparks reference creator id; renderer surfaces avatar + "via X" without inlining attribution.
@@ -95,7 +120,7 @@ Source: **`https://github.com/oznakash/learnai`**.
 ### Quality bar
 
 - **674 tests passing**: 560 SPA (Vitest) + 114 social-svc (supertest+vitest). Recent sprints added: SSR public-profile surface (`/u/<handle>`, robots, sitemap), JSON-LD `@graph` ingestion-friendly structured data, the `/admin → 🪪 Public Profile` policy tab, identity-sync into social-svc, the XP `xp_drop_accepted` log path, the `parseLevelIndex` snapshot fix, the boards real-ranking endpoint, and Sprint 2.5 PR 12's close-out polish (`/health` startup state, Stream Signal-overlap + spotlight cron, telemetry endpoint, admin telemetry panel).
-- Build: ~556 KB JS / ~30 KB CSS gzipped, ~83 modules.
+- Build: ~352 KB JS / ~7 KB CSS gzipped, ~106 modules.
 - Pinch-zoom + double-tap-zoom blocked (mobile + desktop trackpad). Keyboard zoom intentionally preserved.
 - Overscroll bounce stopped.
 - Confetti, mascot moods, illustrations, animated transitions.
@@ -146,8 +171,8 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ```sh
 # Source on disk, not screenshots:
-npm test                              # SPA: 266 / 266
-npm test --prefix services/social-svc # 44 / 44
+npm test                              # SPA: 560 / 560
+npm test --prefix services/social-svc # 114 / 114
 npm run build                         # green
 npm run dev                           # play it
 ```
