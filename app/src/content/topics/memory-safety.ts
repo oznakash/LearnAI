@@ -18,6 +18,8 @@ export const memorySafety: Topic = {
         body: "Each API call starts fresh. The model only 'knows' what's in the current prompt. The 200k-token context window is short-term memory — it disappears the second the call ends. Anything you want it to remember tomorrow has to be stored somewhere and re-injected. That's the entire point of memory layers, RAG, and conversation history.",
         takeaway: "No persistence by default. You provide the memory.",
         visual: "memory",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Quick check", {
         type: "quickpick",
@@ -34,11 +36,15 @@ export const memorySafety: Topic = {
         body: "When a user asks a question, you embed it, search your vector DB for the top-k most relevant chunks, paste them into the prompt, and let the LLM answer using those chunks. That's RAG in one paragraph. It works because the model is great at synthesizing supplied facts, even if it didn't know them. It fails when chunks are too small, too big, retrieved badly, or the LLM ignores them.",
         takeaway: "RAG = relevant docs in context, then answer.",
         visual: "embed",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Chunk by semantic boundary (paragraph, section), not fixed token size. And always include the chunk's source title — the model uses that to weight authority.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
       spark("Build it", {
         type: "buildcard",
@@ -55,6 +61,8 @@ export const memorySafety: Topic = {
         title: "Working / short / long memory",
         body: "Working memory = the current prompt. Short-term = the conversation history (last N turns). Long-term = a persistent store (vector DB, summary doc, structured profile) you query and inject as needed. Production AI products design all three deliberately. Skipping the long-term layer is why most chatbots feel amnesiac.",
         takeaway: "Design memory like a real database — layered, on purpose.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
       spark("Pattern match", {
         type: "patternmatch",
@@ -75,6 +83,8 @@ export const memorySafety: Topic = {
         body: "An aligned model is helpful (does what you actually want) AND harmless (refuses misuse). Both matter — over-refusing is also a failure (frustrating, useless). Frontier labs spend massive effort on RLHF, constitutional AI, and red teaming to find this balance. As a builder, your prompt and policy layer extend this further to fit your product.",
         takeaway: "Alignment ≠ over-refusal. Calibrate for both.",
         visual: "shield",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Quick check", {
         type: "quickpick",
@@ -90,11 +100,15 @@ export const memorySafety: Topic = {
         title: "Don't trust one layer",
         body: "Production safety is layered: input filters (PII, prompt injection patterns), system prompt rules, model-level training (refusals), output filters (toxicity, jailbreak detection), and human-in-the-loop for sensitive actions. Each layer fails sometimes. Together they ship. If you have only one safety layer, you have none.",
         takeaway: "Stack 3+ guardrails. Each is fallible alone.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Use a small, fast classifier (not a big LLM) to pre-screen for obvious abuse. 10x cheaper, catches 80% of bad input before you spend tokens.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
       spark("Scenario", {
         type: "scenario",
@@ -117,11 +131,15 @@ export const memorySafety: Topic = {
         body: "Default rule: never log raw user data with PII. Redact before logging. Never send prod data to a model training pipeline without explicit consent. Use providers that contractually exclude your data from training (Anthropic, OpenAI Enterprise both do). For high-risk domains (health, finance, legal), check if you need on-prem or VPC inference.",
         takeaway: "PII in = explicit policy out. Never default-leak.",
         visual: "lock",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Run a Presidio (or similar) scrub on user input before logging. One Python line, prevents 99% of compliance headaches later.",
+        category: "tooling",
+        addedAt: "2026-02-01",
       }),
     ]),
     level(T, 7, "Evaluating safety", "Specific tests for specific risks.", 4, [
@@ -130,6 +148,8 @@ export const memorySafety: Topic = {
         title: "One eval per risk class",
         body: "Don't evaluate 'safety' generically. Build small targeted eval sets per risk: prompt injection, PII leak, jailbreaks, biased outputs, off-policy advice. 30 cases per category beats 1000 generic. Run them on every prompt change. When a regression slips through, it's almost always a missing eval — add it.",
         takeaway: "Per-risk eval sets. Add cases when bugs slip through.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
     ]),
     level(T, 8, "Long-context vs RAG", "When to use which.", 4, [
@@ -138,6 +158,8 @@ export const memorySafety: Topic = {
         title: "Stuff it vs search it",
         body: "Modern context windows fit huge docs (200k+ tokens). Tempting to just stuff everything in. But: it's expensive, slower, and 'lost in the middle' is real (models miss facts buried mid-context). RAG keeps prompts small and lets you scale to millions of docs, but requires good retrieval. Rule: if your corpus fits and you'll re-use it, cache + stuff it. If it grows or you query small slices, RAG.",
         takeaway: "Long context for stable, small corpora. RAG for scale.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
       spark("Quick check", {
         type: "quickpick",
@@ -154,11 +176,15 @@ export const memorySafety: Topic = {
         body: "An agent that can browse, code, and email has real-world reach. Treat tool permissions like Unix file modes: least privilege, scoped to the task, revoked when done. Sandboxes for code execution. Allow-lists for outbound network. Confirmations for any irreversible action (send, delete, pay, deploy). The bigger the action, the slower and more visible it should be.",
         takeaway: "Slow + visible = safe. Fast + silent = scary.",
         visual: "shield",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Add an 'undo trail' to every agent action. Even fake undo (just a log) saves you when something goes sideways at 2am.",
+        category: "pattern",
+        addedAt: "2025-10-01",
       }),
     ]),
     level(T, 10, "Boss: safety review", "Audit yourself.", 6, [

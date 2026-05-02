@@ -44,6 +44,8 @@ export const aiFoundations: Topic = {
         title: "💡 Tip & Trick",
         body: "When an AI surprises you, ask: 'what pattern in the training data would explain this?' That single question demystifies most weird outputs.",
         bonusXP: 5,
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       // Sprint #2 seed — YouTube source-anchored Spark. Pilot content
       // per docs/content-freshness.md §7. Marked SEED — a human must
@@ -85,6 +87,12 @@ export const aiFoundations: Topic = {
         title: "Train once, infer forever",
         body: "Training is the slow, expensive phase: feed the model billions of examples and adjust its weights. It costs millions and takes weeks. Inference is what happens every time you call the model — it just runs the math on your input. Inference is cheap (milliseconds) but you do it billions of times. Almost all production cost lives in inference, not training. That's why latency, batching, and model size matter so much.",
         takeaway: "Training shapes the brain once. Inference uses it constantly.",
+        bodyByAgeBand: {
+          kid: "AI has two stages, like learning a sport. Training is practice — slow, hard, takes weeks, and you only do it once. The model studies billions of examples until it gets good. Inference is the actual game — quick, easy, you do it every time someone asks the AI a question. Practice is rare and expensive. Playing the game happens a million times a day. That's why making each game faster matters way more than making practice fancier.",
+          teen: "AI has two phases. Training is the slow, expensive part: show the model billions of examples and adjust its weights until predictions get good. That takes weeks and costs millions. Inference is what happens every time you ask it something — it just runs the math on your input in milliseconds. Training happens rarely. Inference happens constantly. So almost all the cost (and engineering attention) goes into making each inference faster, smaller, and cheaper.",
+        },
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Where does cost hide?", {
         type: "quickpick",
@@ -107,11 +115,15 @@ export const aiFoundations: Topic = {
         title: "Data is the model",
         body: "Two teams use the exact same model architecture. Team A trains on a noisy scrape; team B curates 100k high-signal examples and dedupes carefully. Team B wins, often by a landslide. Modern AI proved a hard truth: cleaner, more diverse data beats more parameters. That's why frontier labs spend nine figures on data labeling, and why your fine-tune lives or dies by the 200 examples you hand-pick.",
         takeaway: "Better data > bigger model. Almost always.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Before fine-tuning, hand-write 50 ideal input/output pairs yourself. If you can't write 50 good ones, the task isn't ready for AI yet — clarify it first.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Scenario", {
         type: "scenario",
@@ -133,6 +145,8 @@ export const aiFoundations: Topic = {
         title: "Bias isn't a bug — it's the data",
         body: "If 80% of your hiring data shows men in engineering roles, the model learns 'male = engineer'. It's not malicious; it's statistical. AI inherits every skew, gap, and stereotype baked into its training corpus. The fix isn't a clever algorithm — it's curating the data, evaluating against fairness slices, and being honest about what your model can't do well.",
         takeaway: "Models reflect their data. Audit the data, not just the output.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Quick check", {
         type: "quickpick",
@@ -146,6 +160,22 @@ export const aiFoundations: Topic = {
         answer: 1,
         explain: "Skewed data → skewed predictions. Always.",
       }),
+      spark("Align before superintelligence", {
+        type: "podcastnugget",
+        creatorId: "lenny",
+        quote:
+          "Once we get to superintelligence, it will be too late to align the models. My best granularity forecast for could we have an X-risk or extremely bad outcome is somewhere between 0 and 10%.",
+        takeaway:
+          "Alignment work is a now problem, not a future one. The window to bake values into a system closes the moment that system gets smarter than you.",
+        source: {
+          podcast: "Lenny's Podcast",
+          podcastUrl: "https://www.lennysnewsletter.com/podcast",
+          guest: "Benjamin Mann",
+          guestRole: "co-founder of Anthropic",
+          episodeTitle: "Inside Anthropic — alignment, scaling, AGI timelines",
+          timestamp: "00:00:32",
+        },
+      }),
     ]),
     level(T, 5, "Generative vs predictive", "Two families, two playbooks.", 4, [
       spark("The split", {
@@ -153,6 +183,8 @@ export const aiFoundations: Topic = {
         title: "Predict labels vs make stuff",
         body: "Predictive AI says 'is this fraud? yes/no, 0.92 confidence'. Generative AI says 'write me a fraud-alert email in the customer's tone'. Predictive needs labeled data and crisp metrics (accuracy, F1). Generative needs evals and taste — there's no single right answer. Most modern AI products mix both: a generative core wrapped in predictive guardrails (toxicity classifier, PII detector, retrieval relevance scorer).",
         takeaway: "Predictive picks. Generative produces. Real products use both.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Match", {
         type: "patternmatch",
@@ -172,11 +204,15 @@ export const aiFoundations: Topic = {
         title: "Words as coordinates",
         body: "An embedding turns text (or images, audio) into a list of numbers — a vector — where similar things land near each other in space. 'King' and 'queen' end up close. 'King' minus 'man' plus 'woman' lands near 'queen'. This is the trick behind semantic search, recommendations, deduplication, RAG, and most 'AI search' you see today. The model doesn't 'know' meaning — it just learned to place related things nearby.",
         takeaway: "Embeddings = meaning encoded as nearby points in space.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Cosine similarity > 0.85 usually means 'very related'. Below 0.5 means 'probably unrelated'. Tune this threshold per use case — it's the most under-tuned dial in RAG systems.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Quick check", {
         type: "quickpick",
@@ -205,6 +241,12 @@ export const aiFoundations: Topic = {
         title: "Tokens, not words",
         body: "AI doesn't see 'unbelievable' as one word — it sees ['un', 'believ', 'able'] or similar chunks called tokens. A token averages ~4 characters in English. Why care? Because pricing, context windows, and latency are all token-based. A 200,000-token context isn't 200,000 words — it's roughly 150,000 words. Fitting your knowledge base in context vs. retrieving slices via RAG is one of the central design choices of any AI product.",
         takeaway: "Think in tokens, not words. Cost and capacity live there.",
+        bodyByAgeBand: {
+          kid: "AI doesn't read whole words — it reads chunks called tokens. The word 'unbelievable' might split into 'un', 'believ', 'able' — three tokens. A token is about 4 letters on average. Why does it matter? Because everything an AI does is counted in tokens: how much it can read at once, how fast it answers, how much it costs to use. So when grown-ups talk about a '200,000 token window', that's not 200,000 words — it's about 150,000.",
+          teen: "AI doesn't see whole words — it sees tokens, which are little chunks of text. 'Unbelievable' splits into 'un', 'believ', 'able' — three tokens. One token is roughly 4 characters in English. This matters because everything is measured in tokens: how much the model can read in one go (its context window), how fast it answers, how much it costs to run. A 200,000-token context window is closer to 150,000 words than 200,000 — and that gap shapes how AI tools are built.",
+        },
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Estimate", {
         type: "quickpick",
@@ -220,11 +262,15 @@ export const aiFoundations: Topic = {
         title: "Reasoning is just longer prediction",
         body: "When a model 'reasons', it's not thinking — it's predicting more tokens before committing to an answer. Asking it to 'think step by step' gives it room to lay out scratch work, which dramatically improves accuracy on math, logic, and multi-hop questions. Newer reasoning models (like o-series, Claude with thinking) bake this in: they generate hidden thinking tokens automatically. Same engine, more deliberation.",
         takeaway: "Reasoning = giving the model room to lay out steps before answering.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "On a hard task, just append: 'Think step by step. Show your work.' Free 5-15% accuracy boost on most non-trivial prompts.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Scenario", {
         type: "scenario",
@@ -246,6 +292,8 @@ export const aiFoundations: Topic = {
         title: "Evals beat vibes",
         body: "Every team eventually learns the same lesson: 'looks great in demo' ≠ 'works in prod'. Evals are repeatable test sets you score your system against, ideally tied to real user outcomes. Start with 20 hand-crafted hard cases. Score every prompt change against them. When you can't tell whether a change is better, your eval set is too small or too easy. Evals are unsexy. They're also the difference between a toy and a product.",
         takeaway: "Evals are the unit tests of AI. No evals, no progress.",
+        category: "principle",
+        addedAt: "2025-10-01",
       }),
       spark("Quick check", {
         type: "quickpick",

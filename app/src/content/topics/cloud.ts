@@ -18,7 +18,9 @@ export const cloud: Topic = {
         body: "The cloud is a giant pool of compute, storage, and networking you rent by the second. AWS, GCP, Azure are the big three; Cloudflare, Fly, Render, Vercel sit on top with friendlier APIs. The point isn't 'someone else's computer' — it's the elasticity: scale to a million users by 5pm, scale to zero by midnight, pay for what you used.",
         takeaway: "Elastic + pay-per-use = the cloud's real magic.",
         visual: "cloud",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
       spark("Quick check", {
         type: "quickpick",
         prompt: "What's the biggest practical advantage of cloud over your own server?",
@@ -33,7 +35,9 @@ export const cloud: Topic = {
         title: "The classic stack",
         body: "IaaS (EC2, GCE) = you rent the kitchen, you cook everything. PaaS (Vercel, Render, Fly) = you rent a kitchen with a stove ready, you bring ingredients. SaaS (Notion, Slack) = food delivered. Modern teams sit on PaaS for speed, drop to IaaS only when forced. Each layer trades control for speed.",
         takeaway: "PaaS by default. IaaS only when you must.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
       spark("Pattern match", {
         type: "patternmatch",
         prompt: "Match each example to its layer",
@@ -52,12 +56,16 @@ export const cloud: Topic = {
         title: "Containers + serverless",
         body: "A container packages your app + deps in one runnable unit. Run it anywhere — Docker, Kubernetes, Cloud Run, ECS. Serverless (Lambda, Cloud Functions) goes further: no container, no server, just a function that runs on request. Serverless wins for spiky/cheap workloads. Containers win when you need control or steady traffic.",
         takeaway: "Containers = portable. Serverless = automatic scale.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "For new AI products, start on a simple PaaS (Render, Fly, Vercel). Don't touch Kubernetes until you have a real reason — it eats months of your life otherwise.",
-      }),
+              category: "tooling",
+        addedAt: "2026-02-01",
+}),
     ]),
     level(T, 4, "GPUs and AI compute", "Why your AI bill is huge.", 4, [
       spark("H100s and friends", {
@@ -66,7 +74,9 @@ export const cloud: Topic = {
         body: "AI inference and training need massive parallel matrix math. GPUs (and now NPUs/TPUs) do this thousands of times faster than CPUs. An H100 GPU rents for $2-8/hour. For inference, providers (Anthropic, Together, Replicate, Fireworks) handle this for you. For training or self-hosting, you'll feel the bill.",
         takeaway: "Use API providers unless you have a strong reason to self-host.",
         visual: "chip",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
       spark("Quick check", {
         type: "quickpick",
         prompt: "Cheapest path to ship an AI app today?",
@@ -81,7 +91,9 @@ export const cloud: Topic = {
         title: "Don't pay hot prices for cold data",
         body: "S3 Standard ≈ instant access, premium price. S3 Infrequent Access ≈ retrieved monthly. Glacier ≈ retrieved yearly, near-zero cost. Same files, 90%+ cost difference. Move logs and old artifacts to cold tiers automatically (lifecycle policies). For databases, archive cold tables out of your primary DB.",
         takeaway: "Lifecycle policies = invisible cost wins.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 6, "Latency basics", "Where slow comes from.", 4, [
       spark("The latency budget", {
@@ -89,12 +101,16 @@ export const cloud: Topic = {
         title: "Speed-of-light is a real constraint",
         body: "Cross-region API calls add 50-200ms. Database queries 1-50ms. LLM calls often 500-3000ms. Build a 'latency budget': decide how much of your user-perceived time each layer can spend. Move user-facing inference to the same region as users. Cache aggressively.",
         takeaway: "Latency budget per request. Cache to stay inside it.",
-      }),
+              category: "principle",
+        addedAt: "2025-10-01",
+}),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Stream LLM responses to users token-by-token. Same total latency, but feels 5x faster because they see progress.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 7, "Networking essentials", "VPCs, CDNs, edges.", 4, [
       spark("VPC + CDN + edge", {
@@ -102,7 +118,9 @@ export const cloud: Topic = {
         title: "Three networking primitives",
         body: "VPC = your private network in the cloud (isolation, security). CDN = serve static stuff from 200+ edge locations near users (Cloudflare, Akamai). Edge functions = run small code at those edge locations (low latency rewrites, auth checks). Most AI apps need all three.",
         takeaway: "VPC isolates. CDN distributes. Edge runs fast.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 8, "Cost guardrails", "Stop the runaway bill.", 4, [
       spark("Budgets + alerts", {
@@ -110,12 +128,16 @@ export const cloud: Topic = {
         title: "Set budgets day one",
         body: "Every cloud has billing alerts. Configure them on day one — daily, weekly, monthly thresholds. Tag every resource by team/feature so you know what's eating your money. Tag your AI calls too (prompt caching, model used, tenant_id) so you can attribute later.",
         takeaway: "Budgets + tags. Day one. Always.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
         body: "Set a 'panic budget' at 2x your expected monthly spend that auto-kills suspicious workloads. Saved many a startup from a $40k inference bill from a bug.",
-      }),
+              category: "pattern",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 9, "Disaster recovery", "When the region falls.", 4, [
       spark("Backups + multi-region", {
@@ -123,7 +145,9 @@ export const cloud: Topic = {
         title: "Backups, failover, RTO/RPO",
         body: "RTO = how fast can you recover. RPO = how much data loss is OK. Pick targets per system, design backups + failover to meet them. For most AI apps: nightly DB backups + cross-region read replica is enough. For payments or critical data: multi-region active-active.",
         takeaway: "Define RTO/RPO. Engineer to meet them.",
-      }),
+              category: "principle",
+        addedAt: "2025-10-01",
+}),
     ]),
     level(T, 10, "Boss: cloud check", "Final gate.", 6, [
       spark("Boss Cell", {
