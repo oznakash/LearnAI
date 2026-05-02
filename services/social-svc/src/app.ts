@@ -245,6 +245,15 @@ export function createApp(opts: AppOpts) {
   // Returns startup-state so cloud-claude / operators can detect
   // misconfiguration before users see 401s in the wild.
   app.get("/health", (_req, res) => {
+    // Lightweight store stats — no PII, just totals. Lets the operator
+    // confirm at a glance whether the store has actually accumulated
+    // profiles + events. Empty totals on a deploy that's been live for
+    // hours signals that the SPA isn't authenticating against the
+    // sidecar (or the volume isn't mounted).
+    const stats = opts.store.statsSnapshot?.();
+    const eventsTotal = stats?.eventsByKind
+      ? Object.values(stats.eventsByKind).reduce((a, b) => a + b, 0)
+      : null;
     res.json({
       status: "ok",
       version: "0.1.0",
@@ -252,10 +261,17 @@ export function createApp(opts: AppOpts) {
       demo_trust_header: demoTrustHeader,
       admins: admins.length,
       backend: opts.store.backendName?.() ?? "memory",
-      // Booleans below are surfaced so monitoring can alert on them.
       // demo_trust_header should NEVER be true in production; if it is,
       // someone enabled the impersonation footgun.
       misconfig: !jwtSecret && !demoTrustHeader,
+      // Counts only — no identifiers.
+      profile_count: stats?.profileCount ?? null,
+      open_profiles: stats?.openProfiles ?? null,
+      closed_profiles: stats?.closedProfiles ?? null,
+      kid_profiles: stats?.kidProfiles ?? null,
+      follow_count: stats?.followCount ?? null,
+      events_total: eventsTotal,
+      events_24h: stats?.events24h ?? null,
     });
   });
 
@@ -815,10 +831,16 @@ export function createApp(opts: AppOpts) {
         if (myFollowsApproved.has(lc)) return true;
         if (e.kind === "spotlight" && e.topicId && mySignals.has(e.topicId)) return true;
         // Signal overlap (Open profiles only).
-        if (
-          author.profileMode === "open" &&
-          author.signals.some((s) => mySignals.has(s))
-        ) return true;
+        if (author.profileMode === "open") {
+          // Cold-start fix: a brand-new viewer with zero Signals would
+          // otherwise see an empty Stream forever, even when the cohort
+          // is producing real activity. Treat empty viewer signals as
+          // "match any open profile" — the feed broadens until the
+          // viewer picks Signals, then narrows. Closed profiles still
+          // never auto-surface.
+          if (mySignals.size === 0) return true;
+          if (author.signals.some((s) => mySignals.has(s))) return true;
+        }
         return false;
       })
       .slice(0, limit)
