@@ -37,7 +37,11 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
 ]);
 
 const FULLNAME_MAX = 64;
-const PICTURE_URL_MAX = 2048;
+// Bumped from 2 KB so inline `data:image/*;base64,…` URLs (the
+// offline-mode upload preview) survive the length cap. A 256×256
+// JPEG at q≈80 is ~30 KB raw → ~40 KB base64; cap at 1 MB to keep
+// localStorage from blowing up if a fork starts uploading 4K images.
+const PICTURE_URL_MAX = 1_048_576;
 
 /**
  * Returns the input URL only if it's a syntactically valid `https:` URL.
@@ -49,10 +53,23 @@ const PICTURE_URL_MAX = 2048;
  * to an attacker-controlled URL and turn every profile-view into a tracking
  * pixel that leaks IP, UA, and Referer to a third party.
  */
+/**
+ * Inline data URLs are permitted ONLY for the three raster image
+ * formats. SVG is rejected (it's an XSS surface — `<svg>` parses as
+ * markup and can carry `<script>` or `onload` handlers). Used by the
+ * offline service to keep `<img src=...>` working without a server
+ * round-trip when the user crops a profile picture / hero in-app.
+ */
+const DATA_IMAGE_RE = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+
 export function safePictureUrl(raw?: string | null): string | undefined {
   if (!raw) return undefined;
   const trimmed = String(raw).trim();
   if (!trimmed || trimmed.length > PICTURE_URL_MAX) return undefined;
+  // Inline image data URLs (offline upload preview).
+  if (trimmed.startsWith("data:")) {
+    return DATA_IMAGE_RE.test(trimmed) ? trimmed : undefined;
+  }
   try {
     const u = new URL(trimmed);
     if (u.protocol !== "https:") return undefined;

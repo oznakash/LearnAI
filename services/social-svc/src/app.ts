@@ -38,6 +38,12 @@ import {
   renderRobotsTxt,
   renderSitemapXml,
 } from "./ssr.js";
+import {
+  saveImage,
+  decodeDataUrl,
+  UploadError,
+  type ImageKind,
+} from "./uploads.js";
 
 interface AppOpts {
   store: Store;
@@ -63,6 +69,13 @@ interface AppOpts {
   demoTrustHeader?: boolean;
   /** Optional rate-limit bucket. Defaults to in-memory. */
   rateBucket?: RateBucket;
+  /**
+   * Filesystem root for user image uploads (avatars, hero banners).
+   * In production we mount the cloud-claude `/data` volume; nginx
+   * serves the same path via `location /i/`. When unset, defaults to
+   * `/data/uploads`. In tests, point at a tmp dir.
+   */
+  uploadsRoot?: string;
 }
 
 export function createApp(opts: AppOpts) {
@@ -81,6 +94,7 @@ export function createApp(opts: AppOpts) {
     .map((s) => s.trim())
     .filter(Boolean);
   const rateBucket = opts.rateBucket ?? inMemoryBucket();
+  const uploadsRoot = opts.uploadsRoot ?? "/data/uploads";
 
   if (!jwtSecret && !demoTrustHeader) {
     log.warn(
@@ -422,6 +436,93 @@ export function createApp(opts: AppOpts) {
     const agg = store.getAggregate(me.email);
     res.json(projectProfile(saved, agg, saved.email));
   });
+
+  // -- Image upload (avatar + hero banner) ---------------------------------
+  //
+  // Operator asked for upload + crop *now*, before the CDN sprint.
+  // The container already has a persistent `/data` volume (the same
+  // one the JSON store flushes to), so we land uploads at
+  // `/data/uploads/<emailHash>/<kind>.<ext>` and let nginx serve them
+  // via `location /i/`. When the CDN sprint arrives, swap the body
+  // of `saveImage` to PUT to S3/Cloudflare and return the CDN URL —
+  // every other layer reads `pictureUrl` / `heroUrl` unchanged.
+  //
+  // Auth: `requireUser` (only the user can write their own files).
+  // Body: JSON `{ dataUrl: "data:image/...;base64,..." }`. The 1 MB
+  // body cap below is enforced *before* we reach `saveImage`'s 1 MB
+  // raw cap so a hostile request gets cleanly rejected at the parser.
+  // MIME is sniffed from magic bytes — client-claimed types are a
+  // hint, not a trust source. SVG is refused.
+  function uploadHandler(kind: ImageKind, urlField: "pictureUrl" | "heroUrl") {
+    return (req: Request, res: Response) => {
+      const me = (req as Request & { profile: ProfileRecord }).profile;
+      const dataUrl = (req.body && (req.body as { dataUrl?: unknown }).dataUrl) ?? "";
+      if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
+        return res.status(400).json({ error: "expected_data_url" });
+      }
+      const decoded = decodeDataUrl(dataUrl);
+      if (!decoded) {
+        return res.status(400).json({ error: "bad_data_url" });
+      }
+      try {
+        const proto =
+          (req.headers["x-forwarded-proto"] as string)?.split(",")[0] ||
+          req.protocol ||
+          "https";
+        const host =
+          (req.headers["x-forwarded-host"] as string)?.split(",")[0] ||
+          req.headers.host ||
+          "learnai.cloud-claude.com";
+        const origin = `${proto}://${host}`;
+        const out = saveImage({
+          uploadsRoot,
+          origin,
+          email: me.email,
+          kind,
+          bytes: decoded.bytes,
+          claimedMime: decoded.claimedMime,
+        });
+        // Persist on the profile record so the SSR `og:image` and
+        // every projection picks it up automatically.
+        const next: ProfileRecord = { ...me, [urlField]: out.url };
+        const saved = store.upsertProfile(next);
+        const agg = store.getAggregate(me.email);
+        res.json({
+          url: out.url,
+          mime: out.mime,
+          bytes: out.bytes,
+          profile: projectProfile(saved, agg, saved.email),
+        });
+      } catch (e) {
+        if (e instanceof UploadError) {
+          return res.status(e.status).json({ error: e.message });
+        }
+        log.error("upload_failed", {
+          req_id: (req as Request & { _reqId: string })._reqId,
+          email_hash: emailHash(me.email),
+          err: (e as Error).message,
+        });
+        return res.status(500).json({ error: "upload_failed" });
+      }
+    };
+  }
+
+  // Larger JSON body for these routes only — a 1 MB image data-URL is
+  // ~1.4 MB after base64. Mounted before `requireUser` so the parser
+  // can reject oversize bodies before we hit the rate limiter.
+  const imageBodyParser = express.json({ limit: "2mb" });
+  app.post(
+    "/v1/social/me/image/avatar",
+    imageBodyParser,
+    requireUser,
+    uploadHandler("avatar", "pictureUrl"),
+  );
+  app.post(
+    "/v1/social/me/image/hero",
+    imageBodyParser,
+    requireUser,
+    uploadHandler("hero", "heroUrl"),
+  );
 
   app.put("/v1/social/me/signals", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;

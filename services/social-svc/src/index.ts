@@ -10,6 +10,9 @@
 //   SOCIAL_ALLOWED_ORIGINS      (default "*"; restrict in non-same-origin setups)
 //   SOCIAL_DEMO_TRUST_HEADER    (default "0"; "1" enables X-User-Email path
 //                                — refused when NODE_ENV=production)
+//   SOCIAL_UPLOADS_ROOT         (default "/data/uploads"; same volume that
+//                                holds SOCIAL_DB_PATH. nginx serves it via
+//                                `location /i/`.)
 //   NODE_ENV                    (set to "production" on the live deploy)
 //
 // Storage path: in-memory + JSON-file persistence on the mounted volume.
@@ -30,6 +33,7 @@ const admins = (process.env.SOCIAL_ADMIN_EMAILS ?? "")
 const jwtSecret = process.env.JWT_SECRET || "";
 const allowedOrigins = process.env.SOCIAL_ALLOWED_ORIGINS || "*";
 const demoTrustHeader = process.env.SOCIAL_DEMO_TRUST_HEADER === "1";
+const uploadsRoot = process.env.SOCIAL_UPLOADS_ROOT || undefined;
 
 if (process.env.NODE_ENV === "production") {
   if (!jwtSecret) {
@@ -44,7 +48,14 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const store = createStore({ dbPath });
-const app = createApp({ store, admins, jwtSecret, allowedOrigins, demoTrustHeader });
+const app = createApp({
+  store,
+  admins,
+  jwtSecret,
+  allowedOrigins,
+  demoTrustHeader,
+  uploadsRoot,
+});
 
 // Spotlight cron — emits one `kind="spotlight"` event per Topic
 // every ~6 hours. Keeps the Spark Stream alive even for users with
