@@ -132,6 +132,14 @@ export interface PublicProfile {
   currentWork?: { topicId: string; level: number; topicName: string };
   topicMap?: { topicId: string; xp: number }[];
   activity14d?: number[];
+  // -- extended metadata (PR #112). Each is gated by the matching
+  // `show*` flag for non-owners; owners always see their own values.
+  bio?: string;
+  pronouns?: string;
+  location?: string;
+  heroUrl?: string;
+  skillLevel?: SkillLevel;
+  links?: ProfileLinks;
   ownerPrefs?: {
     fullName?: string;
     showFullName: boolean;
@@ -141,6 +149,13 @@ export interface PublicProfile {
     showBadges: boolean;
     showSignup: boolean;
     signalsGlobal: boolean;
+    // Extended-metadata visibility flags (PR #112).
+    showBio?: boolean;
+    showPronouns?: boolean;
+    showLocation?: boolean;
+    showHero?: boolean;
+    showSkillLevel?: boolean;
+    showLinks?: boolean;
   };
 }
 

@@ -488,6 +488,30 @@ export class OfflineSocialService implements SocialService {
     this.write(next);
   }
 
+  /**
+   * Offline upload — stores the data-URL straight on the profile so
+   * the SPA preview works locally. Online deployments POST the same
+   * data-URL to `/v1/social/me/image/<kind>` and get back a real
+   * same-origin URL; here we keep it as a data: URL because there's
+   * no server to host it. The OG/share-link surface won't unfurl
+   * properly (data: URLs don't traverse the wire), but the in-app
+   * preview is correct.
+   */
+  async uploadImage(
+    kind: "avatar" | "hero",
+    dataUrl: string,
+  ): Promise<{ url: string }> {
+    if (!/^data:image\//i.test(dataUrl)) {
+      throw new Error("expected_data_url");
+    }
+    const state = this.read();
+    const profile = { ...state.profile };
+    if (kind === "avatar") profile.pictureUrl = dataUrl;
+    else profile.heroUrl = dataUrl;
+    this.write({ ...state, profile });
+    return { url: dataUrl };
+  }
+
   // -- write (graph) --------------------------------------------------------
 
   /** True if the target is the signed-in player (by handle or email). */

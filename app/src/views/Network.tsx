@@ -8,6 +8,17 @@ import type { FollowEdge, ProfileLinks, PublicProfile, ProfileMode } from "../so
 import type { SkillLevel, TopicId } from "../types";
 import type { View } from "../App";
 import { profileCompleteness, profileCompletenessSlots } from "../profile/completeness";
+import { ImageCropDialog } from "../components/ImageCropDialog";
+
+/**
+ * Escape characters that would let an attacker break out of a CSS
+ * `url(...)` literal. Only relevant for hero URLs the user pastes;
+ * uploaded URLs are server-controlled or `data:image/...;base64,...`
+ * which can't carry single-quote / paren bytes.
+ */
+function escapeCssUrl(raw: string): string {
+  return raw.replace(/[)(\\'"]/g, (c) => `\\${c}`);
+}
 
 const SKILL_LABELS: { id: SkillLevel; label: string }[] = [
   { id: "starter", label: "🌱 Curious starter" },
@@ -183,7 +194,21 @@ export function Network({ onNav }: Props) {
       <CompletenessCard profile={me} fallbackPicture={player.identity?.picture} />
 
       {/* 1.5 Profile details editor */}
-      <ProfileDetailsEditor profile={me} onSave={saveDetails} />
+      <ProfileDetailsEditor
+        profile={me}
+        fallbackPicture={player.identity?.picture}
+        onSave={saveDetails}
+        onImageUpload={async (kind, dataUrl) => {
+          const result = await social.uploadImage(kind, dataUrl);
+          if (!result) return null;
+          // Pick up the just-saved url + push it into local state so the
+          // preview refreshes immediately. The server has already updated
+          // pictureUrl/heroUrl on the profile record (see social-svc
+          // uploadHandler); refetching getMyProfile syncs us.
+          await refresh();
+          return result.url;
+        }}
+      />
 
       {/* 1. Profile visibility + panic switch */}
       <section className="card p-5 space-y-3">
@@ -768,9 +793,14 @@ function draftFromProfile(p: PublicProfile): DraftState {
 
 function ProfileDetailsEditor({
   profile,
+  fallbackPicture,
   onSave,
+  onImageUpload,
 }: {
   profile: PublicProfile;
+  /** Google avatar URL from `state.identity.picture` — used when the
+   *  user hasn't uploaded a custom image yet. */
+  fallbackPicture?: string;
   onSave: (patch: {
     fullName?: string;
     bio?: string;
@@ -780,11 +810,16 @@ function ProfileDetailsEditor({
     skillLevel?: SkillLevel;
     links?: ProfileLinks;
   }) => Promise<void>;
+  /** Crop-and-upload handler. Resolves with the persisted URL, or
+   *  null if the upload failed. */
+  onImageUpload: (kind: "avatar" | "hero", dataUrl: string) => Promise<string | null>;
 }) {
   const seed = draftFromProfile(profile);
   const [draft, setDraft] = useState<DraftState>(seed);
   const [busy, setBusy] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [cropOpen, setCropOpen] = useState<null | "avatar" | "hero">(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Re-seed when the upstream profile changes (after a save round-trip,
   // or after a parallel write from another surface).
@@ -843,10 +878,93 @@ function ProfileDetailsEditor({
   return (
     <section className="card p-5 space-y-4" data-testid="network-profile-details">
       <div>
-        <h2 className="h2">Profile details</h2>
+        <h2 className="h2">Your details</h2>
         <p className="muted text-xs mt-1">
-          What viewers actually see on <code className="text-white/80">/u/{profile.handle}</code>. Each field has its own visibility toggle in the section below — fill it once, then decide whether to expose it.
+          What other people see on your public page. Fill in what you want to share, then use the toggles below to decide what's visible.
         </p>
+      </div>
+
+      {/* Profile picture + banner — upload + crop, no URL pasting required */}
+      <div className="grid sm:grid-cols-[auto,1fr] gap-4 items-start">
+        <div className="flex flex-col items-center gap-2">
+          <div
+            className="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold text-2xl ring-2 ring-white/10 overflow-hidden"
+          >
+            {profile.pictureUrl ? (
+              <img
+                src={profile.pictureUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+              />
+            ) : fallbackPicture ? (
+              <img
+                src={fallbackPicture}
+                alt=""
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <span className="text-2xl">
+                {(profile.displayName || profile.handle).charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <button
+            className="btn-ghost text-xs"
+            onClick={() => {
+              setUploadError(null);
+              setCropOpen("avatar");
+            }}
+          >
+            📷 Change photo
+          </button>
+        </div>
+        <div>
+          <div className="label">Banner image</div>
+          <div
+            className="relative rounded-xl overflow-hidden border border-white/10"
+            style={{
+              aspectRatio: "1600 / 540",
+              background: draft.heroUrl
+                ? `center / cover no-repeat url(${escapeCssUrl(draft.heroUrl)})`
+                : "linear-gradient(135deg, rgba(124,92,255,0.25), rgba(40,224,179,0.25))",
+            }}
+          >
+            {!draft.heroUrl && (
+              <div className="absolute inset-0 grid place-items-center text-white/50 text-xs">
+                No banner yet — we'll show a soft gradient on your page.
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <button
+              className="btn-ghost text-xs"
+              onClick={() => {
+                setUploadError(null);
+                setCropOpen("hero");
+              }}
+            >
+              🖼 {draft.heroUrl ? "Change banner" : "Add a banner"}
+            </button>
+            {draft.heroUrl && (
+              <button
+                className="btn-ghost text-xs text-white/50"
+                onClick={() => setDraft((d) => ({ ...d, heroUrl: "" }))}
+              >
+                Remove banner
+              </button>
+            )}
+            <p className="text-[11px] text-white/40">
+              JPEG, PNG, or WebP. Up to 8 MB before cropping.
+            </p>
+          </div>
+          {uploadError && (
+            <p className="text-[11px] text-bad mt-1">{uploadError}</p>
+          )}
+        </div>
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <Field
@@ -905,21 +1023,9 @@ function ProfileDetailsEditor({
         )}
       </div>
       <div>
-        <div className="label">Hero / banner image URL</div>
-        <input
-          className="input"
-          placeholder="https://… (https only)"
-          value={draft.heroUrl}
-          onChange={(e) => setDraft((d) => ({ ...d, heroUrl: e.target.value }))}
-        />
-        <p className="text-[11px] text-white/40 mt-1">
-          Image upload ships with the CDN sprint. Until then: paste a public https URL. Falls back to a topic-tinted gradient when blank.
-        </p>
-      </div>
-      <div>
-        <div className="label">External links</div>
+        <div className="label">Your links</div>
         <p className="text-[11px] text-white/40 mb-2">
-          Host-checked per kind. We strip query strings — your saved value is the canonical URL.
+          Add the places you want people to find you. Paste a full URL — we'll tidy it up before saving.
         </p>
         <div className="grid sm:grid-cols-2 gap-2">
           <Field
@@ -950,10 +1056,28 @@ function ProfileDetailsEditor({
       </div>
       <div className="flex items-center gap-3">
         <button className="btn-primary text-sm" disabled={!dirty || busy} onClick={save}>
-          {busy ? "Saving…" : "Save profile details"}
+          {busy ? "Saving…" : "Save your details"}
         </button>
         {savedAt && <span className="text-xs text-good">✓ Saved</span>}
       </div>
+
+      <ImageCropDialog
+        open={cropOpen !== null}
+        kind={cropOpen ?? "avatar"}
+        onClose={() => setCropOpen(null)}
+        onSave={async (dataUrl) => {
+          if (!cropOpen) return;
+          const url = await onImageUpload(cropOpen, dataUrl);
+          if (!url) {
+            setUploadError("That upload didn't go through — check your connection and try again.");
+            return;
+          }
+          if (cropOpen === "hero") {
+            setDraft((d) => ({ ...d, heroUrl: url }));
+          }
+          setCropOpen(null);
+        }}
+      />
     </section>
   );
 }

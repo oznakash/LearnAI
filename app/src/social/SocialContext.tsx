@@ -57,6 +57,20 @@ interface Ctx {
   updateProfile(patch: ProfilePatch): Promise<PublicProfile | null>;
   setSignals(topics: TopicId[]): Promise<TopicId[]>;
   pushSnapshot(snapshot: PlayerSnapshot): Promise<void>;
+  /**
+   * Upload a cropped avatar (`kind="avatar"` → updates `pictureUrl`)
+   * or banner (`kind="hero"` → updates `heroUrl`). Body is a
+   * `data:image/...;base64,...` URL produced client-side by the crop
+   * dialog. Returns `{ url }` of the persisted image; for online
+   * mode this is a same-origin URL like `/i/<hash>/avatar.png?v=…`,
+   * for offline it's the same data URL passed in. Returns `null`
+   * when the upload fails (network blip / 415 / rate-limited) so
+   * callers can keep their existing image.
+   */
+  uploadImage(
+    kind: "avatar" | "hero",
+    dataUrl: string,
+  ): Promise<{ url: string } | null>;
   // Read helpers that fall back to safe sentinels.
   getMyProfile(): Promise<PublicProfile | null>;
   getProfile(handle: string): Promise<PublicProfile | null>;
@@ -288,6 +302,11 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     (patch: ProfilePatch) => withSocialGuard(() => serviceRef.current.updateProfile(patch), null),
     [],
   );
+  const uploadImage = useCallback(
+    (kind: "avatar" | "hero", dataUrl: string) =>
+      withSocialGuard(() => serviceRef.current.uploadImage(kind, dataUrl), null),
+    [],
+  );
   const setSignals = useCallback(
     (topics: TopicId[]) =>
       withSocialGuard(() => serviceRef.current.setSignals(topics), [] as TopicId[]),
@@ -357,6 +376,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
       declineFollowRequest,
       cancelMyPendingRequest,
       updateProfile,
+      uploadImage,
       setSignals,
       pushSnapshot,
       getMyProfile,
@@ -384,6 +404,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
       declineFollowRequest,
       cancelMyPendingRequest,
       updateProfile,
+      uploadImage,
       setSignals,
       pushSnapshot,
       getMyProfile,

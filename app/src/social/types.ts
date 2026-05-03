@@ -233,6 +233,17 @@ export interface SocialService {
   updateProfile(patch: ProfilePatch): Promise<PublicProfile>;
   setSignals(topics: TopicId[]): Promise<TopicId[]>;
   pushSnapshot(snapshot: PlayerSnapshot): Promise<void>;
+  /**
+   * Upload a cropped avatar or hero image. Body is a `data:image/...`
+   * URL (base64) — typically produced by `<canvas>.toDataURL()` from
+   * the in-app crop dialog. Returns a same-origin URL that's been
+   * persisted on the user's `pictureUrl` (avatar) or `heroUrl` (hero).
+   * Online: round-trips to `POST /v1/social/me/image/<kind>`.
+   * Offline: stores the data-URL straight on the local profile (no
+   * upload happens, but the SPA still sees a valid `pictureUrl` /
+   * `heroUrl` for in-app preview).
+   */
+  uploadImage(kind: "avatar" | "hero", dataUrl: string): Promise<{ url: string }>;
 
   // -- write (graph) --
   follow(targetHandle: string): Promise<FollowEdge>;

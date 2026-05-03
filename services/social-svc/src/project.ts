@@ -25,6 +25,17 @@ export function projectProfile(
   // what they'll display when they flip the toggle on).
   const showFullName = isOwner ? true : profile.showFullName;
 
+  // PR #112 extended-metadata visibility helpers. Defaults follow the
+  // SPA: each field is hidden to non-owners unless `show* === true`.
+  // (`show* === undefined` from older saved records reads as off, which
+  // matches the conservative default.)
+  const showBio = !!profile.showBio;
+  const showPronouns = !!profile.showPronouns;
+  const showLocation = !!profile.showLocation;
+  const showHero = !!profile.showHero;
+  const showSkillLevel = !!profile.showSkillLevel;
+  const showLinks = !!profile.showLinks;
+
   return {
     email: isOwner ? profile.email : "",
     handle: profile.handle,
@@ -62,6 +73,14 @@ export function projectProfile(
         : undefined,
     activity14d:
       isOwner || profile.showActivity ? aggregate?.activity14d : undefined,
+    // Extended metadata (PR #112). Owner always sees own values; viewers
+    // only see fields the owner has explicitly opted to expose.
+    bio: isOwner || showBio ? profile.bio : undefined,
+    pronouns: isOwner || showPronouns ? profile.pronouns : undefined,
+    location: isOwner || showLocation ? profile.location : undefined,
+    heroUrl: isOwner || showHero ? profile.heroUrl : undefined,
+    skillLevel: isOwner || showSkillLevel ? profile.skillLevel : undefined,
+    links: isOwner || showLinks ? profile.links : undefined,
     ownerPrefs: isOwner
       ? {
           fullName: profile.fullName,
@@ -72,6 +91,12 @@ export function projectProfile(
           showBadges: profile.showBadges,
           showSignup: profile.showSignup,
           signalsGlobal: profile.signalsGlobal,
+          showBio: profile.showBio,
+          showPronouns: profile.showPronouns,
+          showLocation: profile.showLocation,
+          showHero: profile.showHero,
+          showSkillLevel: profile.showSkillLevel,
+          showLinks: profile.showLinks,
         }
       : undefined,
   };

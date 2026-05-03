@@ -179,6 +179,17 @@ export class OnlineSocialService implements SocialService {
     });
   }
 
+  async uploadImage(
+    kind: "avatar" | "hero",
+    dataUrl: string,
+  ): Promise<{ url: string }> {
+    const r = await this.request<{ url: string }>(
+      `/v1/social/me/image/${kind}`,
+      { method: "POST", body: JSON.stringify({ dataUrl }) },
+    );
+    return { url: r.url };
+  }
+
   // -- write (graph) -----------------------------------------------------
   follow(targetHandle: string): Promise<FollowEdge> {
     return this.request<FollowEdge>(
