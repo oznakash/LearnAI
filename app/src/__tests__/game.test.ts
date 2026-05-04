@@ -108,15 +108,19 @@ describe("bumpStreak", () => {
     expect(after.streak).toBe(1);
   });
   it("does not double-count today", () => {
-    const now = Date.now();
+    // Pin to a midday timestamp so a +5min jump never crosses a day
+    // boundary on a CI machine that happens to run this near midnight.
+    // (`Date.now()` was flaky for this case.)
+    const now = new Date("2026-05-01T12:00:00Z").getTime();
     const s = { ...defaultState(), streak: 3, streakUpdatedAt: now };
     const after = bumpStreak(s, now + 5 * 60 * 1000);
     expect(after.streak).toBe(3);
   });
   it("increments after a day", () => {
-    const yesterday = Date.now() - 24 * 3600 * 1000;
+    const today = new Date("2026-05-01T12:00:00Z").getTime();
+    const yesterday = today - 24 * 3600 * 1000;
     const s = { ...defaultState(), streak: 4, streakUpdatedAt: yesterday };
-    const after = bumpStreak(s, Date.now());
+    const after = bumpStreak(s, today);
     expect(after.streak).toBe(5);
   });
   it("resets if a day was missed", () => {
