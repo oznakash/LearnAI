@@ -162,4 +162,59 @@ describe("pickInsight", () => {
     });
     expect(r).toBeNull();
   });
+
+  describe("goal-text aliases", () => {
+    it("maps 'Become an AI PM' to ai-pm even though the topic name is 'AI Product Management'", () => {
+      const memories = [
+        mem({
+          // No metadata — only the alias gets us there.
+          text: "Goal: Become an AI PM",
+          category: "goal",
+          updatedAt: 100,
+        }),
+      ];
+      // ai-pm is in the interest list.
+      const r = pickInsight(memories, {
+        profile: { ...baseProfile, interests: ["ai-foundations", "ai-pm"] },
+      });
+      expect(r).not.toBeNull();
+      expect(r!.topicId).toBe("ai-pm");
+    });
+
+    it("prefers an alias whose topic is in the user's interests over one that isn't", () => {
+      const memories = [
+        mem({
+          // "ship" matches `ai-builder` aliases AND nothing else; the user's
+          // interests *include* ai-builder, so we should land there.
+          text: "Goal: ship an AI feature this quarter",
+          category: "goal",
+          updatedAt: 100,
+        }),
+      ];
+      const r = pickInsight(memories, {
+        profile: {
+          ...baseProfile,
+          interests: ["ai-builder", "ai-pm"],
+        },
+      });
+      expect(r).not.toBeNull();
+      expect(r!.topicId).toBe("ai-builder");
+    });
+
+    it("falls back to first interest only when no alias matches", () => {
+      const memories = [
+        mem({
+          // No alias hits, no topic name in text.
+          text: "Goal: get more confident",
+          category: "goal",
+          updatedAt: 100,
+        }),
+      ];
+      const r = pickInsight(memories, {
+        profile: { ...baseProfile, interests: ["ai-builder", "ai-pm"] },
+      });
+      expect(r).not.toBeNull();
+      expect(r!.topicId).toBe("ai-builder"); // first interest
+    });
+  });
 });

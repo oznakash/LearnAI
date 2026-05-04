@@ -3,6 +3,7 @@ import {
   applySparkResult,
   bumpStreak,
   defaultState,
+  inferredStartingLevel,
   isLevelUnlocked,
   levelCompletion,
   nextRecommendedLevel,
@@ -10,6 +11,7 @@ import {
   passBoss,
   recordSession,
   regenFocus,
+  startingLevelFromSkill,
   suggestSwitchTopic,
   tierForXP,
   topicAccuracy,
@@ -19,7 +21,21 @@ import {
   FOCUS_REGEN_MIN,
 } from "../store/game";
 import { TOPICS, getTopic } from "../content";
-import type { Spark } from "../types";
+import type { PlayerProfile, Spark } from "../types";
+
+function testProfile(over: Partial<PlayerProfile> = {}): PlayerProfile {
+  return {
+    name: "T",
+    ageBand: "adult",
+    skillLevel: "starter",
+    interests: [],
+    dailyMinutes: 10,
+    goal: "",
+    experience: "",
+    createdAt: 0,
+    ...over,
+  };
+}
 
 describe("tierForXP", () => {
   it("returns the right tier for each XP threshold", () => {
@@ -234,6 +250,95 @@ describe("suggestSwitchTopic", () => {
     const out = suggestSwitchTopic(s, TOPICS[0].id);
     expect(out).not.toBe(TOPICS[0].id);
     expect([TOPICS[1].id, TOPICS[2].id]).toContain(out);
+  });
+});
+
+describe("startingLevelFromSkill / inferredStartingLevel", () => {
+  it("maps each SkillLevel to its conservative one-step-down anchor", () => {
+    expect(startingLevelFromSkill("starter")).toBe(1);
+    expect(startingLevelFromSkill("explorer")).toBe(2);
+    expect(startingLevelFromSkill("builder")).toBe(3);
+    expect(startingLevelFromSkill("architect")).toBe(4);
+    expect(startingLevelFromSkill("visionary")).toBe(5);
+    expect(startingLevelFromSkill(undefined)).toBe(1);
+  });
+
+  it("calibratedLevel always wins over skill", () => {
+    expect(
+      inferredStartingLevel(
+        testProfile({ skillLevel: "starter", calibratedLevel: 7 }),
+      ),
+    ).toBe(7);
+    expect(
+      inferredStartingLevel(
+        testProfile({ skillLevel: "visionary", calibratedLevel: 2 }),
+      ),
+    ).toBe(2);
+  });
+
+  it("falls back to skill when calibratedLevel is missing", () => {
+    expect(
+      inferredStartingLevel(testProfile({ skillLevel: "explorer" })),
+    ).toBe(2);
+    expect(
+      inferredStartingLevel(testProfile({ skillLevel: "builder" })),
+    ).toBe(3);
+  });
+
+  it("returns 1 for an undefined profile", () => {
+    expect(inferredStartingLevel(undefined)).toBe(1);
+  });
+});
+
+describe("isLevelUnlocked + skill-derived floor", () => {
+  it("unlocks L1..L<skill> for a fresh topic when calibration hasn't run", () => {
+    const s = defaultState();
+    s.profile = testProfile({ skillLevel: "explorer" });
+    const topic = TOPICS[0];
+    expect(isLevelUnlocked(s, topic.id, 1)).toBe(true);
+    expect(isLevelUnlocked(s, topic.id, 2)).toBe(true); // skill floor
+    expect(isLevelUnlocked(s, topic.id, 3)).toBe(false);
+  });
+
+  it("unlocks up to calibratedLevel when set, ignoring the skill default", () => {
+    const s = defaultState();
+    s.profile = testProfile({ skillLevel: "starter", calibratedLevel: 4 });
+    const topic = TOPICS[0];
+    expect(isLevelUnlocked(s, topic.id, 4)).toBe(true);
+    expect(isLevelUnlocked(s, topic.id, 5)).toBe(false);
+  });
+
+  it("nextRecommendedSpark for an explorer on a fresh topic returns L2 S1", () => {
+    const s = defaultState();
+    s.profile = testProfile({ skillLevel: "explorer" });
+    const topic = TOPICS[0];
+    const next = nextRecommendedSpark(s, topic.id);
+    expect(next?.spark.id).toBe(topic.levels[1].sparks[0].id); // L2 S1
+  });
+
+  it("nextRecommendedSpark for a starter still returns L1 S1", () => {
+    const s = defaultState();
+    s.profile = testProfile({ skillLevel: "starter" });
+    const topic = TOPICS[0];
+    const next = nextRecommendedSpark(s, topic.id);
+    expect(next?.spark.id).toBe(topic.levels[0].sparks[0].id);
+  });
+
+  it("nextRecommendedSpark resumes from progress once the player has touched the topic", () => {
+    let s = defaultState();
+    s.profile = testProfile({ skillLevel: "explorer" });
+    const topic = TOPICS[0];
+    const lvl1 = topic.levels[0];
+    // Touch L1 — pass one spark. The "no progress" branch no longer fires;
+    // recommender should walk linearly from L1's first incomplete spark.
+    s = applySparkResult(s, topic.id, lvl1.id, {
+      sparkId: lvl1.sparks[0].id,
+      correct: true,
+      awardedXP: 10,
+    });
+    const next = nextRecommendedSpark(s, topic.id);
+    expect(next?.levelId).toBe(lvl1.id);
+    expect(next?.spark.id).toBe(lvl1.sparks[1].id);
   });
 });
 

@@ -25,9 +25,12 @@ describe("nextRecommendedLevel — calibrated start", () => {
   const topic = TOPICS[0];
   const topicId: TopicId = topic.id;
 
-  it("when profile.calibratedLevel is undefined, falls back to L1", () => {
+  it("when profile.calibratedLevel is undefined, falls back to the skill-derived level (builder → L3)", () => {
+    // sampleProfile uses skillLevel: "builder", which now seeds a starting
+    // level of 3 when calibration hasn't run. See `inferredStartingLevel`
+    // in `store/game.ts` and `docs/test-personas.md` "Findings log §2."
     const s = withCalibration(undefined);
-    expect(nextRecommendedLevel(s, topicId)?.index).toBe(1);
+    expect(nextRecommendedLevel(s, topicId)?.index).toBe(3);
   });
 
   it("with a fresh topic and a calibrated level of N, recommends L_N", () => {
@@ -53,9 +56,12 @@ describe("nextRecommendedLevel — calibrated start", () => {
     expect(nextRecommendedLevel(s, topicId)?.index).toBe(1);
   });
 
-  it("a calibrated level below 1 (somehow) falls back to linear progression", () => {
+  it("a calibrated level below 1 (somehow) falls through to the skill-derived level", () => {
+    // calibratedLevel=0 fails the `>= 1` guard, so the fallback chain
+    // continues to the skill-derived starting level. With skill="builder",
+    // that resolves to L3.
     const s = withCalibration(0);
-    expect(nextRecommendedLevel(s, topicId)?.index).toBe(1);
+    expect(nextRecommendedLevel(s, topicId)?.index).toBe(3);
   });
 
   it("calibrated jump is per-topic — fresh topics get the jump independently", () => {
@@ -83,6 +89,9 @@ describe("PlayerState — seenCalibrationQuestionIds back-compat", () => {
   it("calibratedLevel on profile is optional — older profiles still work", () => {
     const s = withCalibration(undefined);
     expect(s.profile?.calibratedLevel).toBeUndefined();
-    expect(nextRecommendedLevel(s, TOPICS[0].id)?.index).toBe(1);
+    // Skill-derived fallback applies (builder → L3); the *recommendation*
+    // is non-null and stable, which is the back-compat guarantee that
+    // matters here.
+    expect(nextRecommendedLevel(s, TOPICS[0].id)?.index).toBe(3);
   });
 });

@@ -54,6 +54,65 @@ const INTENT_OPTIONS: { id: Intent; label: string; emoji: string; sub: string }[
   { id: "forker", emoji: "🌐", label: "Forker", sub: "I want to run my own version of this for my domain" },
 ];
 
+/**
+ * Best-guess display name from a Google identity. Prefers an explicit
+ * `name` from the OAuth payload. Falls back to the email handle but
+ * sanitizes Gmail-style tags (`+work`, `+qa`) and namespace-style
+ * separators — `learnai-qa+maya@gmail.com` should pre-fill as `Maya`,
+ * not `learnai-qa+maya`. If the handle is dominated by token-ish stubs
+ * (`qa`, `test`, `learnai`), the field is left empty so the user types
+ * their real name; the muted placeholder ("Your name") is more inviting
+ * than a machine-looking string they have to delete first.
+ */
+export function deriveDefaultName(identity?: { name?: string; email?: string }): string {
+  if (identity?.name && identity.name.trim().length > 0) return identity.name.trim();
+  const email = identity?.email;
+  if (!email) return "";
+  const handle = email.split("@")[0];
+  if (!handle) return "";
+  // Tokens that look like namespace stubs rather than human names — we'd
+  // rather show an empty placeholder than greet someone as "Hey QA" or
+  // "Hey LearnAI." Add new tokens here as new test/scaffold patterns appear.
+  const tokenish = new Set([
+    "qa", "test", "dev", "prod", "ftue", "demo", "admin", "user",
+    "learnai", "builderquest", "synapse", "claude", "anthropic",
+  ]);
+  const titleCase = (s: string) => {
+    const lower = s.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  };
+  const pickSegment = (text: string): string | null => {
+    const segments = text
+      .split(/[-._]+/)
+      .filter((s) => /[a-zA-Z]/.test(s));
+    if (segments.length === 0) return null;
+    // Walk right→left and pick the first non-token-ish segment.
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (!tokenish.has(segments[i].toLowerCase())) return titleCase(segments[i]);
+    }
+    return null;
+  };
+  // Gmail tag rule. If `learnai-qa+maya`, the `+maya` suffix is more likely
+  // the actual person's name than the multi-segment prefix — but only when
+  // the prefix already looks like a namespace (multiple segments). A plain
+  // `maya+work@gmail.com` gets the normal "drop the +tag" treatment.
+  const plusIdx = handle.indexOf("+");
+  if (plusIdx >= 0) {
+    const beforePlus = handle.slice(0, plusIdx);
+    const afterPlus = handle.slice(plusIdx + 1);
+    const beforeIsNamespaced = /[-._]/.test(beforePlus);
+    if (beforeIsNamespaced) {
+      const afterPick = pickSegment(afterPlus);
+      if (afterPick) return afterPick;
+    }
+    const beforePick = pickSegment(beforePlus);
+    if (beforePick) return beforePick;
+    // Both sides were token-ish — fall through to nothing.
+    return "";
+  }
+  return pickSegment(handle) ?? "";
+}
+
 export function Onboarding() {
   const { state, setProfile } = usePlayer();
   const { remember } = useMemory();
@@ -61,7 +120,7 @@ export function Onboarding() {
   const [stepIdx, setStepIdx] = useState(0);
   const step: StepId = STEPS[stepIdx].id;
 
-  const [name, setName] = useState(state.identity?.name ?? state.identity?.email?.split("@")[0] ?? "");
+  const [name, setName] = useState(deriveDefaultName(state.identity));
   const [ageBand, setAgeBand] = useState<AgeBand>("adult");
   const [age, setAge] = useState<number | undefined>(undefined);
   const [skill, setSkill] = useState<SkillLevel>("explorer");
