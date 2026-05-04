@@ -3,7 +3,7 @@ import { useSocial } from "../social/SocialContext";
 import { useAdmin } from "../admin/AdminContext";
 import { getTopic, TOPICS } from "../content";
 import { Mascot } from "../visuals/Mascot";
-import type { StreamCardKind } from "../social/types";
+import type { PublicProfile, StreamCardKind } from "../social/types";
 import type { TopicId, GuildTier } from "../types";
 import type { View } from "../App";
 
@@ -88,6 +88,11 @@ export function SparkStream({ onNav }: Props) {
   const [cards, setCards] = useState<DisplayCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterFollowingOnly, setFilterFollowingOnly] = useState(false);
+  // Cold-start: when the real stream is empty AND the admin hasn't enabled
+  // showDemoData mock cards, fall back to "people you might follow"
+  // sourced from the global leaderboard minus people I already follow.
+  // This turns the dead-feed empty state into an actionable next step.
+  const [suggestions, setSuggestions] = useState<PublicProfile[]>([]);
 
   const refresh = async () => {
     setLoading(true);
@@ -109,14 +114,40 @@ export function SparkStream({ onNav }: Props) {
       isMock: false,
     }));
     // Mock cards are gated behind the admin `showDemoData` flag (default
-    // false in production). Without the flag, an empty stream stays empty
-    // and the EmptyState component handles the cold-start copy. With the
-    // flag (dev / screenshots / demos), it fills the timeline so the page
-    // never looks dead.
+    // false in production). Without the flag, an empty stream falls back
+    // to a follow-suggestion module (loaded below). With the flag (dev /
+    // screenshots / demos), mocks fill the timeline.
     const mock = config.flags.showDemoData && realDisplay.length === 0
       ? makeMockCards(Date.now(), config.branding.mascotName)
       : [];
     setCards([...realDisplay, ...mock].sort((a, b) => b.createdAt - a.createdAt));
+
+    // Cold-start follow suggestions. Only fetch when we'd otherwise show
+    // the empty state — saves a board API call on every Stream visit
+    // for users with active feeds.
+    if (realDisplay.length === 0 && mock.length === 0) {
+      try {
+        const [board, following] = await Promise.all([
+          social.getBoard("global", "week"),
+          social.listFollowing({ status: "approved" }),
+        ]);
+        const followedHandles = new Set(
+          following.map((e) => e.target.toLowerCase()),
+        );
+        const candidates = board
+          .filter(
+            (p) =>
+              !followedHandles.has(p.handle.toLowerCase()) &&
+              p.profileMode === "open",
+          )
+          .slice(0, 6);
+        setSuggestions(candidates);
+      } catch {
+        setSuggestions([]);
+      }
+    } else {
+      setSuggestions([]);
+    }
     setLoading(false);
   };
 
@@ -179,7 +210,22 @@ export function SparkStream({ onNav }: Props) {
       {loading ? (
         <p className="text-xs text-white/50">Loading…</p>
       ) : filtered.length === 0 ? (
-        <EmptyState followingOnly={filterFollowingOnly} onNav={onNav} />
+        <EmptyState
+          followingOnly={filterFollowingOnly}
+          onNav={onNav}
+          suggestions={suggestions}
+          onFollow={async (h) => {
+            await social.follow(h);
+            // Optimistically remove the now-followed person from the
+            // suggestion strip; the next refresh will surface their
+            // events when the cron seeds them.
+            setSuggestions((prev) =>
+              prev.filter(
+                (p) => p.handle.toLowerCase() !== h.toLowerCase(),
+              ),
+            );
+          }}
+        />
       ) : (
         <ul className="space-y-3">
           {filtered.map((c) => (
@@ -341,7 +387,23 @@ function StreamCardItem({
   );
 }
 
-function EmptyState({ followingOnly, onNav }: { followingOnly: boolean; onNav: (v: View) => void }) {
+function EmptyState({
+  followingOnly,
+  onNav,
+  suggestions,
+  onFollow,
+}: {
+  followingOnly: boolean;
+  onNav: (v: View) => void;
+  suggestions: PublicProfile[];
+  onFollow: (handle: string) => Promise<void>;
+}) {
+  // The follow-suggestions strip turns the cold-start "nothing here" into
+  // an actionable next step. Only renders for the All filter (the
+  // following-only filter is its own clearer signal) and only when we
+  // actually have candidates that aren't already followed.
+  const showSuggestions = !followingOnly && suggestions.length > 0;
+
   return (
     <section className="card p-6 text-center max-w-md mx-auto">
       <Mascot mood="thinking" size={84} />
@@ -352,6 +414,14 @@ function EmptyState({ followingOnly, onNav }: { followingOnly: boolean; onNav: (
             Try the All filter, or pick up a Spark in your favorite Topic.
           </p>
         </>
+      ) : showSuggestions ? (
+        <>
+          <h2 className="h2 mt-3">Build your stream</h2>
+          <p className="muted mt-2 text-sm">
+            Follow a few builders so their level-ups, boss takedowns, and
+            streak milestones land here.
+          </p>
+        </>
       ) : (
         <>
           <h2 className="h2 mt-3">The Stream is empty</h2>
@@ -360,12 +430,56 @@ function EmptyState({ followingOnly, onNav }: { followingOnly: boolean; onNav: (
           </p>
         </>
       )}
+
+      {showSuggestions && (
+        <ul className="mt-4 space-y-2 text-left">
+          {suggestions.map((p) => (
+            <li
+              key={p.handle}
+              className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/10"
+            >
+              <div className="w-9 h-9 rounded-full bg-accent/15 grid place-items-center text-xs font-semibold text-white/80 overflow-hidden shrink-0">
+                {p.pictureUrl ? (
+                  <img
+                    src={p.pictureUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  (p.displayName || p.handle).slice(0, 2).toUpperCase()
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <button
+                  className="font-semibold text-white truncate text-left hover:underline"
+                  onClick={() =>
+                    onNav({ name: "profile", handle: p.handle })
+                  }
+                >
+                  {p.displayName || p.handle}
+                </button>
+                <div className="text-[11px] text-white/55 truncate">
+                  @{p.handle} · {p.guildTier} · ⚡ {p.xpTotal}
+                </div>
+              </div>
+              <button
+                className="btn-primary text-xs px-3 py-1.5"
+                onClick={() => void onFollow(p.handle)}
+              >
+                + Follow
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="flex flex-wrap gap-2 justify-center mt-4">
         <button
           className="btn-primary text-sm"
           onClick={() => onNav({ name: "leaderboard" })}
         >
-          Find people on Boards
+          {showSuggestions ? "More on Boards" : "Find people on Boards"}
         </button>
         <button
           className="btn-ghost text-sm"

@@ -43,20 +43,31 @@ afterEach(() => {
 
 const headers = (email: string) => ({ "x-user-email": email });
 
-function memUserStateResponse(emails: string[]) {
-  return {
-    recent: emails.map((e) => ({ email: e })),
-  };
+type StateRow = {
+  email: string;
+  display_name?: string | null;
+  picture_url?: string | null;
+};
+
+function memUserStateResponse(rows: StateRow[]) {
+  return { recent: rows };
 }
 
 function memAuthUsersResponse(rows: { email: string; name?: string }[]) {
   return { users: rows };
 }
 
-function mockMem0(stateEmails: string[], authRows: { email: string; name?: string }[] = []) {
+function mockMem0(
+  stateRows: StateRow[] | string[],
+  authRows: { email: string; name?: string }[] = [],
+) {
+  // Backwards-compatible: a string[] is treated as bare emails.
+  const normalized: StateRow[] = stateRows.map((r) =>
+    typeof r === "string" ? { email: r } : r,
+  );
   fetchMock.mockImplementation(async (url: string) => {
     if (url.endsWith("/v1/state/admin/users")) {
-      return new Response(JSON.stringify(memUserStateResponse(stateEmails)), {
+      return new Response(JSON.stringify(memUserStateResponse(normalized)), {
         status: 200,
         headers: { "content-type": "application/json" },
       });
@@ -159,5 +170,100 @@ describe("POST /v1/social/admin/reconcile-from-mem0", () => {
     expect(r.status).toBe(200);
     expect(r.body.mem0UserCount).toBe(0);
     expect(r.body.created.length).toBe(0);
+  });
+
+  // -- Identity propagation from user_state (post-mem0#21) ----------------
+  // The mem0 PR #21 added persistent display_name + picture_url columns
+  // to user_states, populated on every /auth/google signin. Reconcile
+  // should pick them up so a Google user lands on social-svc with their
+  // real name + avatar (not just title-cased handle) without the SPA
+  // ever needing to do anything.
+
+  it("uses display_name from user_state to fill fullName for Google users", async () => {
+    mockMem0([
+      { email: "google-user@gmail.com", display_name: "Cho Chang" },
+    ]);
+    await request(app)
+      .post("/v1/social/admin/reconcile-from-mem0")
+      .set(headers("admin@learnai.dev"))
+      .send({ mem0Url: "https://m0", mem0AdminApiKey: "k" });
+    const profile = store.getProfileByEmail("google-user@gmail.com");
+    expect(profile?.fullName).toBe("Cho Chang");
+  });
+
+  it("uses picture_url from user_state to fill pictureUrl for Google users", async () => {
+    mockMem0([
+      {
+        email: "google-user@gmail.com",
+        display_name: "Cho Chang",
+        picture_url: "https://lh3.googleusercontent.com/cho/avatar.jpg",
+      },
+    ]);
+    await request(app)
+      .post("/v1/social/admin/reconcile-from-mem0")
+      .set(headers("admin@learnai.dev"))
+      .send({ mem0Url: "https://m0", mem0AdminApiKey: "k" });
+    const profile = store.getProfileByEmail("google-user@gmail.com");
+    expect(profile?.pictureUrl).toBe(
+      "https://lh3.googleusercontent.com/cho/avatar.jpg",
+    );
+  });
+
+  it("user_state.display_name wins over auth.users.name when both are present", async () => {
+    // Hypothetical: a user signed up via password long ago (auth.users
+    // has their stale name) and later switched to Google signin
+    // (user_state has the fresh Google name). The Google name is more
+    // current — primary source wins.
+    mockMem0(
+      [{ email: "user@gmail.com", display_name: "New Google Name" }],
+      [{ email: "user@gmail.com", name: "Old Password Name" }],
+    );
+    await request(app)
+      .post("/v1/social/admin/reconcile-from-mem0")
+      .set(headers("admin@learnai.dev"))
+      .send({ mem0Url: "https://m0", mem0AdminApiKey: "k" });
+    const profile = store.getProfileByEmail("user@gmail.com");
+    expect(profile?.fullName).toBe("New Google Name");
+  });
+
+  it("backfills an existing profile that lacks fullName/pictureUrl", async () => {
+    // Pre-create a profile with no identity fields (the social-svc
+    // ghost case from the audit).
+    store.upsertProfile({
+      email: "stranded@gmail.com",
+      handle: "stranded",
+      displayFirst: "Stranded",
+      ageBand: "adult",
+      profileMode: "open",
+      showFullName: true,
+      showCurrent: true,
+      showMap: true,
+      showActivity: true,
+      showBadges: true,
+      showSignup: true,
+      signalsGlobal: true,
+      signals: [],
+      banned: false,
+      bannedSocial: false,
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    mockMem0([
+      {
+        email: "stranded@gmail.com",
+        display_name: "Stranded Person",
+        picture_url: "https://lh3.googleusercontent.com/s/avatar.jpg",
+      },
+    ]);
+    const r = await request(app)
+      .post("/v1/social/admin/reconcile-from-mem0")
+      .set(headers("admin@learnai.dev"))
+      .send({ mem0Url: "https://m0", mem0AdminApiKey: "k" });
+    expect(r.body.updated).toContain("stranded@gmail.com");
+    const profile = store.getProfileByEmail("stranded@gmail.com");
+    expect(profile?.fullName).toBe("Stranded Person");
+    expect(profile?.pictureUrl).toBe(
+      "https://lh3.googleusercontent.com/s/avatar.jpg",
+    );
   });
 });

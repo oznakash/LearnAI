@@ -10,6 +10,7 @@ export function AdminUsers() {
     banUser,
     resetUserProgress,
     wipeRealUserState,
+    cascadeRemoveRealUser,
     sendTemplateToUser,
     config,
   } = useAdmin();
@@ -236,12 +237,12 @@ export function AdminUsers() {
                   title={
                     selected.isCurrentUser
                       ? "Refusing to wipe the currently signed-in admin."
-                      : undefined
+                      : "Resets progress only — mem0 user_state row is removed. Memories, social profile, and follow graph stay intact."
                   }
                   onClick={async () => {
                     const isReal = selected.id.startsWith("mem0:");
                     const prompt = isReal
-                      ? `Wipe ${selected.email}'s server-side state on mem0?\n\nThis deletes their user_state row. They re-onboard on next sign-in. Cannot be undone.`
+                      ? `Reset ${selected.email}'s progress?\n\nWipes their user_state row in mem0 (xp / streak / history). Memories, social profile, and follows STAY. They re-onboard on next sign-in. Cannot be undone.\n\nFor a full removal use "Remove permanently" instead.`
                       : "Reset this user's progress?";
                     if (!confirm(prompt)) return;
                     setActionError(null);
@@ -261,8 +262,41 @@ export function AdminUsers() {
                     }
                   }}
                 >
-                  {acting ? "Wiping…" : selected.id.startsWith("mem0:") ? "Wipe server state" : "Reset progress"}
+                  {acting ? "Wiping…" : selected.id.startsWith("mem0:") ? "Reset progress" : "Reset progress"}
                 </button>
+                {selected.id.startsWith("mem0:") && (
+                  <button
+                    className="btn-ghost text-bad"
+                    disabled={acting || selected.isCurrentUser === true}
+                    title={
+                      selected.isCurrentUser
+                        ? "Refusing to remove the currently signed-in admin."
+                        : "Cascades across mem0 (user_state + memories + auth.users) AND social-svc (profile + follows/blocks/events). On next sign-in, they start fresh onboarding."
+                    }
+                    onClick={async () => {
+                      const prompt = `Permanently remove ${selected.email}?\n\nWipes EVERYTHING:\n  • mem0 user_state (xp / streak / history)\n  • mem0 memories\n  • mem0 auth.users (if present)\n  • social-svc profile + follows + blocks + events\n\nOn next sign-in, they go through fresh onboarding. Cannot be undone.`;
+                      if (!confirm(prompt)) return;
+                      setActionError(null);
+                      setActing(true);
+                      try {
+                        const out = await cascadeRemoveRealUser(selected.id);
+                        if (out.ok) setSelected(null);
+                        if (out.steps) {
+                          // Surface the per-store report so an operator
+                          // can see exactly what got removed.
+                          // eslint-disable-next-line no-alert
+                          alert(out.steps);
+                        }
+                      } catch (e) {
+                        setActionError((e as Error).message);
+                      } finally {
+                        setActing(false);
+                      }
+                    }}
+                  >
+                    {acting ? "Removing…" : "Remove permanently"}
+                  </button>
+                )}
               </div>
               {actionError && (
                 <div className="text-xs text-bad mt-1">
