@@ -4,11 +4,12 @@ import { usePlayer } from "../store/PlayerContext";
 import { activityByDay, nextRecommendedSpark, nextTierThreshold, suggestSwitchTopic, topicCompletion, uxStage } from "../store/game";
 import { useTodayInsight } from "../memory/insight";
 import { useAdmin } from "../admin/AdminContext";
+import { ROLE_LABEL } from "../store/role";
 import type { View } from "../App";
 import { Mascot } from "../visuals/Mascot";
 import { Sparkline, Ring } from "../visuals/Charts";
 import { Illustration } from "../visuals/Illustrations";
-import type { TopicId } from "../types";
+import type { Role, TopicId } from "../types";
 
 export function Home({ onNav }: { onNav: (v: View) => void }) {
   const { state } = usePlayer();
@@ -148,18 +149,7 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
       </section>
 
       {stage === "fresh" ? (
-        <section
-          className="card p-4 sm:p-5 flex items-center gap-3 border border-white/5 bg-white/[0.03]"
-          aria-label="First steps"
-        >
-          <div className="text-2xl">🌱</div>
-          <div className="flex-1 text-sm text-white/75">
-            <div className="text-white font-semibold">Your first Spark plants your first dot.</div>
-            <div className="muted text-xs mt-0.5">
-              Stats, streaks, and your 14-day rhythm appear once you've completed a Spark or two.
-            </div>
-          </div>
-        </section>
+        <FreshStageHeader playerRole={state.profile?.role} dailyMinutes={state.profile?.dailyMinutes ?? 10} target={target.name} />
       ) : (
         <section className="grid sm:grid-cols-3 gap-4">
           <div className="card p-4 flex items-center gap-4">
@@ -260,6 +250,7 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
         </div>
       </section>
 
+      {/* Discover-more grid kept below */}
       {others.length > 0 && (
         <section>
           <h2 className="h2 mb-3">Discover more</h2>
@@ -286,5 +277,51 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
         </section>
       )}
     </div>
+  );
+}
+
+/**
+ * The fresh-user welcome card. Replaces the empty stats grid with an
+ * "I see you" moment that references the role + daily-minutes the user
+ * just gave us during onboarding. Drops back to a generic hint when the
+ * profile is too sparse to personalize (back-compat with profiles
+ * created before the role field shipped).
+ */
+function FreshStageHeader({
+  playerRole,
+  dailyMinutes,
+  target,
+}: {
+  playerRole: Role | undefined;
+  dailyMinutes: number;
+  target: string;
+}) {
+  const role = playerRole ? ROLE_LABEL[playerRole] : null;
+  return (
+    <section
+      className="card p-4 sm:p-5 flex items-start gap-3 border border-white/5 bg-white/[0.03]"
+      aria-label="First steps"
+    >
+      <div className="text-2xl">{role?.emoji ?? "🌱"}</div>
+      <div className="flex-1 text-sm text-white/75">
+        {role ? (
+          <>
+            <div className="text-white font-semibold">
+              Set up for a {role.label.toLowerCase()}: {dailyMinutes} min · {target} first.
+            </div>
+            <div className="muted text-xs mt-0.5">
+              Tap Start above for your first Spark — stats and a 14-day sparkline appear after a couple plays.
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-white font-semibold">Your first Spark plants your first dot.</div>
+            <div className="muted text-xs mt-0.5">
+              Stats, streaks, and your 14-day rhythm appear once you've completed a Spark or two.
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }

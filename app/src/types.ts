@@ -17,6 +17,34 @@ export type SkillLevel = "starter" | "explorer" | "builder" | "architect" | "vis
  */
 export type Intent = "curious" | "applied" | "decision" | "researcher" | "forker";
 
+/**
+ * The user's *role* — who they are, not what they're trying to do.
+ *
+ * Captured at onboarding, drives:
+ *   - **Topic pre-selection** — a PM gets `ai-pm` + `ai-trends` + … checked
+ *     by default; an engineer gets `ai-builder` + `ai-devtools` + …; a kid
+ *     gets `ai-foundations` + `ai-news` + simpler-language topics.
+ *   - **Skill self-report sanity check** — a 12-year-old is unlikely to be
+ *     "Senior architect"; a researcher is unlikely to be "Curious starter".
+ *     We don't override the user's pick, just suggest a sensible default.
+ *   - **Future tone shaping** — kid-band copy when the role is `student`,
+ *     business-tone when `pm` / `exec`, etc.
+ *
+ * Optional (`role?` on PlayerProfile) so back-compat with profiles created
+ * before this field shipped is automatic. Consumers should treat
+ * `undefined` as "no role hint; fall back to age-band heuristics."
+ */
+export type Role =
+  | "student"   // kids and teens — simpler language, more games, basic news
+  | "pm"        // product managers — better calls, blends trends + skills
+  | "engineer"  // software engineers / hobbyists who ship code
+  | "designer"  // designers thinking about AI in their craft
+  | "creator"   // content creators / educators / writers
+  | "exec"      // execs / leaders / decision-makers
+  | "researcher"// frontier researchers, paper readers
+  | "curious"   // adults who are simply curious about AI
+  | "other";    // catch-all so the wizard never blocks
+
 export type TopicId =
   | "ai-foundations"
   | "llms-cognition"
@@ -424,6 +452,22 @@ export interface PlayerProfile {
    * (no intent set; default to the universal CTA).
    */
   intents?: Intent[];
+  /**
+   * The user's professional / life role, captured at onboarding. Drives
+   * topic pre-selection, skill defaults, and (in the future) copy tone.
+   * Optional for back-compat — older profiles fall back to the existing
+   * age-band heuristics. See {@link Role}.
+   */
+  role?: Role;
+  /**
+   * AI-fluency score (0..4) inferred from the onboarding probe. Captures
+   * "have you used ChatGPT/Claude?" + "have you written code or a prompt
+   * before?" as a 0..4 scalar. Used to map to a sensible starting skill
+   * when the user defers ("not sure where I am") and to bias the first
+   * Spark format (low fluency → MicroRead, high fluency → BuildCard).
+   * Optional for back-compat.
+   */
+  fluency?: number;
   /**
    * Numeric level (1-10) inferred by the most recent calibration. Maps
    * to the same 1..N index used by Topic levels — when a player opens a
