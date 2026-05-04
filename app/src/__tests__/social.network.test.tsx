@@ -101,6 +101,42 @@ describe("Network view", () => {
     expect((openBtn as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("Profile visibility renders BELOW Signals + People (low-priority anchor at the bottom)", async () => {
+    // Operator: privacy controls aren't a first-time-user concern. They
+    // belong at the foot of the page, after the editor + Signals +
+    // People. This test pins the order so a future refactor doesn't
+    // silently bubble visibility back up to the top.
+    mount();
+    await settle();
+    await waitFor(() => screen.getByRole("heading", { name: /^Profile visibility$/ }));
+    const headings = Array.from(document.querySelectorAll("h2")).map(
+      (h) => h.textContent?.trim() ?? "",
+    );
+    const idxAbout = headings.indexOf("About you");
+    const idxSignals = headings.indexOf("Signals");
+    const idxPeople = headings.indexOf("People");
+    const idxVisibility = headings.indexOf("Profile visibility");
+    expect(idxAbout).toBeGreaterThan(-1);
+    expect(idxSignals).toBeGreaterThan(idxAbout);
+    expect(idxPeople).toBeGreaterThan(idxSignals);
+    expect(idxVisibility).toBeGreaterThan(idxPeople);
+  });
+
+  it("Field-level visibility toggles are collapsed in a <details> by default (uncluttered first paint)", async () => {
+    // The "When my profile is Public" wall-of-13-checkboxes used to
+    // dominate the page. Now they sit inside a closed disclosure so a
+    // first-time user isn't asked to make 13 micro-decisions before
+    // they've even uploaded a photo.
+    mount();
+    await settle();
+    await waitFor(() => screen.getByRole("heading", { name: /^Profile visibility$/ }));
+    const summary = screen.getByText(/Show me what visitors can see/i);
+    expect(summary).toBeTruthy();
+    const details = summary.closest("details") as HTMLDetailsElement | null;
+    expect(details).toBeTruthy();
+    expect(details!.open).toBe(false);
+  });
+
   it("setSignals call from the Save button caps at 5 (service-side enforcement)", async () => {
     mount();
     await settle();

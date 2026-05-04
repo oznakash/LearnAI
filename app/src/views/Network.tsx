@@ -20,12 +20,12 @@ function escapeCssUrl(raw: string): string {
   return raw.replace(/[)(\\'"]/g, (c) => `\\${c}`);
 }
 
-const SKILL_LABELS: { id: SkillLevel; label: string }[] = [
-  { id: "starter", label: "🌱 Curious starter" },
-  { id: "explorer", label: "🔭 Hobby explorer" },
-  { id: "builder", label: "🛠️ Active builder" },
-  { id: "architect", label: "🏛️ Senior architect" },
-  { id: "visionary", label: "🌌 Frontier visionary" },
+const SKILL_LABELS: { id: SkillLevel; label: string; emoji: string }[] = [
+  { id: "starter", label: "Curious starter", emoji: "🌱" },
+  { id: "explorer", label: "Hobby explorer", emoji: "🔭" },
+  { id: "builder", label: "Active builder", emoji: "🛠️" },
+  { id: "architect", label: "Senior architect", emoji: "🏛️" },
+  { id: "visionary", label: "Frontier visionary", emoji: "🌌" },
 ];
 
 type PeopleTab = "summary" | "following" | "followers" | "pending" | "blocked";
@@ -33,16 +33,18 @@ type PeopleTab = "summary" | "following" | "followers" | "pending" | "blocked";
 /**
  * Settings → Network — the privacy + discoverability cockpit.
  *
- * One screen, owner-only. The five blocks:
- *  1. Profile visibility (Public ↔ Private) + a panic switch.
- *  2. Field-level visibility checkboxes (only meaningful when Open).
- *  3. Signals picker (max 5 Topics this profile is discoverable for).
- *  4. People summary (Following / Followers / Pending / Blocked counts) —
- *     the manage-each-list flows land in PR 4.
- *  5. The "View my public profile" CTA.
- *
- * Backed entirely by the offline `SocialService` until PR 7. Edits persist
- * to localStorage and are reflected on the Profile view immediately.
+ * Layout (top → bottom, by priority):
+ *  1. Completeness ring (a small celebratory nudge).
+ *  2. Profile editor — banner + avatar live preview, then the
+ *     few fields that actually matter (name, bio, skill,
+ *     pronouns, location) and your links.
+ *  3. Signals — the topics you want to be discoverable for.
+ *  4. People — followers, following, pending, blocked.
+ *  5. Profile visibility (PUBLIC / PRIVATE) — at the BOTTOM
+ *     because the operator wants this to be the *last* thing a
+ *     fresh user worries about. The 13 field-level toggles live
+ *     inside a collapsed disclosure so they don't crowd the
+ *     page.
  */
 
 interface Props {
@@ -165,7 +167,7 @@ export function Network({ onNav }: Props) {
   };
 
   const takeMeDown = async () => {
-    if (!confirm("Switch to Closed mode and pause discoverability? You can flip back any time.")) return;
+    if (!confirm("Switch to Private and pause discoverability? You can flip back any time.")) return;
     await setMode("closed");
   };
 
@@ -173,14 +175,14 @@ export function Network({ onNav }: Props) {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-end justify-between">
+      <header className="flex items-end justify-between gap-3 flex-wrap">
         <div>
           <button onClick={() => onNav({ name: "settings" })} className="text-xs text-white/50 hover:text-white">
             ← Settings
           </button>
           <h1 className="h1 mt-1">Network</h1>
           <p className="muted text-sm">
-            Who can see you, what they see, and the people you've followed.
+            What other builders see — and the people in your network.
           </p>
         </div>
         <button
@@ -193,7 +195,6 @@ export function Network({ onNav }: Props) {
 
       <CompletenessCard profile={me} fallbackPicture={player.identity?.picture} />
 
-      {/* 1.5 Profile details editor */}
       <ProfileDetailsEditor
         profile={me}
         fallbackPicture={player.identity?.picture}
@@ -201,182 +202,250 @@ export function Network({ onNav }: Props) {
         onImageUpload={async (kind, dataUrl) => {
           const result = await social.uploadImage(kind, dataUrl);
           if (!result) return null;
-          // Pick up the just-saved url + push it into local state so the
-          // preview refreshes immediately. The server has already updated
-          // pictureUrl/heroUrl on the profile record (see social-svc
-          // uploadHandler); refetching getMyProfile syncs us.
+          // The server has already updated pictureUrl/heroUrl on the
+          // profile record (offline mode writes the data URL straight to
+          // local profile state); refetch so the live-preview hero
+          // refreshes immediately.
           await refresh();
           return result.url;
         }}
       />
 
-      {/* 1. Profile visibility + panic switch */}
-      <section className="card p-5 space-y-3">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="h2">Profile visibility</h2>
-            <p className="muted text-xs mt-1">
-              {isKid
-                ? "Your profile is private by default — kids' profiles are not discoverable."
-                : "Public profiles are discoverable. Private profiles require approval before someone can follow you."}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              className={`btn ${me.profileMode === "open" ? "btn-good" : "btn-ghost"} text-sm`}
-              disabled={isKid || busy}
-              onClick={() => setMode("open")}
-            >
-              🌐 Public
-            </button>
-            <button
-              className={`btn ${me.profileMode === "closed" ? "btn-good" : "btn-ghost"} text-sm`}
-              disabled={busy}
-              onClick={() => setMode("closed")}
-            >
-              🔒 Private
-            </button>
-          </div>
-        </div>
-        <div className="text-xs text-white/50">
-          Currently: <strong className="text-white">{me.profileMode === "open" ? "Public" : "Private"}</strong>
-          {isKid && <span className="ml-2">(kids profiles are always private)</span>}
-        </div>
-        {me.profileMode === "open" && !isKid && (
-          <div className="pt-2 border-t border-white/5">
-            <button className="btn-bad text-xs" onClick={takeMeDown} disabled={busy}>
-              ⏸ Take me down (panic switch)
-            </button>
-            <p className="text-[11px] text-white/40 mt-1">
-              Flips you to Private and pauses discoverability immediately. Reversible.
-            </p>
-          </div>
-        )}
-      </section>
+      <SignalsCard
+        signalsDraft={signalsDraft}
+        max={config.socialConfig.signalsMaxPerUser}
+        onToggle={toggleSignal}
+        onSave={saveSignals}
+      />
 
-      {/* 2. Field-level visibility */}
-      {me.profileMode === "open" && me.ownerPrefs && (
-        <section className="card p-5 space-y-3">
-          <h2 className="h2">When my profile is Public, also show:</h2>
-          <div className="space-y-2">
+      <PeopleSection counts={counts} onChanged={refresh} onNav={onNav} />
+
+      <VisibilityCard
+        profile={me}
+        isKid={isKid}
+        busy={busy}
+        onSetMode={setMode}
+        onFlipFlag={flipFlag}
+        onTakeMeDown={takeMeDown}
+      />
+    </div>
+  );
+}
+
+// -- Visibility (privacy + advanced toggles, last on the page) ----------
+
+function VisibilityCard({
+  profile,
+  isKid,
+  busy,
+  onSetMode,
+  onFlipFlag,
+  onTakeMeDown,
+}: {
+  profile: PublicProfile;
+  isKid: boolean;
+  busy: boolean;
+  onSetMode: (m: ProfileMode) => void;
+  onFlipFlag: (
+    key:
+      | "showFullName"
+      | "showCurrent"
+      | "showMap"
+      | "showActivity"
+      | "showBadges"
+      | "showSignup"
+      | "signalsGlobal"
+      | "showBio"
+      | "showPronouns"
+      | "showLocation"
+      | "showHero"
+      | "showSkillLevel"
+      | "showLinks",
+    value: boolean,
+  ) => void;
+  onTakeMeDown: () => void;
+}) {
+  const isOpen = profile.profileMode === "open";
+  return (
+    <section className="card p-5 space-y-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="h2">Profile visibility</h2>
+          <p className="muted text-xs mt-1">
+            {isKid
+              ? "Your profile is private by default — kids' profiles are not discoverable."
+              : "Public profiles are discoverable. Private profiles require approval before someone can follow you."}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            className={`btn ${isOpen ? "btn-good" : "btn-ghost"} text-sm`}
+            disabled={isKid || busy}
+            onClick={() => onSetMode("open")}
+          >
+            🌐 Public
+          </button>
+          <button
+            className={`btn ${!isOpen ? "btn-good" : "btn-ghost"} text-sm`}
+            disabled={busy}
+            onClick={() => onSetMode("closed")}
+          >
+            🔒 Private
+          </button>
+        </div>
+      </div>
+      <div className="text-xs text-white/50">
+        Currently: <strong className="text-white">{isOpen ? "Public" : "Private"}</strong>
+        {isKid && <span className="ml-2">(kids profiles are always private)</span>}
+      </div>
+
+      {isOpen && profile.ownerPrefs && (
+        <details className="pt-2 border-t border-white/5 group">
+          <summary className="cursor-pointer text-sm text-white/70 hover:text-white list-none flex items-center gap-2">
+            <span className="text-white/40 group-open:rotate-90 transition-transform inline-block">▸</span>
+            Show me what visitors can see (advanced)
+          </summary>
+          <div className="space-y-2 mt-3">
             <FieldToggle
               label="My current Topic + level (what I'm working on)"
-              checked={me.ownerPrefs.showCurrent}
-              onChange={(v) => flipFlag("showCurrent", v)}
+              checked={profile.ownerPrefs.showCurrent}
+              onChange={(v) => onFlipFlag("showCurrent", v)}
             />
             <FieldToggle
               label="My Topic map (topic affinities)"
-              checked={me.ownerPrefs.showMap}
-              onChange={(v) => flipFlag("showMap", v)}
+              checked={profile.ownerPrefs.showMap}
+              onChange={(v) => onFlipFlag("showMap", v)}
             />
             <FieldToggle
               label="My 14-day activity sparkline"
-              checked={me.ownerPrefs.showActivity}
-              onChange={(v) => flipFlag("showActivity", v)}
+              checked={profile.ownerPrefs.showActivity}
+              onChange={(v) => onFlipFlag("showActivity", v)}
             />
             <FieldToggle
               label="My badges"
-              checked={me.ownerPrefs.showBadges}
-              onChange={(v) => flipFlag("showBadges", v)}
+              checked={profile.ownerPrefs.showBadges}
+              onChange={(v) => onFlipFlag("showBadges", v)}
             />
             <FieldToggle
               label="My full name (otherwise first-name only)"
-              checked={me.ownerPrefs.showFullName}
-              onChange={(v) => flipFlag("showFullName", v)}
+              checked={profile.ownerPrefs.showFullName}
+              onChange={(v) => onFlipFlag("showFullName", v)}
             />
             <FieldToggle
               label="Sign-up month"
-              checked={me.ownerPrefs.showSignup}
-              onChange={(v) => flipFlag("showSignup", v)}
+              checked={profile.ownerPrefs.showSignup}
+              onChange={(v) => onFlipFlag("showSignup", v)}
             />
             <FieldToggle
               label="Show me on the Global Leaderboard"
-              checked={me.ownerPrefs.signalsGlobal}
-              onChange={(v) => flipFlag("signalsGlobal", v)}
+              checked={profile.ownerPrefs.signalsGlobal}
+              onChange={(v) => onFlipFlag("signalsGlobal", v)}
             />
             <FieldToggle
               label="My bio"
-              checked={me.ownerPrefs.showBio}
-              onChange={(v) => flipFlag("showBio", v)}
+              checked={profile.ownerPrefs.showBio}
+              onChange={(v) => onFlipFlag("showBio", v)}
             />
             <FieldToggle
               label="My pronouns"
-              checked={me.ownerPrefs.showPronouns}
-              onChange={(v) => flipFlag("showPronouns", v)}
+              checked={profile.ownerPrefs.showPronouns}
+              onChange={(v) => onFlipFlag("showPronouns", v)}
             />
             <FieldToggle
               label="My location"
-              checked={me.ownerPrefs.showLocation}
-              onChange={(v) => flipFlag("showLocation", v)}
+              checked={profile.ownerPrefs.showLocation}
+              onChange={(v) => onFlipFlag("showLocation", v)}
             />
             <FieldToggle
               label="My hero banner"
-              checked={me.ownerPrefs.showHero}
-              onChange={(v) => flipFlag("showHero", v)}
+              checked={profile.ownerPrefs.showHero}
+              onChange={(v) => onFlipFlag("showHero", v)}
             />
             <FieldToggle
               label="My skill level"
-              checked={me.ownerPrefs.showSkillLevel}
-              onChange={(v) => flipFlag("showSkillLevel", v)}
+              checked={profile.ownerPrefs.showSkillLevel}
+              onChange={(v) => onFlipFlag("showSkillLevel", v)}
             />
             <FieldToggle
               label="My external links"
-              checked={me.ownerPrefs.showLinks}
-              onChange={(v) => flipFlag("showLinks", v)}
+              checked={profile.ownerPrefs.showLinks}
+              onChange={(v) => onFlipFlag("showLinks", v)}
             />
-          </div>
-          <p className="text-[11px] text-white/40">
-            We never show your email, age, location, or your specific Spark answers. Those are
-            never collected for the social layer.
-          </p>
-        </section>
-      )}
-
-      {/* 3. Signals */}
-      <section className="card p-5 space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="h2">Signals</h2>
-            <p className="muted text-xs">
-              Pick up to {config.socialConfig.signalsMaxPerUser} Topics you want to be discoverable for. You'll appear on those Topic Leaderboards.
+            <p className="text-[11px] text-white/40 pt-1">
+              We never show your email, age, location, or your specific Spark answers. Those are
+              never collected for the social layer.
             </p>
           </div>
-          <div className="text-xs text-white/50">
-            {signalsDraft.length} / {config.socialConfig.signalsMaxPerUser}
-          </div>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-2">
-          {TOPICS.map((t) => {
-            const on = signalsDraft.includes(t.id);
-            const disabled =
-              !on && signalsDraft.length >= config.socialConfig.signalsMaxPerUser;
-            return (
-              <button
-                key={t.id}
-                onClick={() => toggleSignal(t.id)}
-                disabled={disabled}
-                className={`p-2 rounded-xl border text-left transition ${
-                  on
-                    ? "bg-accent/15 border-accent"
-                    : disabled
-                      ? "bg-white/5 border-white/5 opacity-40"
-                      : "bg-white/5 border-white/10 hover:border-white/30"
-                }`}
-              >
-                <span className="mr-2">{t.emoji}</span>
-                <span className="text-white">{t.name}</span>
-              </button>
-            );
-          })}
-        </div>
-        <button className="btn-primary text-sm" onClick={saveSignals}>
-          Save Signals
-        </button>
-      </section>
+        </details>
+      )}
 
-      {/* 4. People — tabbed list management */}
-      <PeopleSection counts={counts} onChanged={refresh} onNav={onNav} />
-    </div>
+      {isOpen && !isKid && (
+        <div className="pt-2">
+          <button className="btn-bad text-xs" onClick={onTakeMeDown} disabled={busy}>
+            ⏸ Take me down (panic switch)
+          </button>
+          <p className="text-[11px] text-white/40 mt-1">
+            Flips you to Private and pauses discoverability immediately. Reversible.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// -- Signals (lift to its own card so the main render reads cleanly) ----
+
+function SignalsCard({
+  signalsDraft,
+  max,
+  onToggle,
+  onSave,
+}: {
+  signalsDraft: TopicId[];
+  max: number;
+  onToggle: (id: TopicId) => void;
+  onSave: () => void;
+}) {
+  return (
+    <section className="card p-5 space-y-3">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="h2">Signals</h2>
+          <p className="muted text-xs">
+            Pick up to {max} Topics you want to be discoverable for. You'll appear on those Topic Leaderboards.
+          </p>
+        </div>
+        <div className="text-xs text-white/50">
+          {signalsDraft.length} / {max}
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-2">
+        {TOPICS.map((t) => {
+          const on = signalsDraft.includes(t.id);
+          const disabled = !on && signalsDraft.length >= max;
+          return (
+            <button
+              key={t.id}
+              onClick={() => onToggle(t.id)}
+              disabled={disabled}
+              className={`p-2 rounded-xl border text-left transition ${
+                on
+                  ? "bg-accent/15 border-accent"
+                  : disabled
+                    ? "bg-white/5 border-white/5 opacity-40"
+                    : "bg-white/5 border-white/10 hover:border-white/30"
+              }`}
+            >
+              <span className="mr-2">{t.emoji}</span>
+              <span className="text-white">{t.name}</span>
+            </button>
+          );
+        })}
+      </div>
+      <button className="btn-primary text-sm" onClick={onSave}>
+        Save Signals
+      </button>
+    </section>
   );
 }
 
@@ -875,190 +944,204 @@ function ProfileDetailsEditor({
     }
   };
 
-  return (
-    <section className="card p-5 space-y-4" data-testid="network-profile-details">
-      <div>
-        <h2 className="h2">Your details</h2>
-        <p className="muted text-xs mt-1">
-          What other people see on your public page. Fill in what you want to share, then use the toggles below to decide what's visible.
-        </p>
-      </div>
+  const initials = (profile.displayName || profile.handle).charAt(0).toUpperCase();
+  const avatarSrc = profile.pictureUrl || fallbackPicture || "";
+  const previewName = (draft.fullName.trim() || profile.displayName).trim();
+  const heroBg = draft.heroUrl
+    ? `center / cover no-repeat url(${escapeCssUrl(draft.heroUrl)})`
+    : "linear-gradient(135deg, rgba(124,92,255,0.35), rgba(40,224,179,0.25))";
 
-      {/* Profile picture + banner — upload + crop, no URL pasting required */}
-      <div className="grid sm:grid-cols-[auto,1fr] gap-4 items-start">
-        <div className="flex flex-col items-center gap-2">
-          <div
-            className="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold text-2xl ring-2 ring-white/10 overflow-hidden"
-          >
-            {profile.pictureUrl ? (
-              <img
-                src={profile.pictureUrl}
-                alt=""
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-              />
-            ) : fallbackPicture ? (
-              <img
-                src={fallbackPicture}
-                alt=""
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-              />
-            ) : (
-              <span className="text-2xl">
-                {(profile.displayName || profile.handle).charAt(0).toUpperCase()}
-              </span>
-            )}
+  return (
+    <section className="card overflow-hidden" data-testid="network-profile-details">
+      {/* Live preview hero — banner across the top with the avatar overlapping
+          the lower edge. Mirrors what visitors see on /u/<handle>, so the
+          editor feels like you're decorating your own page rather than
+          filling out a form. */}
+      <div
+        className="relative h-32 sm:h-40"
+        style={{ background: heroBg }}
+      >
+        {!draft.heroUrl && (
+          <div className="absolute inset-0 grid place-items-center text-white/55 text-xs italic px-4 text-center">
+            No banner yet — we'll show a soft gradient on your page.
           </div>
+        )}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {draft.heroUrl && (
+            <button
+              type="button"
+              className="text-[11px] text-white/80 hover:text-white px-2 py-1.5 rounded-full bg-black/55 backdrop-blur-sm border border-white/20"
+              onClick={() => setDraft((d) => ({ ...d, heroUrl: "" }))}
+            >
+              Remove
+            </button>
+          )}
           <button
-            className="btn-ghost text-xs"
+            type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/55 backdrop-blur-sm text-xs font-semibold text-white border border-white/20 hover:bg-black/75 active:scale-[0.98] transition"
             onClick={() => {
               setUploadError(null);
-              setCropOpen("avatar");
+              setCropOpen("hero");
             }}
           >
-            📷 Change photo
+            🖼 {draft.heroUrl ? "Change banner" : "Add a banner"}
           </button>
         </div>
-        <div>
-          <div className="label">Banner image</div>
-          <div
-            className="relative rounded-xl overflow-hidden border border-white/10"
-            style={{
-              aspectRatio: "1600 / 540",
-              background: draft.heroUrl
-                ? `center / cover no-repeat url(${escapeCssUrl(draft.heroUrl)})`
-                : "linear-gradient(135deg, rgba(124,92,255,0.25), rgba(40,224,179,0.25))",
-            }}
-          >
-            {!draft.heroUrl && (
-              <div className="absolute inset-0 grid place-items-center text-white/50 text-xs">
-                No banner yet — we'll show a soft gradient on your page.
-              </div>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
+      </div>
+
+      {/* Avatar overlapping the banner edge — same visual rhythm as the
+          public Profile header so the user gets a real preview of how
+          their page looks. */}
+      <div className="px-4 sm:px-6 -mt-12 sm:-mt-14 relative">
+        <div className="flex items-end gap-3">
+          <div className="relative shrink-0">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold text-2xl sm:text-3xl ring-4 ring-ink shadow-card overflow-hidden">
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </div>
             <button
-              className="btn-ghost text-xs"
+              type="button"
+              aria-label="Change photo"
+              className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-accent text-white grid place-items-center text-base shadow-card border-2 border-ink hover:brightness-110 active:scale-95 transition"
               onClick={() => {
                 setUploadError(null);
-                setCropOpen("hero");
+                setCropOpen("avatar");
               }}
             >
-              🖼 {draft.heroUrl ? "Change banner" : "Add a banner"}
+              📷
             </button>
-            {draft.heroUrl && (
-              <button
-                className="btn-ghost text-xs text-white/50"
-                onClick={() => setDraft((d) => ({ ...d, heroUrl: "" }))}
-              >
-                Remove banner
-              </button>
-            )}
-            <p className="text-[11px] text-white/40">
-              JPEG, PNG, or WebP. Up to 8 MB before cropping.
-            </p>
           </div>
-          {uploadError && (
-            <p className="text-[11px] text-bad mt-1">{uploadError}</p>
-          )}
+          <div className="pb-2 flex-1 min-w-0">
+            <div className="text-white font-display font-semibold text-base sm:text-lg leading-tight truncate">
+              {previewName || "Your name"}
+            </div>
+            <div className="text-xs text-white/50 truncate">@{profile.handle}</div>
+          </div>
         </div>
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Field
-          label="Full name"
-          placeholder={profile.displayName}
-          value={draft.fullName}
-          onChange={(v) => setDraft((d) => ({ ...d, fullName: v }))}
-          maxLength={64}
-        />
-        <Field
-          label="Pronouns"
-          placeholder="she/her"
-          value={draft.pronouns}
-          onChange={(v) => setDraft((d) => ({ ...d, pronouns: v }))}
-          maxLength={30}
-        />
-        <Field
-          label="Location"
-          placeholder="Tel Aviv"
-          value={draft.location}
-          onChange={(v) => setDraft((d) => ({ ...d, location: v }))}
-          maxLength={60}
-        />
-        <div>
-          <div className="label">Skill level</div>
-          <select
-            className="input"
-            value={draft.skillLevel}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, skillLevel: e.target.value as SkillLevel | "" }))
-            }
-          >
-            <option value="">— pick one —</option>
-            {SKILL_LABELS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div>
-        <div className="flex items-center justify-between">
-          <div className="label">Bio (one sentence)</div>
-          <span className="text-[11px] text-white/40 tabular-nums">{draft.bio.length}/160</span>
-        </div>
-        <textarea
-          className="input min-h-[64px]"
-          placeholder="What you're building or curious about. One sentence."
-          value={draft.bio}
-          onChange={(e) => setDraft((d) => ({ ...d, bio: e.target.value }))}
-          maxLength={200}
-        />
-        {draft.bio.length > 160 && (
-          <p className="text-[11px] text-bad mt-1">Keep it under 160 characters.</p>
+        {uploadError && (
+          <p className="text-[11px] text-bad mt-2">{uploadError}</p>
         )}
       </div>
-      <div>
-        <div className="label">Your links</div>
-        <p className="text-[11px] text-white/40 mb-2">
-          Add the places you want people to find you. Paste a full URL — we'll tidy it up before saving.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-2">
+
+      {/* The actual editing fields — bio + name first because they shape
+          the preview directly above. Everything else is secondary. */}
+      <div className="p-4 sm:p-6 pt-5 space-y-4">
+        <div>
+          <h2 className="h2">About you</h2>
+          <p className="muted text-xs mt-1">
+            What other people see on your public page. Fill in what you want to share.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
           <Field
-            label="LinkedIn"
-            placeholder="https://linkedin.com/in/…"
-            value={draft.linkedin}
-            onChange={(v) => setDraft((d) => ({ ...d, linkedin: v }))}
+            label="Full name"
+            placeholder={profile.displayName}
+            value={draft.fullName}
+            onChange={(v) => setDraft((d) => ({ ...d, fullName: v }))}
+            maxLength={64}
+          />
+          <div>
+            <div className="label">Skill level</div>
+            <select
+              className="input"
+              value={draft.skillLevel}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, skillLevel: e.target.value as SkillLevel | "" }))
+              }
+            >
+              <option value="">— pick one —</option>
+              {SKILL_LABELS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.emoji} {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <div className="label">Bio (one sentence)</div>
+            <span className="text-[11px] text-white/40 tabular-nums">{draft.bio.length}/160</span>
+          </div>
+          <textarea
+            className="input min-h-[64px]"
+            placeholder="What you're building or curious about. One sentence."
+            value={draft.bio}
+            onChange={(e) => setDraft((d) => ({ ...d, bio: e.target.value }))}
+            maxLength={200}
+          />
+          {draft.bio.length > 160 && (
+            <p className="text-[11px] text-bad mt-1">Keep it under 160 characters.</p>
+          )}
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field
+            label="Pronouns"
+            placeholder="she/her"
+            value={draft.pronouns}
+            onChange={(v) => setDraft((d) => ({ ...d, pronouns: v }))}
+            maxLength={30}
           />
           <Field
-            label="GitHub"
-            placeholder="https://github.com/…"
-            value={draft.github}
-            onChange={(v) => setDraft((d) => ({ ...d, github: v }))}
-          />
-          <Field
-            label="X / Twitter"
-            placeholder="https://x.com/…"
-            value={draft.twitter}
-            onChange={(v) => setDraft((d) => ({ ...d, twitter: v }))}
-          />
-          <Field
-            label="Personal website"
-            placeholder="https://…"
-            value={draft.website}
-            onChange={(v) => setDraft((d) => ({ ...d, website: v }))}
+            label="Location"
+            placeholder="Tel Aviv"
+            value={draft.location}
+            onChange={(v) => setDraft((d) => ({ ...d, location: v }))}
+            maxLength={60}
           />
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <button className="btn-primary text-sm" disabled={!dirty || busy} onClick={save}>
-          {busy ? "Saving…" : "Save your details"}
-        </button>
-        {savedAt && <span className="text-xs text-good">✓ Saved</span>}
+
+        <div>
+          <div className="label">Your links</div>
+          <p className="text-[11px] text-white/40 mb-2">
+            Add the places you want people to find you. Paste a full URL — we'll tidy it up before saving.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            <Field
+              label="LinkedIn"
+              placeholder="https://linkedin.com/in/…"
+              value={draft.linkedin}
+              onChange={(v) => setDraft((d) => ({ ...d, linkedin: v }))}
+            />
+            <Field
+              label="GitHub"
+              placeholder="https://github.com/…"
+              value={draft.github}
+              onChange={(v) => setDraft((d) => ({ ...d, github: v }))}
+            />
+            <Field
+              label="X / Twitter"
+              placeholder="https://x.com/…"
+              value={draft.twitter}
+              onChange={(v) => setDraft((d) => ({ ...d, twitter: v }))}
+            />
+            <Field
+              label="Personal website"
+              placeholder="https://…"
+              value={draft.website}
+              onChange={(v) => setDraft((d) => ({ ...d, website: v }))}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button className="btn-primary text-sm" disabled={!dirty || busy} onClick={save}>
+            {busy ? "Saving…" : "Save your details"}
+          </button>
+          {savedAt && <span className="text-xs text-good">✓ Saved</span>}
+        </div>
       </div>
 
       <ImageCropDialog
