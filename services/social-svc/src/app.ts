@@ -1216,6 +1216,61 @@ export function createApp(opts: AppOpts) {
   // Idempotent. If a profile already exists for the given email it is
   // returned untouched (only the displayName/picture are patched if the
   // body provides them and the existing values are empty).
+  // Shared upsert-from-identity helper. Factored out of the route so the
+  // /reconcile-from-mem0 endpoint can re-use the same idempotency logic.
+  // Returns `{ created, handle }` or `null` when the email is invalid.
+  function upsertProfileFromIdentity(opts: {
+    email: string;
+    fullName?: string;
+    pictureUrl?: string;
+  }): { created: boolean; handle: string; email: string } | null {
+    const email = (opts.email ?? "").trim().toLowerCase();
+    if (!email || !email.includes("@")) return null;
+    let profile = store.getProfileByEmail(email);
+    let created = false;
+    if (!profile) {
+      const base = baseHandleFromEmail(email);
+      const handle =
+        disambiguateHandle(base, (h) => store.isHandleTaken(h)) ??
+        `${base}-${Date.now()}`;
+      profile = store.upsertProfile({
+        email,
+        handle,
+        fullName: opts.fullName?.trim() || undefined,
+        pictureUrl: opts.pictureUrl?.trim() || undefined,
+        displayFirst: handle.charAt(0).toUpperCase() + handle.slice(1),
+        ageBand: "adult",
+        profileMode: "open",
+        // Match the lazy-create default — see `requireUser` above
+        // and `docs/entity-wiring-audit.md` Issue #1.
+        showFullName: true,
+        showCurrent: true,
+        showMap: true,
+        showActivity: true,
+        showBadges: true,
+        showSignup: true,
+        signalsGlobal: true,
+        signals: [],
+        banned: false,
+        bannedSocial: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      created = true;
+    } else if (
+      (opts.fullName?.trim() && !profile.fullName) ||
+      (opts.pictureUrl?.trim() && !profile.pictureUrl)
+    ) {
+      profile = store.upsertProfile({
+        ...profile,
+        fullName: profile.fullName || opts.fullName?.trim() || undefined,
+        pictureUrl: profile.pictureUrl || opts.pictureUrl?.trim() || undefined,
+        updatedAt: Date.now(),
+      });
+    }
+    return { created, handle: profile.handle, email: profile.email };
+  }
+
   app.post(
     "/v1/social/admin/profiles/upsert",
     requireUser,
@@ -1230,57 +1285,136 @@ export function createApp(opts: AppOpts) {
       if (!email || !email.includes("@")) {
         return res.status(400).json({ error: "invalid_email" });
       }
-      let profile = store.getProfileByEmail(email);
-      let created = false;
-      if (!profile) {
-        const base = baseHandleFromEmail(email);
-        const handle =
-          disambiguateHandle(base, (h) => store.isHandleTaken(h)) ??
-          `${base}-${Date.now()}`;
-        profile = store.upsertProfile({
-          email,
-          handle,
-          fullName: body.fullName?.trim() || undefined,
-          pictureUrl: body.pictureUrl?.trim() || undefined,
-          displayFirst: handle.charAt(0).toUpperCase() + handle.slice(1),
-          ageBand: "adult",
-          profileMode: "open",
-          // Match the lazy-create default — see `requireUser` above
-          // and `docs/entity-wiring-audit.md` Issue #1.
-          showFullName: true,
-          showCurrent: true,
-          showMap: true,
-          showActivity: true,
-          showBadges: true,
-          showSignup: true,
-          signalsGlobal: true,
-          signals: [],
-          banned: false,
-          bannedSocial: false,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
-        created = true;
+      const out = upsertProfileFromIdentity({
+        email,
+        fullName: body.fullName,
+        pictureUrl: body.pictureUrl,
+      });
+      if (!out) return res.status(400).json({ error: "invalid_email" });
+      if (out.created) {
         log.info("admin_profile_backfilled", {
           req_id: (req as Request & { _reqId: string })._reqId,
           actor_email_hash: emailHash(
             (req as Request & { profile: ProfileRecord }).profile.email,
           ),
           target_email_hash: emailHash(email),
-          handle,
-        });
-      } else if (
-        (body.fullName?.trim() && !profile.fullName) ||
-        (body.pictureUrl?.trim() && !profile.pictureUrl)
-      ) {
-        profile = store.upsertProfile({
-          ...profile,
-          fullName: profile.fullName || body.fullName?.trim() || undefined,
-          pictureUrl: profile.pictureUrl || body.pictureUrl?.trim() || undefined,
-          updatedAt: Date.now(),
+          handle: out.handle,
         });
       }
-      res.json({ created, handle: profile.handle, email: profile.email });
+      res.json(out);
+    },
+  );
+
+  // Reconcile-from-mem0: pulls every mem0 user (via /v1/state/admin/users)
+  // and ensures a social-svc profile exists for each. Optionally also
+  // pulls /auth/admin/users to lift `name` into `fullName` for password-
+  // registered users (Google users go through the inline fan-out from
+  // mem0's /auth/google instead). Idempotent — safe to run on a cron.
+  //
+  // Body:
+  //   { mem0Url: string, mem0AdminApiKey: string }
+  // Response:
+  //   { reconciledAt: epoch, mem0UserCount, created: [emails], updated: [emails], skipped: [emails], errors: [{email, err}] }
+  //
+  // The admin gate already enforces operator authority. The mem0 admin
+  // key is sent in the body (not stored on social-svc) so this endpoint
+  // doesn't need cross-service config — the operator (or a /schedule
+  // cron) supplies it per call.
+  app.post(
+    "/v1/social/admin/reconcile-from-mem0",
+    requireUser,
+    requireAdmin,
+    async (req, res) => {
+      const body = req.body as {
+        mem0Url?: string;
+        mem0AdminApiKey?: string;
+      };
+      const mem0Url = (body.mem0Url ?? "").replace(/\/+$/, "");
+      const mem0Key = body.mem0AdminApiKey ?? "";
+      if (!mem0Url || !mem0Key) {
+        return res
+          .status(400)
+          .json({ error: "missing_mem0Url_or_mem0AdminApiKey" });
+      }
+
+      const fetchJson = async <T>(path: string): Promise<T | null> => {
+        try {
+          const r = await fetch(`${mem0Url}${path}`, {
+            headers: { "X-API-Key": mem0Key },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!r.ok) {
+            log.warn("reconcile_mem0_fetch_non_ok", { path, status: r.status });
+            return null;
+          }
+          return (await r.json()) as T;
+        } catch (e) {
+          log.warn("reconcile_mem0_fetch_failed", {
+            path,
+            err: (e as Error).message,
+          });
+          return null;
+        }
+      };
+
+      // user_state holds emails for everyone (Google + password).
+      const stateRes = await fetchJson<{ recent: { email: string }[] }>(
+        "/v1/state/admin/users",
+      );
+      // auth.users only has password-registered users — but for those it
+      // carries `name`, which we want to merge into fullName.
+      const authRes = await fetchJson<{
+        users: { email: string; name?: string }[];
+      }>("/auth/admin/users");
+
+      const namesByEmail = new Map<string, string>();
+      for (const u of authRes?.users ?? []) {
+        if (u.email && u.name) namesByEmail.set(u.email.toLowerCase(), u.name);
+      }
+
+      const created: string[] = [];
+      const updated: string[] = [];
+      const skipped: string[] = [];
+      const errors: { email: string; err: string }[] = [];
+      const stateUsers = stateRes?.recent ?? [];
+
+      for (const u of stateUsers) {
+        const email = (u.email ?? "").trim().toLowerCase();
+        if (!email) continue;
+        try {
+          const fullName = namesByEmail.get(email);
+          const before = !!store.getProfileByEmail(email);
+          const out = upsertProfileFromIdentity({ email, fullName });
+          if (!out) {
+            errors.push({ email, err: "invalid_email" });
+            continue;
+          }
+          if (out.created) created.push(email);
+          else if (!before) errors.push({ email, err: "post_state_drift" });
+          else if (fullName && !before) updated.push(email);
+          else skipped.push(email);
+        } catch (e) {
+          errors.push({ email, err: (e as Error).message });
+        }
+      }
+
+      log.info("admin_reconcile_from_mem0", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        mem0_user_count: stateUsers.length,
+        created: created.length,
+        updated: updated.length,
+        skipped: skipped.length,
+        errors: errors.length,
+      });
+
+      return res.json({
+        reconciledAt: Date.now(),
+        mem0UserCount: stateUsers.length,
+        created,
+        updated,
+        skipped,
+        errors,
+      });
     },
   );
 
