@@ -22,6 +22,7 @@ import {
 } from "./handles.js";
 import { projectProfile } from "./project.js";
 import type {
+  FollowEdge,
   PlayerSnapshot,
   ProfileRecord,
   PublicProfile,
@@ -709,6 +710,43 @@ export function createApp(opts: AppOpts) {
   });
 
   // -- Follow graph --------------------------------------------------------
+  //
+  // Wire-shape contract: every FollowEdge that leaves the server has
+  // its `target` and `follower` fields rewritten from the stored email
+  // to the public handle. Two reasons:
+  //
+  //   1. **Privacy.** The SPA renders /u/<handle> and never needs the
+  //      raw email of someone the viewer isn't. Returning emails leaks
+  //      Gmail addresses into client memory.
+  //   2. **Symmetry with the SPA's offline service.** The offline
+  //      mirror (`app/src/social/offline.ts`) stores `target` as
+  //      handle. Without this projection, the SPA's Profile.tsx
+  //      compares `e.target.toLowerCase() === handle.toLowerCase()`
+  //      and never matches against an email — which is why a follow
+  //      that is correctly persisted server-side appeared "reset" on
+  //      every refresh.
+  //
+  // The store still keys edges by email internally — only the wire
+  // shape changes. Email-keyed routes (approve/decline by email) stay
+  // available for back-compat; the new handle-shaped twins are added
+  // alongside.
+  function projectEdge(edge: FollowEdge | undefined | null): FollowEdge | null {
+    if (!edge) return null;
+    const f = store.getProfileByEmail(edge.follower);
+    const t = store.getProfileByEmail(edge.target);
+    return {
+      follower: f?.handle.toLowerCase() ?? edge.follower,
+      target: t?.handle.toLowerCase() ?? edge.target,
+      status: edge.status,
+      muted: edge.muted,
+      createdAt: edge.createdAt,
+      approvedAt: edge.approvedAt,
+    };
+  }
+  function projectEdges(edges: FollowEdge[]): FollowEdge[] {
+    return edges.map((e) => projectEdge(e)).filter((e): e is FollowEdge => e !== null);
+  }
+
   app.post("/v1/social/follow/:handle", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
     const target = store.getProfileByHandle(String(req.params.handle));
@@ -720,7 +758,7 @@ export function createApp(opts: AppOpts) {
       return res.status(403).json({ error: "blocked" });
     }
     const existing = store.getFollow(me.email, target.email);
-    if (existing) return res.json(existing);
+    if (existing) return res.json(projectEdge(existing));
     const edge = store.upsertFollow({
       follower: me.email,
       target: target.email,
@@ -729,7 +767,7 @@ export function createApp(opts: AppOpts) {
       createdAt: Date.now(),
       approvedAt: target.profileMode === "open" ? Date.now() : undefined,
     });
-    res.status(201).json(edge);
+    res.status(201).json(projectEdge(edge));
   });
 
   app.delete("/v1/social/follow/:handle", requireUser, (req, res) => {
@@ -751,17 +789,34 @@ export function createApp(opts: AppOpts) {
     res.status(204).end();
   });
 
-  app.post("/v1/social/requests/:followerEmail/approve", requireUser, (req, res) => {
+  // Approve / decline a pending follow request. The path param accepts
+  // EITHER a handle (current SPA, post-projection) or an email (legacy
+  // SPA + back-compat for any client built against the old contract).
+  // We try handle first, falling back to email so a client mid-deploy
+  // doesn't break.
+  function resolveFollowerEmail(param: string): string | null {
+    const decoded = decodeURIComponent(param || "").trim();
+    if (!decoded) return null;
+    if (decoded.includes("@")) return decoded.toLowerCase();
+    const profile = store.getProfileByHandle(decoded);
+    return profile?.email ?? null;
+  }
+
+  app.post("/v1/social/requests/:follower/approve", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
-    const edge = store.getFollow(String(req.params.followerEmail), me.email);
+    const followerEmail = resolveFollowerEmail(String(req.params.follower));
+    if (!followerEmail) return res.status(404).json({ error: "not_found" });
+    const edge = store.getFollow(followerEmail, me.email);
     if (!edge) return res.status(404).json({ error: "not_found" });
     store.upsertFollow({ ...edge, status: "approved", approvedAt: Date.now() });
     res.status(204).end();
   });
 
-  app.post("/v1/social/requests/:followerEmail/decline", requireUser, (req, res) => {
+  app.post("/v1/social/requests/:follower/decline", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
-    const edge = store.getFollow(String(req.params.followerEmail), me.email);
+    const followerEmail = resolveFollowerEmail(String(req.params.follower));
+    if (!followerEmail) return res.status(204).end(); // idempotent — nothing to remove
+    const edge = store.getFollow(followerEmail, me.email);
     if (edge && edge.status === "pending") store.removeFollow(edge.follower, edge.target);
     res.status(204).end();
   });
@@ -779,14 +834,16 @@ export function createApp(opts: AppOpts) {
     const me = (req as Request & { profile: ProfileRecord }).profile;
     const status = req.query.status as "approved" | "pending" | undefined;
     const all = store.listFollowing(me.email);
-    res.json(status ? all.filter((e) => e.status === status) : all);
+    const filtered = status ? all.filter((e) => e.status === status) : all;
+    res.json(projectEdges(filtered));
   });
 
   app.get("/v1/social/me/followers", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
     const status = req.query.status as "approved" | "pending" | undefined;
     const all = store.listFollowers(me.email);
-    res.json(status ? all.filter((e) => e.status === status) : all);
+    const filtered = status ? all.filter((e) => e.status === status) : all;
+    res.json(projectEdges(filtered));
   });
 
   // -- Blocks --------------------------------------------------------------

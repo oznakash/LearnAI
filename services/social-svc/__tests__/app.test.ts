@@ -141,7 +141,10 @@ describe("follow / unfollow / block", () => {
       .post("/v1/social/follow/priya")
       .set(userHeaders("maya@gmail.com"));
     expect(r2.status).toBe(200);
-    expect(r2.body.target.toLowerCase()).toBe("priya@gmail.com");
+    // Wire-shape contract: the server projects email → handle on
+    // every FollowEdge before it leaves. See the comment block above
+    // `projectEdge` in `app.ts` for why.
+    expect(r2.body.target).toBe("priya");
   });
 
   it("POST follow on a Closed profile creates a pending request", async () => {

@@ -154,6 +154,32 @@ In production the path is `/usr/share/nginx/html/index.html` (per the Dockerfile
 
 `resolveDisplayName` returns `fullName` only when `showFullName` is true; otherwise falls back to first-name-only or, if no `fullName` exists at all, the title-cased handle. New profiles created via `requireUser` (lazy-create) and via the admin upsert defaulted to `showFullName: false` — too restrictive for the social fabric the leaderboard is part of. **Default flipped to `true`**; users can still toggle it off in Settings → Network for a privacy-first view. The `fullName` itself populates on the next sign-in via the `ensureProfile` + `updateProfile` chain landed in PR #125.
 
+## Bug D — `FollowEdge.target` was email server-side, handle SPA-side (2026-05-04)
+
+### Symptom
+
+User reported: "Follow is resetting and not registering on refresh." A follow click registered server-side, but the next page load showed the **Follow** button again — never **Following**.
+
+### Root cause
+
+The server-side store keys `FollowEdge` by email (`follower: me.email`, `target: target.email`). Routes like `GET /v1/social/me/following` returned the raw store rows — including the email-shaped `target`. The SPA's offline service stores `target` as a HANDLE (because handles are what URLs and UI text use). `app/src/views/Profile.tsx` therefore does:
+
+```ts
+const edge = follow.find((e) => e.target.toLowerCase() === handle.toLowerCase());
+```
+
+Pre-fix that compare was email-vs-handle and **never matched.** The follow was correctly persisted; the UI just couldn't see it.
+
+A live diagnostic confirmed it: `GET /v1/social/me/following` for `oznakash@gmail.com` returned three approved follows (`ubershmekel@gmail.com`, `amyu98@gmail.com`, `nakash.caroline@gmail.com`) — the user had been clicking Follow repeatedly, the server had recorded each, but Profile.tsx kept showing the un-followed state.
+
+### Fix
+
+`projectEdge(edge)` and `projectEdges(edges)` in `services/social-svc/src/app.ts` rewrite `target` and `follower` from the stored email to the public handle on every wire response. Applied to `GET /me/following`, `GET /me/followers`, the `POST /follow/:handle` 201 reply, and the idempotent re-follow 200 reply. The store still keys by email internally — only the wire shape changes.
+
+Privacy bonus: cross-viewer reads no longer leak Gmail addresses into client memory.
+
+The legacy `:followerEmail`-shaped approve/decline URLs were generalized to `:follower` and accept either handle or email — a `resolveFollowerEmail(param)` helper handles both, picking the right edge from the store. Pinned by `services/social-svc/__tests__/follow-edge-projection.test.ts` (7 tests, including the exact Profile.tsx-style `target.toLowerCase() === handle.toLowerCase()` lookup).
+
 ## Recommended next steps
 
 1. **Schema-level pinning**: move handle generation into a single source-of-truth file shared by both packages (e.g. via a workspace package). Today the duplication is enforced by tests; tomorrow it should be a single import.
