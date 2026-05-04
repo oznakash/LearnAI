@@ -16,6 +16,28 @@ export interface Insight {
 }
 
 /**
+ * Goal-text aliases per topic. Free-text goals don't always contain the
+ * literal Topic name — "Become an AI PM" should still map to `ai-pm` even
+ * though that topic is officially "AI Product Management." Add aliases
+ * defensively; false positives only re-bias the today-insight, they don't
+ * gate any content.
+ */
+export const TOPIC_GOAL_ALIASES: Partial<Record<TopicId, readonly string[]>> = {
+  "ai-pm": ["ai pm", "product manager", "product management", "pm role"],
+  "ai-builder": ["ship ai", "build ai", "shipping ai", "ai feature", "ai product"],
+  "llms-cognition": ["llm", "prompt", "prompting", "context window", "tokens"],
+  "memory-safety": ["rag", "alignment", "guardrail", "memory layer"],
+  "ai-foundations": ["fundamentals", "the basics", "what is ai", "how ai works"],
+  "ai-devtools": ["claude code", "cursor", "copilot", "agentic ide"],
+  "cybersecurity": ["security", "attack", "defense", "red team", "blue team"],
+  "cloud": ["gpu", "inference cost", "hosting", "compute"],
+  "ai-news": ["stay current", "weekly digest", "ai news"],
+  "ai-trends": ["trend", "market", "what's coming"],
+  "frontier-companies": ["openai", "anthropic", "google deepmind", "meta ai", "frontier lab"],
+  "open-source": ["open-source", "open source", "huggingface", "hugging face"],
+};
+
+/**
  * Pure, testable reducer that turns a list of memories + the player's state
  * into a single recommendation. Heuristic order:
  *
@@ -34,8 +56,11 @@ export function pickInsight(
   const interests: TopicId[] = player.profile?.interests ?? [];
   const sorted = [...memories].sort((a, b) => b.updatedAt - a.updatedAt);
 
-  // Helper: match a memory to a topic via metadata.topicId, or a topic name in
-  // its text (case-insensitive).
+  // Helper: match a memory to a topic via metadata.topicId, the topic's name
+  // appearing in text, or a goal-alias fragment. The fallback is the first
+  // *interest* whose alias appears in the text, then the first interest by
+  // index — this tilts the today-insight toward what the user actually said
+  // they care about rather than the alphabetical default.
   const matchTopic = (m: MemoryItem): { topicId: TopicId; levelIndex?: number } | null => {
     const meta = m.metadata as Record<string, unknown> | undefined;
     if (meta && typeof meta.topicId === "string" && topics.some((t) => t.id === meta.topicId)) {
@@ -43,10 +68,25 @@ export function pickInsight(
       return { topicId: meta.topicId as TopicId, levelIndex };
     }
     const lower = m.text.toLowerCase();
+    // Direct topic-name match wins.
     for (const t of topics) {
       if (lower.includes(t.name.toLowerCase())) return { topicId: t.id };
     }
-    // Fall back to the first interest the user picked.
+    // Alias match — prefer an alias that maps to one of the user's
+    // interests so the recommendation stays inside their stated scope.
+    const interestSet = new Set(interests);
+    const aliasHit = (preferInterests: boolean): TopicId | null => {
+      for (const [topicId, aliases] of Object.entries(TOPIC_GOAL_ALIASES) as [TopicId, readonly string[]][]) {
+        if (preferInterests && !interestSet.has(topicId)) continue;
+        if (aliases.some((a) => lower.includes(a))) return topicId;
+      }
+      return null;
+    };
+    const interestAlias = aliasHit(true);
+    if (interestAlias) return { topicId: interestAlias };
+    const anyAlias = aliasHit(false);
+    if (anyAlias) return { topicId: anyAlias };
+    // Last resort: the first interest the user picked.
     if (interests[0]) return { topicId: interests[0] };
     return null;
   };

@@ -12,6 +12,7 @@ import type { TopicId } from "../types";
 import type { View } from "../App";
 import { shareProfile, type ShareResult } from "../profile/share";
 import { buildPersonJsonLd, clearProfileSeo, setProfileSeo } from "../profile/seo";
+import { isHiddenHandle } from "../lib/hidden-accounts";
 
 /**
  * Public Profile view — `/u/<handle>`.
@@ -59,6 +60,18 @@ export function Profile({ handle, onNav }: Props) {
     let cancelled = false;
     setLoading(true);
     (async () => {
+      // Internal QA personas: any non-owner view resolves to "not found"
+      // so the profile never gets cross-rendered, even if a determined
+      // viewer types the URL directly. Owners still see their own page so
+      // we can dogfood the FTUE; the SEO useEffect skips emission for
+      // hidden handles separately.
+      if (!isOwner && isHiddenHandle(handle)) {
+        if (!cancelled) {
+          setProfile(null);
+          setLoading(false);
+        }
+        return;
+      }
       const fetcher = isOwner ? social.getMyProfile() : social.getProfile(handle);
       const got = await fetcher;
       if (!cancelled) {
@@ -72,10 +85,12 @@ export function Profile({ handle, onNav }: Props) {
   }, [handle, isOwner, social]);
 
   // Per-profile SEO. Only writes when the resolved profile is Public.
-  // Closed profiles, the closed-gate, and "not found" all skip — we never
-  // want a private profile's display name leaking into JSON-LD.
+  // Closed profiles, the closed-gate, "not found", and internal QA
+  // personas (`docs/test-personas.md`) all skip — we never want a
+  // private or test profile's display name leaking into JSON-LD.
   useEffect(() => {
     if (!profile || profile.profileMode !== "open") return;
+    if (isHiddenHandle(profile.handle)) return;
     const url = typeof window !== "undefined" ? `${window.location.origin}/u/${profile.handle}` : `/u/${profile.handle}`;
     const description = profile.signals.length
       ? `${profile.displayName} on LearnAI — building across ${profile.signals.length} topics.`

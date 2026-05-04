@@ -198,7 +198,11 @@ export function SignIn() {
       setErr("Demo mode also requires a @gmail.com address.");
       return;
     }
-    signIn({ email: demoEmail.trim(), name: demoEmail.split("@")[0] });
+    // Don't pre-fill `name` from the email's local-part — that bleeds the
+    // raw handle (including +tags + namespace prefixes) into Onboarding's
+    // name field. Onboarding's `deriveDefaultName` will sanitize the
+    // email-derived fallback when `name` is absent. See `docs/test-personas.md`.
+    signIn({ email: demoEmail.trim() });
   };
 
   return (

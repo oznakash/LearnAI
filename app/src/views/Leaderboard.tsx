@@ -4,6 +4,7 @@ import { useAdmin } from "../admin/AdminContext";
 import { useSocial } from "../social/SocialContext";
 import { baseHandleFromEmail } from "../social/handles";
 import { tierForXP } from "../store/game";
+import { isHiddenAccount, isHiddenHandle } from "../lib/hidden-accounts";
 import { TOPICS } from "../content";
 import { Mascot } from "../visuals/Mascot";
 import type { BoardPeriod, BoardScope, PublicProfile } from "../social/types";
@@ -116,16 +117,21 @@ export function Leaderboard({ onNav }: Props = {}) {
   // Build the rendered roster: real rows first, then mock filler if sparse,
   // then `me` mixed in by xp.
   const players = useMemo(() => {
-    const real = rows.map((p, i) => ({
-      key: `r-${p.handle}-${i}`,
-      handle: p.handle,
-      name: p.displayName,
-      xp: p.xpTotal,
-      emoji: "👤",
-      isMe: p.handle.toLowerCase() === me.handle.toLowerCase(),
-      isMock: false,
-      tier: p.guildTier,
-    }));
+    // Strip internal QA personas before any layout work happens, so the
+    // dedupe + sort logic below never sees them. See
+    // `app/src/lib/hidden-accounts.ts` and `docs/test-personas.md`.
+    const real = rows
+      .filter((p) => !isHiddenHandle(p.handle))
+      .map((p, i) => ({
+        key: `r-${p.handle}-${i}`,
+        handle: p.handle,
+        name: p.displayName,
+        xp: p.xpTotal,
+        emoji: "👤",
+        isMe: p.handle.toLowerCase() === me.handle.toLowerCase(),
+        isMock: false,
+        tier: p.guildTier,
+      }));
     // Mock filler is gated behind the admin `showDemoData` flag (default
     // false in production). Without the flag, real users see only real
     // peers + themselves; the cohort never includes synthetic accounts.
@@ -147,7 +153,11 @@ export function Leaderboard({ onNav }: Props = {}) {
             tier: tierForXP(p.xp),
           }))
         : [];
-    const meRow = scope === "following"
+    // Internal QA personas (see `app/src/lib/hidden-accounts.ts` +
+    // `docs/test-personas.md`) are filtered from every leaderboard row so
+    // dogfood traffic never pollutes the public cohort.
+    const iAmHidden = isHiddenAccount(state.identity?.email);
+    const meRow = scope === "following" || iAmHidden
       ? null
       : {
           key: "me",
@@ -168,7 +178,7 @@ export function Leaderboard({ onNav }: Props = {}) {
         if (idx === 0) return true;
         return row.handle.toLowerCase() !== arr[idx - 1].handle.toLowerCase();
       });
-  }, [rows, me.handle, me.name, me.xp, tier, scope, config.branding.mascotName]);
+  }, [rows, me.handle, me.name, me.xp, tier, scope, config.branding.mascotName, config.flags.showDemoData, state.identity?.email]);
 
   const scopeIsTopic = scope !== "global" && scope !== "following";
   const scopeTopic = scopeIsTopic ? TOPICS.find((t) => t.id === scope) : null;

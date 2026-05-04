@@ -2,7 +2,9 @@ import type {
   Exercise,
   GuildTier,
   PlayerState,
+  PlayerProfile,
   SessionRecord,
+  SkillLevel,
   Spark,
   SparkFeedback,
   SparkSignal,
@@ -437,9 +439,53 @@ export function isLevelUnlocked(
   if (levelIndex === 1) return true;
   const t = getTopic(topicId);
   if (!t) return false;
+  // Calibrated / skill-derived starting floor: a player whose profile says
+  // they should start at level N has L1..LN pre-unlocked, so the skip-ahead
+  // from Home + Calibration doesn't dead-end on "This level is locked." Once
+  // levels above the floor get touched, the standard chain (boss-pass or
+  // 100% complete) takes over again.
+  const start = inferredStartingLevel(s.profile);
+  if (levelIndex <= start) return true;
   const prev = t.levels.find((l) => l.index === levelIndex - 1);
   if (!prev) return true;
   return s.progress.bossPassed[prev.id] === true || levelCompletion(s, topicId, prev.id).pct >= 100;
+}
+
+/**
+ * Map self-reported skill to a default starting level. Conservative — one
+ * level below where the user *says* they are, so the first session leaves
+ * room to be impressed rather than bored. The fully calibrated number from
+ * {@link scoreCalibration} always wins; this is the fallback for users who
+ * skipped calibration.
+ *
+ * starter → 1 · explorer → 2 · builder → 3 · architect → 4 · visionary → 5
+ */
+export function startingLevelFromSkill(skill: SkillLevel | undefined): number {
+  switch (skill) {
+    case "explorer":
+      return 2;
+    case "builder":
+      return 3;
+    case "architect":
+      return 4;
+    case "visionary":
+      return 5;
+    case "starter":
+    default:
+      return 1;
+  }
+}
+
+/**
+ * Combined "where should this player start in a fresh topic?" — calibrated
+ * level wins; otherwise the skill-self-report fallback. Returns at least 1.
+ */
+export function inferredStartingLevel(profile: Pick<PlayerProfile, "calibratedLevel" | "skillLevel"> | null | undefined): number {
+  if (!profile) return 1;
+  if (typeof profile.calibratedLevel === "number" && profile.calibratedLevel >= 1) {
+    return profile.calibratedLevel;
+  }
+  return startingLevelFromSkill(profile.skillLevel);
 }
 
 /**
@@ -454,11 +500,15 @@ export function isLevelUnlocked(
  * for content they've already shown they know. As soon as they make any
  * progress in the topic, we resume linear progression — the calibrated
  * jump only fires for fresh topics.
+ *
+ * Skill-derived fallback: when calibration hasn't run yet but the player
+ * self-reported a skill level at onboarding, use {@link inferredStartingLevel}
+ * as the starting offset. Same "fresh topic only" rule applies.
  */
 export function nextRecommendedLevel(s: PlayerState, topicId: TopicId) {
   const t = getTopic(topicId);
   if (!t) return null;
-  const calibrated = s.profile?.calibratedLevel;
+  const inferredStart = inferredStartingLevel(s.profile);
   const hasNoProgress =
     !Object.entries(s.progress.completed).some(([levelId, ids]) => {
       if (ids.length === 0) return false;
@@ -466,13 +516,8 @@ export function nextRecommendedLevel(s: PlayerState, topicId: TopicId) {
     }) &&
     !t.levels.some((l) => s.progress.bossPassed[l.id]);
 
-  if (
-    typeof calibrated === "number" &&
-    calibrated >= 1 &&
-    hasNoProgress &&
-    t.levels.length > 0
-  ) {
-    const target = Math.min(calibrated, t.levels.length);
+  if (inferredStart >= 1 && hasNoProgress && t.levels.length > 0) {
+    const target = Math.min(inferredStart, t.levels.length);
     const match = t.levels.find((l) => l.index === target);
     if (match) return match;
   }
@@ -490,7 +535,13 @@ export function nextRecommendedSpark(
   const t = getTopic(topicId);
   if (!t) return null;
   const disliked = dislikedSparkIds(s);
+  // Honor the calibrated/skill-derived starting level for fresh topics so a
+  // self-reported "explorer" doesn't get dropped on Level 1 Spark 1. Once the
+  // player has any progress in this topic, fall back to linear scan from L1
+  // (which is what nextRecommendedLevel does internally).
+  const startLevel = nextRecommendedLevel(s, topicId)?.index ?? 1;
   for (const lvl of t.levels) {
+    if (lvl.index < startLevel) continue;
     if (!isLevelUnlocked(s, topicId, lvl.index)) break;
     const done = new Set(completedSparkIds(s, lvl.id));
     const spark = lvl.sparks.find((sp) => !done.has(sp.id) && !disliked.has(sp.id));
