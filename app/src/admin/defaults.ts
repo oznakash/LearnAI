@@ -1,4 +1,4 @@
-import type { AdminConfig, EmailTemplate, EmailTemplateId, GameTuning, ServerAuthConfig } from "./types";
+import type { AdminConfig, EmailTemplate, EmailTemplateId, GameTuning, PulseConfig, ServerAuthConfig } from "./types";
 import { SEED_CREATORS } from "../content/creators";
 
 /**
@@ -329,5 +329,54 @@ export function defaultAdminConfig(): AdminConfig {
       },
     },
     serverAuth: defaultServerAuth(),
+    pulse: defaultPulse(),
+  };
+}
+
+/**
+ * Three evergreen-but-current trend cards seeded into a fresh install
+ * so the Pulse strip on Home isn't empty before an operator curates
+ * their own. Each links to the most-relevant Constellation, so the
+ * "trend → learning" loop closes in one tap.
+ *
+ * The dates intentionally use a non-zero ISO so the freshness chip
+ * shows "Added recently" without claiming a misleading specific day.
+ * Operators are expected to overwrite these with whatever's actually
+ * hot in their cohort.
+ */
+export function defaultPulse(): PulseConfig {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    enabled: true,
+    items: [
+      {
+        id: "pulse-frontier-2026",
+        headline: "Frontier model race: capability per dollar keeps accelerating.",
+        body:
+          "Inference cost on capable open-weight models has dropped 5–10× year-over-year, and frontier closed models keep moving the bar on math, code, and tool use. The practical impact for builders: features that needed a $30k spend last year fit a hobbyist budget today.",
+        source: { name: "AI Trends", url: "https://www.anthropic.com/news" },
+        topicId: "ai-trends",
+        audience: "all",
+        addedAt: today,
+      },
+      {
+        id: "pulse-coding-agents-2026",
+        headline: "Coding agents (Claude Code, Cursor, Copilot Workspace) eat real ticket volume.",
+        body:
+          "The shift is from ‘autocomplete’ to ‘assign me a ticket’. Builders who ship agent-friendly repos (clear CLAUDE.md, tight tests, small PRs) compound faster. The compounding effect favors small teams who design for agentic workflows from day one.",
+        topicId: "ai-devtools",
+        audience: "adult",
+        addedAt: today,
+      },
+      {
+        id: "pulse-ai-news-2026",
+        headline: "AI is now a daily news story — knowing what to skim matters more than what to read.",
+        body:
+          "The signal-to-noise of AI news got worse, not better. Trend-watchers triage by ‘will this change what I build next month?’ and ignore the rest. LearnAI surfaces the headlines that pass that filter and translates each into something you can do.",
+        topicId: "ai-news",
+        audience: "all",
+        addedAt: today,
+      },
+    ],
   };
 }

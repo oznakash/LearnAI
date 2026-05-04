@@ -5,6 +5,8 @@ import { activityByDay, nextRecommendedSpark, nextTierThreshold, suggestSwitchTo
 import { useTodayInsight } from "../memory/insight";
 import { useAdmin } from "../admin/AdminContext";
 import { ROLE_LABEL } from "../store/role";
+import { pulseForAudience } from "../store/pulse";
+import { PulseStrip } from "../components/PulseStrip";
 import type { View } from "../App";
 import { Mascot } from "../visuals/Mascot";
 import { Sparkline, Ring } from "../visuals/Charts";
@@ -45,8 +47,23 @@ export function Home({ onNav }: { onNav: (v: View) => void }) {
   const stage = uxStage(state);
   const nextTier = nextTierThreshold(state.xp);
 
+  // "Today in AI" Pulse — admin-curated daily-trend strip. Filtered by
+  // the player's age band (kids / teens see kid-tagged items, adults
+  // see adult-tagged items, "all" → everyone). Hidden if the operator
+  // has flipped the `pulse.enabled` master switch off OR the visible
+  // list ends up empty for this audience.
+  const pulseItems = adminCfg.pulse?.enabled
+    ? pulseForAudience(adminCfg.pulse.items, state.profile?.ageBand)
+    : [];
+
   return (
     <div className="space-y-6">
+      {pulseItems.length > 0 && (
+        <PulseStrip
+          items={pulseItems}
+          onOpenTopic={(topicId) => onNav({ name: "play", topicId })}
+        />
+      )}
       {insight && insightTopic && (
         <section
           className="card p-4 sm:p-5 border border-accent/30 bg-accent/5 relative overflow-hidden"
