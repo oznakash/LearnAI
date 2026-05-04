@@ -58,7 +58,7 @@ describe("Network view", () => {
     expect(screen.getByRole("heading", { name: /^Profile visibility$/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /🌐 Public/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /🔒 Private/ })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: /^Signals$/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /^Topics$/ })).toBeTruthy();
   });
 
   it("flipping the Private button persists profileMode=closed", async () => {
@@ -113,12 +113,12 @@ describe("Network view", () => {
       (h) => h.textContent?.trim() ?? "",
     );
     const idxAbout = headings.indexOf("About you");
-    const idxSignals = headings.indexOf("Signals");
+    const idxTopics = headings.indexOf("Topics");
     const idxPeople = headings.indexOf("People");
     const idxVisibility = headings.indexOf("Profile visibility");
     expect(idxAbout).toBeGreaterThan(-1);
-    expect(idxSignals).toBeGreaterThan(idxAbout);
-    expect(idxPeople).toBeGreaterThan(idxSignals);
+    expect(idxTopics).toBeGreaterThan(idxAbout);
+    expect(idxPeople).toBeGreaterThan(idxTopics);
     expect(idxVisibility).toBeGreaterThan(idxPeople);
   });
 
@@ -137,10 +137,62 @@ describe("Network view", () => {
     expect(details!.open).toBe(false);
   });
 
+  it("Pronouns field is removed from the editor (operator decision — see docs/profile.md §7)", async () => {
+    mount();
+    await settle();
+    await waitFor(() => screen.getByRole("heading", { name: /^About you$/ }));
+    expect(screen.queryByText(/^Pronouns$/i)).toBeNull();
+    expect(screen.queryByPlaceholderText(/^she\/her$/i)).toBeNull();
+  });
+
+  it("Connect-with-LinkedIn CTA renders below the LinkedIn input and captures intent on click", async () => {
+    mount();
+    await settle();
+    await waitFor(() => screen.getByRole("heading", { name: /^About you$/ }));
+    const cta = await screen.findByTestId("linkedin-intent-cta");
+    expect(cta.textContent).toMatch(/Connect with LinkedIn/i);
+    await act(async () => {
+      fireEvent.click(cta);
+    });
+    expect(screen.getByTestId("linkedin-intent-captured")).toBeTruthy();
+    expect(localStorage.getItem("learnai:linkedin:intent")).toBeTruthy();
+  });
+
+  it("Saving Topics writes BOTH social.signals AND state.profile.interests (one decision, dual-write)", async () => {
+    mount();
+    await settle();
+    await waitFor(() => screen.getByRole("heading", { name: /^Topics$/ }));
+    // Click two topic buttons inside the Topics picker. The buttons are
+    // labeled by emoji + topic name; pin the click via partial match.
+    const aiFoundations = await screen.findByRole("button", { name: /AI Foundations/i });
+    await act(async () => {
+      fireEvent.click(aiFoundations);
+    });
+    const aiBuilder = await screen.findByRole("button", { name: /AI Builder/i });
+    await act(async () => {
+      fireEvent.click(aiBuilder);
+    });
+    const saveButton = await screen.findByRole("button", { name: /^Save Topics$/i });
+    await act(async () => {
+      fireEvent.click(saveButton);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    // Social-svc side: signals persisted.
+    const svc = new OfflineSocialService({ email: "maya@gmail.com" });
+    const me = await svc.getMyProfile();
+    expect(me.signals).toContain("ai-foundations");
+    expect(me.signals).toContain("ai-builder");
+    // PlayerContext side: interests mirror the same selection.
+    const playerRaw = localStorage.getItem(STORAGE_KEY)!;
+    const player = JSON.parse(playerRaw);
+    expect(player.profile.interests).toContain("ai-foundations");
+    expect(player.profile.interests).toContain("ai-builder");
+  });
+
   it("setSignals call from the Save button caps at 5 (service-side enforcement)", async () => {
     mount();
     await settle();
-    await waitFor(() => screen.getByRole("heading", { name: /^Signals$/ }));
+    await waitFor(() => screen.getByRole("heading", { name: /^Topics$/ }));
     // Click 6 distinct topic buttons inside the Signals picker. The picker
     // itself disables further selections after 5; but to verify the
     // service cap survives even if a stale UI state submits 6, we drive

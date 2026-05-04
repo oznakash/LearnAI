@@ -61,8 +61,8 @@ const SPECS: Record<CropKind, KindSpec> = {
     outputHeight: 400,
     cutoutAspect: 1,
     cutoutShape: "circle",
-    title: "Crop your profile photo",
-    saveLabel: "Use this photo",
+    title: "Crop your photo",
+    saveLabel: "Save photo",
     hint: "Drag to position. Pinch or scroll to zoom.",
     emptyLabel: "Pick a photo",
   },
@@ -72,7 +72,7 @@ const SPECS: Record<CropKind, KindSpec> = {
     cutoutAspect: 1280 / 432,
     cutoutShape: "rect",
     title: "Crop your banner",
-    saveLabel: "Use this banner",
+    saveLabel: "Save banner",
     hint: "Drag to position. Pinch or scroll to zoom.",
     emptyLabel: "Pick a banner image",
   },
@@ -240,6 +240,12 @@ export function ImageCropDialog({ open, kind, onSave, onClose }: CropDialogProps
     }
   };
 
+  // Zoom step buttons — explicit affordance so users on a touchscreen
+  // without two-finger pinch (or who don't know to pinch) still find
+  // the zoom. Same range as the slider [1, 5].
+  const zoomBy = (delta: number) =>
+    setZoom((z) => clamp(Number((z + delta).toFixed(2)), 1, 5));
+
   return (
     <div
       role="dialog"
@@ -247,11 +253,16 @@ export function ImageCropDialog({ open, kind, onSave, onClose }: CropDialogProps
       className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-md p-3 sm:p-4"
       onClick={onClose}
     >
+      {/* Constrain the dialog to the visible viewport so the action bar
+          (Cancel / Save photo) is ALWAYS reachable without scrolling. v2
+          let the stage push the buttons off-screen on small phones — the
+          fix is `max-h: 100dvh` on the card + `flex-1 min-h-0` on the
+          stage so it shrinks instead of overflowing. */}
       <div
-        className="w-full max-w-[640px] rounded-2xl bg-ink2 border border-white/10 overflow-hidden flex flex-col shadow-card"
+        className="w-full max-w-[640px] max-h-[calc(100dvh-1.5rem)] rounded-2xl bg-ink2 border border-white/10 overflow-hidden flex flex-col shadow-card"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-white/5">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-white/5 shrink-0">
           <div>
             <h2 className="font-display text-base sm:text-lg font-bold text-white">
               {spec.title}
@@ -277,10 +288,9 @@ export function ImageCropDialog({ open, kind, onSave, onClose }: CropDialogProps
               ref={stageRef}
               role="img"
               aria-label="Crop preview"
-              className="relative w-full bg-black select-none touch-none cursor-grab active:cursor-grabbing"
+              className="relative w-full bg-black select-none touch-none cursor-grab active:cursor-grabbing flex-1 min-h-0"
               style={{
                 aspectRatio: kind === "avatar" ? "1 / 1" : "16 / 11",
-                maxHeight: "70vh",
               }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
@@ -319,9 +329,19 @@ export function ImageCropDialog({ open, kind, onSave, onClose }: CropDialogProps
               <CropFrame cutout={cutout} shape={spec.cutoutShape} />
             </div>
 
-            <div className="px-4 sm:px-5 py-3 border-t border-white/5 space-y-3">
-              <div className="flex items-center gap-3 text-xs text-white/60">
-                <span className="text-base" aria-hidden="true">🔍</span>
+            <div className="px-4 sm:px-5 py-3 border-t border-white/5 space-y-3 shrink-0">
+              {/* Zoom row — explicit –/+ buttons flank the slider so a
+                  user who doesn't pinch still sees how to zoom. */}
+              <div className="flex items-center gap-2 text-xs text-white/60">
+                <button
+                  type="button"
+                  onClick={() => zoomBy(-0.25)}
+                  disabled={zoom <= 1}
+                  aria-label="Zoom out"
+                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-white/5 grid place-items-center font-bold"
+                >
+                  −
+                </button>
                 <input
                   type="range"
                   min="1"
@@ -332,7 +352,16 @@ export function ImageCropDialog({ open, kind, onSave, onClose }: CropDialogProps
                   className="flex-1 accent-accent"
                   aria-label="Zoom"
                 />
-                <span className="tabular-nums w-10 text-right">{zoom.toFixed(2)}×</span>
+                <button
+                  type="button"
+                  onClick={() => zoomBy(0.25)}
+                  disabled={zoom >= 5}
+                  aria-label="Zoom in"
+                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 disabled:opacity-40 disabled:hover:bg-white/5 grid place-items-center font-bold"
+                >
+                  +
+                </button>
+                <span className="tabular-nums w-10 text-right">{Math.round(zoom * 100)}%</span>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <label className="text-xs text-white/60 hover:text-white cursor-pointer underline underline-offset-2">

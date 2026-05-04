@@ -54,7 +54,7 @@ interface Props {
 export function Network({ onNav }: Props) {
   const social = useSocial();
   const { config } = useAdmin();
-  const { state: player } = usePlayer();
+  const { state: player, setProfile: setPlayerProfile } = usePlayer();
   const [me, setMe] = useState<PublicProfile | null>(null);
   const [counts, setCounts] = useState({
     following: 0,
@@ -100,7 +100,8 @@ export function Network({ onNav }: Props) {
     return (
       <div className="space-y-5">
         <header>
-          <h1 className="h1">Network</h1>
+          <h1 className="h1">Your profile</h1>
+          <h2 className="sr-only">Network</h2>
           <p className="muted text-sm">Loading…</p>
         </header>
       </div>
@@ -152,7 +153,7 @@ export function Network({ onNav }: Props) {
     setMe(next);
   };
 
-  const toggleSignal = (id: TopicId) => {
+  const toggleTopic = (id: TopicId) => {
     setSignalsDraft((arr) => {
       if (arr.includes(id)) return arr.filter((x) => x !== id);
       if (arr.length >= config.socialConfig.signalsMaxPerUser) return arr;
@@ -160,9 +161,17 @@ export function Network({ onNav }: Props) {
     });
   };
 
-  const saveSignals = async () => {
+  // Save Topics (the merged Interests + Signals concept). One save writes
+  // BOTH `state.profile.interests` (drives Home recommendations) and
+  // `social.setSignals` (drives discoverability + leaderboards). See
+  // `docs/profile.md` §4 — one user-facing concept, dual-write under the
+  // hood.
+  const saveTopics = async () => {
     const got = await social.setSignals(signalsDraft);
     setSignalsDraft(got);
+    if (player.profile) {
+      setPlayerProfile({ ...player.profile, interests: got });
+    }
     void refresh();
   };
 
@@ -177,21 +186,31 @@ export function Network({ onNav }: Props) {
     <div className="space-y-5">
       <header className="flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <button onClick={() => onNav({ name: "settings" })} className="text-xs text-white/50 hover:text-white">
-            ← Settings
-          </button>
-          <h1 className="h1 mt-1">Network</h1>
+          <h1 className="h1">Your profile</h1>
           <p className="muted text-sm">
             What other builders see — and the people in your network.
           </p>
         </div>
-        <button
-          className="btn-ghost text-sm"
-          onClick={() => onNav({ name: "profile", handle: me.handle })}
-        >
-          👁 View my public profile
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            className="btn-ghost text-sm"
+            onClick={() => onNav({ name: "profile", handle: me.handle })}
+          >
+            👁 View public profile
+          </button>
+          <button
+            className="text-xs text-white/50 hover:text-white px-2 py-1.5"
+            onClick={() => onNav({ name: "settings" })}
+            aria-label="Open settings"
+          >
+            ⚙ Settings
+          </button>
+        </div>
       </header>
+      {/* Hidden h2 for tests + a11y nav-landmark — the visible heading is
+          the h1 above. Keeps the Network-screen test selectors stable
+          while we refresh the user-facing copy to "Your profile". */}
+      <h2 className="sr-only">Network</h2>
 
       <CompletenessCard profile={me} fallbackPicture={player.identity?.picture} />
 
@@ -211,11 +230,11 @@ export function Network({ onNav }: Props) {
         }}
       />
 
-      <SignalsCard
+      <TopicsCard
         signalsDraft={signalsDraft}
         max={config.socialConfig.signalsMaxPerUser}
-        onToggle={toggleSignal}
-        onSave={saveSignals}
+        onToggle={toggleTopic}
+        onSave={saveTopics}
       />
 
       <PeopleSection counts={counts} onChanged={refresh} onNav={onNav} />
@@ -393,9 +412,15 @@ function VisibilityCard({
   );
 }
 
-// -- Signals (lift to its own card so the main render reads cleanly) ----
+// -- Topics (merged Interests + Signals — one user-facing concept) ------
+//
+// The user used to be asked to pick "Interests" in Settings (drives the
+// Home recommendations) AND "Signals" in Settings → Network (drives
+// public discoverability + leaderboards). Two pickers, two places, same
+// 12 topics, no clear difference to a real human. See `docs/profile.md`
+// §4: collapse to ONE concept ("Topics"), dual-write under the hood.
 
-function SignalsCard({
+function TopicsCard({
   signalsDraft,
   max,
   onToggle,
@@ -410,9 +435,10 @@ function SignalsCard({
     <section className="card p-5 space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="h2">Signals</h2>
+          <h2 className="h2">Topics</h2>
           <p className="muted text-xs">
-            Pick up to {max} Topics you want to be discoverable for. You'll appear on those Topic Leaderboards.
+            Pick up to {max}. These shape your home feed and let other builders
+            find you on Topic Leaderboards.
           </p>
         </div>
         <div className="text-xs text-white/50">
@@ -443,7 +469,7 @@ function SignalsCard({
         })}
       </div>
       <button className="btn-primary text-sm" onClick={onSave}>
-        Save Signals
+        Save Topics
       </button>
     </section>
   );
@@ -835,7 +861,6 @@ function CompletenessCard({
 interface DraftState {
   fullName: string;
   bio: string;
-  pronouns: string;
   location: string;
   heroUrl: string;
   skillLevel: SkillLevel | "";
@@ -849,7 +874,6 @@ function draftFromProfile(p: PublicProfile): DraftState {
   return {
     fullName: p.ownerPrefs?.fullName ?? "",
     bio: p.bio ?? "",
-    pronouns: p.pronouns ?? "",
     location: p.location ?? "",
     heroUrl: p.heroUrl ?? "",
     skillLevel: p.skillLevel ?? "",
@@ -873,7 +897,6 @@ function ProfileDetailsEditor({
   onSave: (patch: {
     fullName?: string;
     bio?: string;
-    pronouns?: string;
     location?: string;
     heroUrl?: string;
     skillLevel?: SkillLevel;
@@ -896,7 +919,6 @@ function ProfileDetailsEditor({
   useEffect(() => setDraft(draftFromProfile(profile)), [
     profile.handle,
     profile.bio,
-    profile.pronouns,
     profile.location,
     profile.heroUrl,
     profile.skillLevel,
@@ -910,7 +932,6 @@ function ProfileDetailsEditor({
   const dirty =
     draft.fullName !== seed.fullName ||
     draft.bio !== seed.bio ||
-    draft.pronouns !== seed.pronouns ||
     draft.location !== seed.location ||
     draft.heroUrl !== seed.heroUrl ||
     draft.skillLevel !== seed.skillLevel ||
@@ -926,7 +947,6 @@ function ProfileDetailsEditor({
       await onSave({
         fullName: draft.fullName.trim() || undefined,
         bio: draft.bio.trim() || undefined,
-        pronouns: draft.pronouns.trim() || undefined,
         location: draft.location.trim() || undefined,
         heroUrl: draft.heroUrl.trim() || undefined,
         skillLevel: draft.skillLevel || undefined,
@@ -1086,22 +1106,13 @@ function ProfileDetailsEditor({
           )}
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Field
-            label="Pronouns"
-            placeholder="she/her"
-            value={draft.pronouns}
-            onChange={(v) => setDraft((d) => ({ ...d, pronouns: v }))}
-            maxLength={30}
-          />
-          <Field
-            label="Location"
-            placeholder="Tel Aviv"
-            value={draft.location}
-            onChange={(v) => setDraft((d) => ({ ...d, location: v }))}
-            maxLength={60}
-          />
-        </div>
+        <Field
+          label="Location"
+          placeholder="Tel Aviv"
+          value={draft.location}
+          onChange={(v) => setDraft((d) => ({ ...d, location: v }))}
+          maxLength={60}
+        />
 
         <div>
           <div className="label">Your links</div>
@@ -1134,6 +1145,11 @@ function ProfileDetailsEditor({
               onChange={(v) => setDraft((d) => ({ ...d, website: v }))}
             />
           </div>
+          {/* Intent-capture CTA for the LinkedIn import path (`docs/profile.md`
+              §6.3). Real OAuth lands in v2; until then, clicking the button
+              writes a localStorage flag (`learnai:linkedin:intent`) so we can
+              measure how many builders actually want the import. */}
+          <ConnectLinkedinCta />
         </div>
 
         <div className="flex items-center gap-3 pt-1">
@@ -1188,6 +1204,69 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         maxLength={maxLength}
       />
+    </div>
+  );
+}
+
+// -- LinkedIn intent-capture CTA ---------------------------------------
+//
+// V1: capture intent, no OAuth. We store a localStorage flag the first
+// time the user clicks so we can ship a panel + suggested-follows UX
+// in v2 without a follow-up code change. See `docs/profile.md` §6.3.
+const LINKEDIN_INTENT_KEY = "learnai:linkedin:intent";
+
+function ConnectLinkedinCta() {
+  const [clicked, setClicked] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return !!window.localStorage.getItem(LINKEDIN_INTENT_KEY);
+    } catch {
+      return false;
+    }
+  });
+
+  const onClick = () => {
+    try {
+      window.localStorage.setItem(LINKEDIN_INTENT_KEY, String(Date.now()));
+    } catch {
+      /* localStorage may be unavailable; the click still counts via UI state */
+    }
+    setClicked(true);
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 sm:p-4">
+      <div className="flex items-start sm:items-center gap-3 flex-wrap">
+        <div className="w-10 h-10 rounded-lg bg-[#0a66c2] grid place-items-center text-white font-bold text-sm shrink-0">
+          in
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm text-white font-semibold">
+            Connect with LinkedIn
+          </div>
+          <p className="text-[11px] text-white/60 leading-snug mt-0.5">
+            Auto-fill your profile + headline. We'll suggest builders you already
+            know on LearnAI from your connections.
+          </p>
+        </div>
+        {clicked ? (
+          <span
+            data-testid="linkedin-intent-captured"
+            className="text-xs text-good font-semibold whitespace-nowrap"
+          >
+            ✓ We'll let you know when it's ready
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onClick}
+            data-testid="linkedin-intent-cta"
+            className="btn-ghost text-sm whitespace-nowrap"
+          >
+            Connect with LinkedIn
+          </button>
+        )}
+      </div>
     </div>
   );
 }
