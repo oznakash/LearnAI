@@ -72,6 +72,8 @@ Defined in [`app/src/index.css`](../app/src/index.css) under `@layer components`
 - If the same five-class Tailwind chain appears more than twice, it should be a primitive. Add it here and to `index.css`.
 - Don't introduce shadows beyond `shadow-card` and `shadow-glow`. Two shadows is a noise budget.
 - Border radius scale: `rounded-xl` (interactive controls) and `rounded-2xl` (containers). Keep it boring.
+- For long secondary lists (10+ low-priority toggles, advanced settings, technical references), use a native `<details>` disclosure with a `cursor-pointer` `<summary>` that includes a `▸` glyph using `group-open:rotate-90 transition-transform` for the affordance. Examples: `app/src/views/Network.tsx` (advanced visibility toggles), `app/src/admin/AdminEmails.tsx` (SMTP credentials). Don't reach for a custom accordion component — the native element is keyboard-accessible, scroll-aware, and has zero runtime cost.
+- Editor surfaces that produce a public artifact (Network → profile editor) should *look like the artifact while you edit it*. The Network editor places the banner + overlapping avatar at the top of the card with edit affordances overlaid, so the user is decorating their own page rather than filling out a form. Keep the overlay buttons in `bg-black/55 backdrop-blur-sm` pills with `border-white/20` so they read as controls on top of any banner image (light or dark).
 
 ---
 
