@@ -19,7 +19,11 @@ Source: **`https://github.com/oznakash/learnai`**.
 
 ### Onboarding & personalization
 
-- 6-step wizard (~90 seconds): name, age, skill level, interests, daily minutes, goal.
+- **Role-aware 8-step wizard** (~90–120 seconds): name, **role**, age, **AI-fluency probe**, interests, daily minutes, goal, **first-Spark preview**.
+- Role step (Student/Kid · PM · Engineer · Designer · Creator · Exec · Researcher · Curious · Other) drives topic pre-selection, suggested skill, and downstream tone.
+- AI-fluency probe — two soft questions ("Used ChatGPT or Claude?" / "Written code or a prompt?") yield a 0–4 fluency score that suggests the right starting skill instead of asking the user to label themselves.
+- First-Spark preview — the final wizard step shows the exact Spark the user will start with (title, format, level, ETA), computed by the same `nextRecommendedSpark` selector Play uses.
+- Personalized fresh-stage Home header — references role + daily minutes + first topic before the user has any stats.
 - Age-band shaping (kid / teen / adult).
 - Skill-level shaping (5 tiers from "Curious starter" to "Frontier visionary").
 - **Adaptive recalibration** — 5-question quiz with smart probes (anchor at the player's level + one and two levels up + one level down + one cross-area probe), drawn from a tagged pool that excludes ids the player has already seen. Records `profile.calibratedLevel` (1-10) — when the player opens a *fresh* topic, recommendations start at that level instead of always at L1. Plus the existing interest re-pick.
