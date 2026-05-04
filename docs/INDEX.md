@@ -74,7 +74,7 @@ These pre-date the structured wiki but contain useful detail. Read them when the
 → [`contributing.md`](./contributing.md) → [`mvp.md`](./mvp.md) → [`technical.md`](./technical.md) → ship a Spark.
 
 **"I'm an engineer — show me the system."**
-→ [`architecture.md`](./architecture.md) → [`technical.md`](./technical.md) → [`mem0.md`](./mem0.md) → [`social-mvp-engineering.md`](./social-mvp-engineering.md) → run `npm test` (560 SPA + 114 social-svc = 674).
+→ [`architecture.md`](./architecture.md) → [`technical.md`](./technical.md) → [`mem0.md`](./mem0.md) → [`social-mvp-engineering.md`](./social-mvp-engineering.md) → run `npm test` (591 SPA + 137 social-svc = 728).
 
 **"I'm an investor / partner — show me the case."**
 → [`pitch-deck.md`](./pitch-deck.md) → [`vision.md`](./vision.md) → [`competitors.md`](./competitors.md) → [`mvp.md`](./mvp.md) → [`metrics.md`](./metrics.md).

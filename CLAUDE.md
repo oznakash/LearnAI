@@ -45,7 +45,7 @@
 
 ```sh
 npm install     # workspace install (delegates to ./app)
-npm test        # vitest — SPA, must be all green (currently 560 / 560). Run `cd services/social-svc && npm test` for the sidecar suite (114 / 114).
+npm test        # vitest — SPA, must be all green (currently 591 / 591). Run `cd services/social-svc && npm test` for the sidecar suite (137 / 137).
 npm run build   # tsc + vite build → ./dist
 npm run dev     # local dev server (http://localhost:5173)
 ```

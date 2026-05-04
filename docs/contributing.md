@@ -19,7 +19,7 @@ git clone https://github.com/oznakash/learnai
 cd learnai
 npm install      # delegates to ./app
 npm run dev      # local dev at http://localhost:5173
-npm test         # vitest (560 SPA tests today; another 114 in services/social-svc)
+npm test         # vitest (591 SPA tests today; another 137 in services/social-svc)
 ```
 
 ## House rules
