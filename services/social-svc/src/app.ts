@@ -1140,6 +1140,84 @@ export function createApp(opts: AppOpts) {
     },
   );
 
+  // -- Admin: profile backfill --------------------------------------------
+  // Operational seam for the "mem0 has a user, social-svc doesn't"
+  // scenario (entity-wiring audit, Bug A). The SPA fix in
+  // `app/src/social/SocialContext.tsx` closes the gap going forward —
+  // every signed-in identity now triggers a `getMyProfile()` so
+  // `requireUser` lazy-creates the profile. This endpoint exists for
+  // ops to backfill users who signed in BEFORE the SPA fix shipped
+  // without minting per-user JWTs.
+  //
+  // Idempotent. If a profile already exists for the given email it is
+  // returned untouched (only the displayName/picture are patched if the
+  // body provides them and the existing values are empty).
+  app.post(
+    "/v1/social/admin/profiles/upsert",
+    requireUser,
+    requireAdmin,
+    (req, res) => {
+      const body = req.body as {
+        email?: string;
+        fullName?: string;
+        pictureUrl?: string;
+      };
+      const email = (body.email ?? "").trim().toLowerCase();
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ error: "invalid_email" });
+      }
+      let profile = store.getProfileByEmail(email);
+      let created = false;
+      if (!profile) {
+        const base = baseHandleFromEmail(email);
+        const handle =
+          disambiguateHandle(base, (h) => store.isHandleTaken(h)) ??
+          `${base}-${Date.now()}`;
+        profile = store.upsertProfile({
+          email,
+          handle,
+          fullName: body.fullName?.trim() || undefined,
+          pictureUrl: body.pictureUrl?.trim() || undefined,
+          displayFirst: handle.charAt(0).toUpperCase() + handle.slice(1),
+          ageBand: "adult",
+          profileMode: "open",
+          showFullName: false,
+          showCurrent: true,
+          showMap: true,
+          showActivity: true,
+          showBadges: true,
+          showSignup: true,
+          signalsGlobal: true,
+          signals: [],
+          banned: false,
+          bannedSocial: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        created = true;
+        log.info("admin_profile_backfilled", {
+          req_id: (req as Request & { _reqId: string })._reqId,
+          actor_email_hash: emailHash(
+            (req as Request & { profile: ProfileRecord }).profile.email,
+          ),
+          target_email_hash: emailHash(email),
+          handle,
+        });
+      } else if (
+        (body.fullName?.trim() && !profile.fullName) ||
+        (body.pictureUrl?.trim() && !profile.pictureUrl)
+      ) {
+        profile = store.upsertProfile({
+          ...profile,
+          fullName: profile.fullName || body.fullName?.trim() || undefined,
+          pictureUrl: profile.pictureUrl || body.pictureUrl?.trim() || undefined,
+          updatedAt: Date.now(),
+        });
+      }
+      res.json({ created, handle: profile.handle, email: profile.email });
+    },
+  );
+
   // -- Admin: telemetry ----------------------------------------------------
   // One JSON blob the AdminAnalytics social panel polls. Cheap to compute
   // since the in-memory store walks once. Postgres adapter provides the

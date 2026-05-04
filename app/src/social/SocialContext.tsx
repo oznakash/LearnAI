@@ -209,12 +209,37 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     name?: string;
     picture?: string;
   }>({});
+  // Two responsibilities, deliberately split into two refs:
+  //   1. lastPushedIdentityRef tracks what we last sent via PUT /v1/social/me
+  //      so we don't re-PUT identical name/picture on every render.
+  //   2. ensuredProfileForEmailRef tracks which signed-in emails we've
+  //      already touched social-svc for, so we don't fire `getMyProfile()`
+  //      every time the identity object reference changes.
+  // The split exists because a user CAN sign in with no `name` or `picture`
+  // (mem0 email+password registration, or any OAuth provider that omits
+  // those claims). In that case `updateProfile` would early-return on an
+  // empty patch — and social-svc's `requireUser` auto-create never fires.
+  // The user becomes a mem0 ghost: cognition-side they exist, social-side
+  // they don't. Ensuring the profile via a side `getMyProfile()` closes
+  // that gap. See `docs/entity-wiring-audit.md` "Bug A".
+  const ensuredProfileForEmailRef = useRef<string | null>(null);
   useEffect(() => {
     const id = player.identity;
     if (!id?.email) {
       lastPushedIdentityRef.current = {};
+      ensuredProfileForEmailRef.current = null;
       return;
     }
+    // (A) Ensure the social-svc profile exists for this email — fire-and-
+    // forget. Skip when we've already done it for this email in this
+    // session. `getMyProfile()` hits `requireUser` on the server which
+    // lazy-creates the profile on first request and is a cheap no-op
+    // afterwards.
+    if (ensuredProfileForEmailRef.current !== id.email) {
+      ensuredProfileForEmailRef.current = id.email;
+      void withSocialGuard(() => serviceRef.current.getMyProfile(), null);
+    }
+    // (B) If we have a name or picture on the identity, push them too.
     const last = lastPushedIdentityRef.current;
     if (
       last.email === id.email &&
