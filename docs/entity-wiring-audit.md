@@ -180,6 +180,32 @@ Privacy bonus: cross-viewer reads no longer leak Gmail addresses into client mem
 
 The legacy `:followerEmail`-shaped approve/decline URLs were generalized to `:follower` and accept either handle or email — a `resolveFollowerEmail(param)` helper handles both, picking the right edge from the store. Pinned by `services/social-svc/__tests__/follow-edge-projection.test.ts` (7 tests, including the exact Profile.tsx-style `target.toLowerCase() === handle.toLowerCase()` lookup).
 
+## Bug F — drift would have recurred without a recurring guarantee (2026-05-04)
+
+The previous fixes closed each individual gap, but the system had no auto-heal: if a user signed up via Google when social-svc was briefly unreachable from the SPA, they'd become a "ghost" again. Two new layers close that hole.
+
+### Layer 1 — inline fan-out from mem0 to social-svc
+
+`mem0/server/routers/google_auth.py` `/auth/google` now fires a fire-and-forget background POST to `<SOCIAL_SVC_URL>/v1/social/admin/profiles/upsert` after issuing the session token, carrying the Google identity (`email`, `name`, `picture`). Idempotent on the receiving side. Never blocks the signin response. Skipped when `SOCIAL_SVC_URL` is unset (same-host setups).
+
+This guarantees that **every fresh Google signin lands a profile in social-svc with the correct full name and picture**, regardless of what the SPA does next. Pinned by `server/tests/test_google_auth_social_fanout.py` (6 tests).
+
+### Layer 2 — `POST /v1/social/admin/reconcile-from-mem0`
+
+A defensive periodic reconcile. social-svc reads mem0's `/v1/state/admin/users` (every user) and `/auth/admin/users` (password users with names) and idempotently upserts every email it finds. Designed to run on a `/schedule` cron — anything the inline fan-out missed (server down at signin time, multi-host network blip, manual user injection) self-heals on the next tick.
+
+Body: `{mem0Url, mem0AdminApiKey}`. Returns a diff report (`created`, `updated`, `skipped`, `errors`). A flaky mem0 returns an empty report rather than a 5xx so the cron keeps walking. Pinned by `services/social-svc/__tests__/reconcile-from-mem0.test.ts` (7 tests).
+
+### Layer 3 — `GET /auth/admin/users` on mem0
+
+For password-registered users, mem0's `auth.users` table carries the `name` field that's missing from `user_state`. New endpoint exposes `[{email, name, role, created_at, last_login_at}]` (admin-only, dual-credential gate matching `/v1/state/admin/users`). The reconcile endpoint joins this in to fill `fullName`.
+
+Google users still rely on Layer 1 for names — the Google identity is ephemeral (session-token only), never persisted in mem0's tables.
+
+### Combined guarantee
+
+> Every new Google signin lands a complete profile in social-svc within milliseconds (Layer 1). If anything goes wrong, the next reconcile tick repairs it (Layer 2 + 3). If a user signed up before any of this shipped, the next time they sign in either path picks them up.
+
 ## Recommended next steps
 
 1. **Schema-level pinning**: move handle generation into a single source-of-truth file shared by both packages (e.g. via a workspace package). Today the duplication is enforced by tests; tomorrow it should be a single import.
