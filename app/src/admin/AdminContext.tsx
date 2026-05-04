@@ -108,6 +108,17 @@ interface Ctx {
    * rebound on the next refetch.
    */
   wipeRealUserState: (id: string) => Promise<boolean>;
+  /**
+   * Permanent removal: cascades the delete across mem0 (user_state,
+   * memories, auth.users) AND social-svc (profile + follow/block/event
+   * cascade) via mem0's `/v1/state/admin/users/{email}/cascade` route.
+   * Returns `{ ok: true, steps }` on success — `steps` is mem0's
+   * structured per-store report (rendered in the admin row's toast).
+   *
+   * Distinct from `wipeRealUserState` (= reset-progress only). On the
+   * removed user's next sign-in, fresh onboarding kicks in.
+   */
+  cascadeRemoveRealUser: (id: string) => Promise<{ ok: boolean; steps?: string }>;
   setConfig: (mutate: (cfg: AdminConfig) => AdminConfig) => void;
   bootstrapAdmin: (email: string) => void;
   addAdmin: (email: string) => boolean;
@@ -410,6 +421,42 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     [config.serverAuth.mem0Url, player.serverSession?.token, player.identity?.email]
   );
 
+  const cascadeRemoveRealUser = useCallback(
+    async (id: string): Promise<{ ok: boolean; steps?: string }> => {
+      // **Permanent removal** — fans across mem0 (user_state, memories,
+      // auth.users) AND social-svc (profile + follow/block/event cascade).
+      // The user's next sign-in starts a brand-new onboarding flow.
+      // Distinct from `wipeRealUserState` (= reset-progress only).
+      if (!id.startsWith("mem0:")) return { ok: false };
+      const email = id.slice("mem0:".length);
+      const token = player.serverSession?.token;
+      const base = config.serverAuth.mem0Url;
+      if (!token || !base) {
+        throw new Error(
+          "cascade-remove requires a session JWT and serverAuth.mem0Url — neither is set."
+        );
+      }
+      if (player.identity?.email?.toLowerCase() === email.toLowerCase()) {
+        throw new Error(
+          "Refusing to cascade-remove the currently signed-in admin."
+        );
+      }
+      const url = `${base}/v1/state/admin/users/${encodeURIComponent(email)}/cascade`;
+      const r = await fetch(url, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        throw new Error(`HTTP ${r.status}${txt ? ` — ${txt.slice(0, 200)}` : ""}`);
+      }
+      const body = (await r.json().catch(() => ({}))) as { message?: string };
+      setRealUsersRefreshKey((k) => k + 1);
+      return { ok: true, steps: body.message };
+    },
+    [config.serverAuth.mem0Url, player.serverSession?.token, player.identity?.email]
+  );
+
   const sendTemplateToUser = useCallback(
     (userId: string, templateId: EmailTemplateId, extraVars: Record<string, string | number> = {}) => {
       const user = mockUsers.find((u) => u.id === userId);
@@ -641,6 +688,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       realUserCount,
       realUsersError,
       wipeRealUserState,
+      cascadeRemoveRealUser,
       setConfig,
       bootstrapAdmin,
       addAdmin,
@@ -661,6 +709,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       realUserCount,
       realUsersError,
       wipeRealUserState,
+      cascadeRemoveRealUser,
       setConfig,
       bootstrapAdmin,
       addAdmin,

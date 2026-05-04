@@ -1357,19 +1357,39 @@ export function createApp(opts: AppOpts) {
         }
       };
 
-      // user_state holds emails for everyone (Google + password).
-      const stateRes = await fetchJson<{ recent: { email: string }[] }>(
-        "/v1/state/admin/users",
-      );
-      // auth.users only has password-registered users — but for those it
-      // carries `name`, which we want to merge into fullName.
+      // /v1/state/admin/users now (post mem0 #21) carries the persisted
+      // Google identity per user — `display_name` and `picture_url`
+      // populated on every /auth/google signin. We pick them up from
+      // here as the primary source.
+      const stateRes = await fetchJson<{
+        recent: {
+          email: string;
+          display_name?: string | null;
+          picture_url?: string | null;
+        }[];
+      }>("/v1/state/admin/users");
+      // auth.users carries `name` for password-registered users (no
+      // overlap with Google users — those don't insert into the table).
+      // Used as a secondary source so a single reconcile call covers
+      // both signin paths.
       const authRes = await fetchJson<{
         users: { email: string; name?: string }[];
       }>("/auth/admin/users");
 
       const namesByEmail = new Map<string, string>();
+      const picturesByEmail = new Map<string, string>();
+      for (const u of stateRes?.recent ?? []) {
+        if (u.email && u.display_name) {
+          namesByEmail.set(u.email.toLowerCase(), u.display_name);
+        }
+        if (u.email && u.picture_url) {
+          picturesByEmail.set(u.email.toLowerCase(), u.picture_url);
+        }
+      }
       for (const u of authRes?.users ?? []) {
-        if (u.email && u.name) namesByEmail.set(u.email.toLowerCase(), u.name);
+        if (u.email && u.name && !namesByEmail.has(u.email.toLowerCase())) {
+          namesByEmail.set(u.email.toLowerCase(), u.name);
+        }
       }
 
       const created: string[] = [];
@@ -1383,15 +1403,19 @@ export function createApp(opts: AppOpts) {
         if (!email) continue;
         try {
           const fullName = namesByEmail.get(email);
-          const before = !!store.getProfileByEmail(email);
-          const out = upsertProfileFromIdentity({ email, fullName });
+          const pictureUrl = picturesByEmail.get(email);
+          const profileBefore = store.getProfileByEmail(email);
+          const willPatch =
+            !!profileBefore &&
+            ((fullName && !profileBefore.fullName) ||
+              (pictureUrl && !profileBefore.pictureUrl));
+          const out = upsertProfileFromIdentity({ email, fullName, pictureUrl });
           if (!out) {
             errors.push({ email, err: "invalid_email" });
             continue;
           }
           if (out.created) created.push(email);
-          else if (!before) errors.push({ email, err: "post_state_drift" });
-          else if (fullName && !before) updated.push(email);
+          else if (willPatch) updated.push(email);
           else skipped.push(email);
         } catch (e) {
           errors.push({ email, err: (e as Error).message });

@@ -206,6 +206,31 @@ Google users still rely on Layer 1 for names — the Google identity is ephemera
 
 > Every new Google signin lands a complete profile in social-svc within milliseconds (Layer 1). If anything goes wrong, the next reconcile tick repairs it (Layer 2 + 3). If a user signed up before any of this shipped, the next time they sign in either path picks them up.
 
+## Bug G — identity drift after session expiry + sparse stream cold-start + admin "wipe" was unclear (2026-05-04)
+
+Three deferred items shipped together. They share a theme: the platform's "every user has a real, permanent profile" property had three thin spots.
+
+### G.1 — Persist Google name + avatar on user_state
+
+Pre-fix, the Google identity (name + picture) lived only in the session JWT, which expires every 7 days. Once expired, mem0 had no record — so the reconcile path could only fill `fullName` for *password-registered* users (via `/auth/admin/users`). Google users got `displayName: "Danshtr"` (title-cased handle) until they re-signed in.
+
+Fix (mem0 PR #21): Alembic migration `009` adds nullable `display_name` + `picture_url` columns to `user_states`. `/auth/google` upserts these on every signin via a new `upsert_user_identity()` helper. `GET /v1/state/admin/users` projection returns both. Reconcile (LearnAI #128 extended) picks them up — Google users now backfill deterministically without needing to log in again.
+
+### G.2 — Stream cold-start with follow-suggestions
+
+When the Stream returned `[]` AND the admin hadn't enabled mock cards, the empty state was a dead "Find people on Boards" wall. Now: when the feed is empty, the Stream fetches `getBoard("global", "week")` minus `listFollowing()` and renders up to 6 follow candidates inline. Each row has a `+ Follow` button that optimistically removes the candidate after a successful follow. The mock-cards path (gated by `showDemoData`) is unchanged.
+
+### G.3 — Admin "Reset progress" vs "Remove permanently" — clear semantics
+
+User feedback: *"there is a 'wipe server state', but not clear what this action does."* The single button conflated two operationally distinct intents.
+
+| Action | Endpoint | What it touches |
+|---|---|---|
+| **Reset progress** | `DELETE /v1/state/admin/users/{email}` | mem0 user_state row only. **Memories, social profile, follow graph stay.** |
+| **Remove permanently** *(new)* | `DELETE /v1/state/admin/users/{email}/cascade` | **All four**: mem0 user_state + memories + auth.users + social-svc (profile + follows + blocks + events) |
+
+mem0's cascade endpoint returns a structured `steps` map per store; the SPA's `AdminUsers` panel renders it in a confirmation alert so the operator sees exactly which deletes succeeded. The "Reset progress" button's tooltip + confirmation dialog were also rewritten to spell out what stays untouched and to point at "Remove permanently" as the alternative.
+
 ## Recommended next steps
 
 1. **Schema-level pinning**: move handle generation into a single source-of-truth file shared by both packages (e.g. via a workspace package). Today the duplication is enforced by tests; tomorrow it should be a single import.
