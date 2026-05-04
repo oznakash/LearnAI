@@ -79,6 +79,18 @@ The current `src/store.ts` is a pure-memory + JSON-file implementation. To swap 
 
 Operationally, mem0 already runs on Fly.io with its own Postgres; social-svc's deploy will mirror that with an additional Postgres instance + `Dockerfile` (lands with the proxy PR).
 
+## Hidden / dogfooding accounts
+
+Internal QA personas (see [`../../docs/test-personas.md`](../../docs/test-personas.md)) live on a hard-coded allowlist in [`src/hidden-accounts.ts`](src/hidden-accounts.ts). They never appear on public surfaces:
+
+- `GET /u/:handle` SSR returns a 404 page.
+- `GET /sitemap.xml` excludes them.
+- `GET /v1/social/profiles/:handle` returns 404 for cross-viewer reads (the persona's own session still resolves their profile).
+- `GET /v1/social/boards/:scope` filters them out of every leaderboard scope.
+- `GET /v1/social/stream` drops events authored by them.
+
+The same allowlist exists at `app/src/lib/hidden-accounts.ts` for client-side filtering. `__tests__/hidden-accounts.test.ts` cross-reads both files and fails CI if the persona sets diverge.
+
 ## What this service does **not** do
 
 - No cognition — memories live in mem0.

@@ -44,6 +44,7 @@ import {
   UploadError,
   type ImageKind,
 } from "./uploads.js";
+import { isHiddenAccount } from "./hidden-accounts.js";
 
 interface AppOpts {
   store: Store;
@@ -362,6 +363,14 @@ export function createApp(opts: AppOpts) {
       res.status(404).type("text/html; charset=utf-8");
       return res.send(renderNotFoundHtml(raw, ssrOrigin(req)));
     }
+    // Internal QA personas (`docs/test-personas.md`) are SSR-invisible
+    // even if a viewer types the URL directly. Owner views still go
+    // through the SPA at runtime; only the unauthenticated SSR path is
+    // gated here.
+    if (isHiddenAccount(profile.email)) {
+      res.status(404).type("text/html; charset=utf-8");
+      return res.send(renderNotFoundHtml(raw, ssrOrigin(req)));
+    }
     const aggregate = store.getAggregate(profile.email);
     res.status(200).type("text/html; charset=utf-8");
     // Short cache so updates land within a minute on share-link refreshes
@@ -379,7 +388,12 @@ export function createApp(opts: AppOpts) {
   app.get("/sitemap.xml", (req, res) => {
     res.status(200).type("application/xml; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
-    return res.send(renderSitemapXml(store.listProfiles(), ssrOrigin(req)));
+    // Sitemap reflects the *public* set; QA personas (`docs/test-personas.md`)
+    // never enter search-engine indices.
+    const visibleProfiles = store
+      .listProfiles()
+      .filter((p) => !isHiddenAccount(p.email));
+    return res.send(renderSitemapXml(visibleProfiles, ssrOrigin(req)));
   });
 
   // -- /me -----------------------------------------------------------------
@@ -649,6 +663,15 @@ export function createApp(opts: AppOpts) {
     if (store.isBlockedEitherWay(me.email, target.email)) {
       return res.status(404).json({ error: "not_found" });
     }
+    // Internal QA persona (`docs/test-personas.md`): only the owner can
+    // resolve their own profile; everyone else gets a 404 — matches what
+    // the SPA does for cross-viewers.
+    if (
+      isHiddenAccount(target.email) &&
+      target.email.toLowerCase() !== me.email.toLowerCase()
+    ) {
+      return res.status(404).json({ error: "not_found" });
+    }
     // Closed-mode: only self and approved followers see the full payload.
     if (target.profileMode === "closed" && me.email !== target.email) {
       const edge = store.getFollow(me.email, target.email);
@@ -850,6 +873,7 @@ export function createApp(opts: AppOpts) {
       self: 0,
       blocked: 0,
       banned: 0,
+      hidden: 0,
       ageBandMismatch: 0,
       notFollowing: 0,
       closedProfile: 0,
@@ -860,6 +884,9 @@ export function createApp(opts: AppOpts) {
       if (lc === meLc) { drops.self++; return false; }
       if (blocked.has(lc)) { drops.blocked++; return false; }
       if (p.banned || p.bannedSocial) { drops.banned++; return false; }
+      // Internal QA personas are filtered before any sort/limit work —
+      // they never appear on the leaderboard for any viewer.
+      if (isHiddenAccount(p.email)) { drops.hidden++; return false; }
       if (meIsKid !== (p.ageBand === "kid")) { drops.ageBandMismatch++; return false; }
       if (followingApproved) {
         if (!followingApproved.has(lc)) { drops.notFollowing++; return false; }
@@ -923,6 +950,10 @@ export function createApp(opts: AppOpts) {
         if (lc === me.email.toLowerCase()) return false;
         if (blocked.has(lc)) return false;
         if (mutedAuthors.has(lc)) return false;
+        // Internal QA personas (`docs/test-personas.md`): never surface
+        // their stream events to anyone (including themselves; we already
+        // filter self events above for layout reasons).
+        if (isHiddenAccount(e.email)) return false;
         const author = store.getProfileByEmail(e.email);
         if (!author || author.banned || author.bannedSocial) return false;
         // Kid isolation: adult viewers never see kid authors; kid viewers

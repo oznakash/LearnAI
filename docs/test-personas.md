@@ -96,16 +96,29 @@ explicitly testing the kid/teen surface.
 
 ## Future work
 
-- **Mirror the allowlist into social-svc.** The SPA-side allowlist filters
-  every client-rendered surface. To make the hide-completely guarantee
-  fully end-to-end, the social-svc backend should also reject reads that
-  resolve to a hidden email so a determined viewer typing `/u/<handle>`
-  directly can't bypass the SPA filter on a future server-rendered route.
-  Tracked here, not yet built.
 - **Per-environment hiding.** Today the allowlist is a hard-coded module
-  constant. As the persona list grows we can move it behind an admin
-  config flag so prod hides them and a dev fork can include them for
-  end-to-end tests.
+  constant on both sides. As the persona list grows we can move it
+  behind an admin config flag so prod hides them and a dev fork can
+  include them for end-to-end tests.
+
+## Done — server-side mirror (2026-05-04)
+
+The allowlist is now mirrored in
+[`services/social-svc/src/hidden-accounts.ts`](../services/social-svc/src/hidden-accounts.ts)
+and gates four entry points on the sidecar:
+
+| Entry point | Behavior for a hidden persona |
+|---|---|
+| `GET /u/:handle` (SSR HTML) | Renders the not-found page, regardless of viewer auth. |
+| `GET /sitemap.xml` | The persona's URL is omitted from the sitemap. |
+| `GET /v1/social/profiles/:handle` | Cross-viewer requests get `404`; the owner still sees their own profile (so the FTUE owner-view works). |
+| `GET /v1/social/boards/:scope` | Persona is dropped before any sort/limit work — never appears on global, topic, or following boards. |
+| `GET /v1/social/stream` | Stream events authored by hidden personas are filtered out for every viewer. |
+
+Sidecar tests (`services/social-svc/__tests__/hidden-accounts.test.ts`)
+cross-check that both allowlists describe the same persona set so
+adding a new persona to one side and forgetting the other fails CI
+loudly.
 
 ---
 

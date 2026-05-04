@@ -282,6 +282,7 @@ Each PR independently mergeable, each with new Vitest coverage, each verified li
 
 - **2026-05-01** — Doc created. 10-item active queue defined. Three items from [`growth-plan-cpo-q1.md`](./growth-plan-cpo-q1.md) (Daily Pulse, Cohort Quests, full Build Loop) deferred. Two items carried (Cold-Start Aha, Spark Cards). Cohort Quests deferred because cohorts need an aha to recruit into; will return after the paired-onboarding mechanic in #8 ships and we see what the inviter→invitee curve looks like.
 - **2026-05-03** — Slot 6 moved from 📅 to 🟡 partial. Entry-point skill branching now lands a self-reported "explorer" on Level 2 of a fresh topic instead of forcing them through Level 1 ("AI is pattern, not magic") — the single biggest fit-misalignment surfaced by the Maya FTUE pass in [`test-personas.md`](./test-personas.md). Per-Spark `bodyByLevel` content branching still pending. Same PR also lands the goal→topic alias map (Maya's "Become an AI PM" goal now correctly resolves to `ai-pm` instead of falling through to `interests[0]`), the Onboarding name-prefill sanitizer, and the hidden-account allowlist that filters QA personas from every public surface.
+- **2026-05-04** — Server-side mirror of the hidden-account allowlist landed in `services/social-svc`. SSR `/u/:handle`, sitemap, profile API, leaderboard, and stream all gate on the persona email — closes the "type the URL directly" hole the SPA-only allowlist left open. Both allowlists are now cross-checked in CI so adding a persona to one side without the other fails the test suite.
 
 ---
 
