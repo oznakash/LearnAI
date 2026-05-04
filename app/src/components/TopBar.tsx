@@ -74,9 +74,15 @@ export function TopBar({ onNav }: { onNav: (v: View) => void }) {
             {memoryBadge.emoji}
           </button>
           <button
-            onClick={() => onNav({ name: "settings" })}
+            onClick={() =>
+              // Avatar tap → profile editor (the unified "this is who I am"
+              // surface), not Settings. Settings is reachable from a small
+              // ⚙ link inside the editor; see docs/profile.md §3.
+              onNav({ name: adminCfg.flags.socialEnabled ? "network" : "settings" })
+            }
             className="ml-1 w-9 h-9 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-white font-bold ring-2 ring-white/10 hover:ring-accent/60 transition"
             title={state.identity?.email ?? "Profile"}
+            aria-label="Open my profile"
           >
             {state.identity?.picture ? (
               // eslint-disable-next-line @next/next/no-img-element

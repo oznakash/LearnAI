@@ -21,6 +21,7 @@
 | [`social-mvp-engineering.md`](./social-mvp-engineering.md) | Sister doc to the social PRD · Postgres-2 schema · `SocialService` contract · auth-verifying proxy · tests · rollout · risk register | Implementing the social MVP in a single PR. |
 | [`social-mvp-status.md`](./social-mvp-status.md) | Sprint-2 changelog (9 PRs) · open P0/P1 punch list from the post-merge review · what Sprint 2.5 closes | Anyone shipping Sprint 2.5 or asking "is the social layer production-ready?" |
 | [`profile-enhancements.md`](./profile-enhancements.md) | Three additive lifts on top of the public-profile MVP — Public/Private terminology, profile completeness gauge, native-share, per-profile SEO + JSON-LD | Touching `Profile.tsx`, `Network.tsx`, `Settings.tsx`, or anything in `app/src/profile/`. |
+| [`profile.md`](./profile.md) | **The senior-PM contract for profiles.** Five jobs · users' mental model · interests-+-signals merge into Topics · identity consistency rules · five growth levers · UX checklist · anti-patterns · implementation map | Read **first** before touching `Network.tsx`, `Settings.tsx`, the TopBar avatar, or any naming / discoverability surface. |
 
 ## Technical & operator
 

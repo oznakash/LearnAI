@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { PlayerProvider } from "../store/PlayerContext";
 import { AdminProvider } from "../admin/AdminContext";
 import { MemoryProvider } from "../memory/MemoryContext";
@@ -83,5 +83,73 @@ describe("TopBar honors admin branding (no hardcoded BuilderQuest/BQ)", () => {
     // "BQ" might appear inside an attribute or longer string — check it's
     // not the visible 2-letter logo, which would be its own text node.
     expect(screen.queryByText(/^BQ$/)).toBeNull();
+  });
+});
+
+describe("TopBar avatar tap routes to the unified profile editor", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  // The avatar is the highest-affinity "this is me" surface in the shell.
+  // Tapping it should land on the profile editor (`/network`) when social
+  // is enabled — not the operational Settings dump. See `docs/profile.md`
+  // §3.
+  it("with social enabled, avatar tap navigates to /network", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        identity: { email: "alex@gmail.com", name: "Alex", provider: "google" },
+      }),
+    );
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ flags: { socialEnabled: true } }),
+    );
+    let target: { name: string } | null = null;
+    render(
+      <PlayerProvider>
+        <AdminProvider>
+          <MemoryProvider>
+            <TopBar onNav={(v) => { target = v as { name: string }; }} />
+          </MemoryProvider>
+        </AdminProvider>
+      </PlayerProvider>,
+    );
+    await settle();
+    const avatarButton = screen.getByRole("button", { name: /Open my profile/i });
+    fireEvent.click(avatarButton);
+    expect(target).not.toBeNull();
+    expect(target!.name).toBe("network");
+  });
+
+  // Fallback: if the operator has social off, there's nowhere to go but
+  // Settings. Don't strand the user.
+  it("with social disabled, avatar tap falls back to /settings", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        identity: { email: "alex@gmail.com", name: "Alex", provider: "google" },
+      }),
+    );
+    localStorage.setItem(
+      ADMIN_STORAGE_KEY,
+      JSON.stringify({ flags: { socialEnabled: false } }),
+    );
+    let target: { name: string } | null = null;
+    render(
+      <PlayerProvider>
+        <AdminProvider>
+          <MemoryProvider>
+            <TopBar onNav={(v) => { target = v as { name: string }; }} />
+          </MemoryProvider>
+        </AdminProvider>
+      </PlayerProvider>,
+    );
+    await settle();
+    const avatarButton = screen.getByRole("button", { name: /Open my profile/i });
+    fireEvent.click(avatarButton);
+    expect(target).not.toBeNull();
+    expect(target!.name).toBe("settings");
   });
 });

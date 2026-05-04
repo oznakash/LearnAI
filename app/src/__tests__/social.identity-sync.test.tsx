@@ -253,11 +253,11 @@ describe("Cross-view identity audit — every surface shows the same player", ()
     expect(screen.getByText(MAYA.email)).toBeTruthy();
   });
 
-  it("Network — 'View my public profile' CTA carries the canonical handle", async () => {
+  it("Network — 'View public profile' CTA carries the canonical handle", async () => {
     mountWithProviders(<Network onNav={() => {}} />);
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /View my public profile/i }),
+        screen.getByRole("button", { name: /View public profile/i }),
       ).toBeTruthy();
     });
   });
