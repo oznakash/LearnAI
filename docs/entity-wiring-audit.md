@@ -122,11 +122,45 @@ Cleanup actions taken during the audit:
 
 Post-cleanup: mem0 has 8 real users, social-svc has 8 matching profiles. The leaderboard reflects 7 visible peers + the viewer.
 
+## Bug C — `/u/<handle>` refresh dropped the SPA (2026-05-04)
+
+A second walk-through surfaced three more entries that all ladder to one root cause.
+
+### Symptoms (numbered as the user reported them)
+
+- **#4a** "Follow doesn't persist when I refresh the profile page."
+- **#4b** "After refresh I see the public version of the profile, not my own logged-in view."
+- **#5** "Browser back doesn't work from a profile page."
+
+### Root cause
+
+`nginx.conf` routes every `/u/<handle>` request to social-svc, which serves a server-rendered HTML page targeted at SEO bots and link-unfurlers. That page is **standalone** — it has no `<script type="module" src="/assets/...">` tag, no `<div id="root">`, no SPA bundle. When a signed-in human refreshes on `/u/danshtr`, their browser receives a static HTML page with no JavaScript, no TopBar/TabBar, no follow button, and no pushState history. The follow they just made is still in social-svc's store, but the SSR page has no way to read it. Browser back has nothing to go back to.
+
+A `curl /u/danshtr | grep '<script'` on prod showed only the JSON-LD schema tag — confirming the bundle was missing.
+
+### Fix
+
+`services/social-svc/src/ssr.ts` reads the SPA's `dist/index.html` once at module load via `getSpaAssets()`, extracts every `<script type="module" src="/assets/...">` and `<link rel="stylesheet" href="/assets/...">` tag emitted by Vite, and caches the result. A new `injectSpaHydration(html, assets)` final-string transform:
+
+1. Inserts the CSS link into `<head>` so the React tree doesn't flash unstyled.
+2. Wraps the existing `<body>` inner content in `<div id="root">` so the SPA's `createRoot(...)` mounts at the right node.
+3. Appends the JS module before `</body>`.
+
+Both `renderProfileHtml` and `renderNotFoundHtml` now run their output through this transform. Anonymous bots without a JS engine still index the SSR keywords directly — no SEO regression. Pinned by `services/social-svc/__tests__/ssr-hydration.test.ts` (7 tests, including a "no-op when index.html is missing" fallback).
+
+In production the path is `/usr/share/nginx/html/index.html` (per the Dockerfile). For tests / forks the `LEARNAI_SPA_INDEX` env var overrides.
+
+### Issue 1 — leaderboard shows handles, not full names
+
+`resolveDisplayName` returns `fullName` only when `showFullName` is true; otherwise falls back to first-name-only or, if no `fullName` exists at all, the title-cased handle. New profiles created via `requireUser` (lazy-create) and via the admin upsert defaulted to `showFullName: false` — too restrictive for the social fabric the leaderboard is part of. **Default flipped to `true`**; users can still toggle it off in Settings → Network for a privacy-first view. The `fullName` itself populates on the next sign-in via the `ensureProfile` + `updateProfile` chain landed in PR #125.
+
 ## Recommended next steps
 
 1. **Schema-level pinning**: move handle generation into a single source-of-truth file shared by both packages (e.g. via a workspace package). Today the duplication is enforced by tests; tomorrow it should be a single import.
 2. **Per-environment hidden-account flag** (deferred from `docs/test-personas.md`).
 3. **A "mem0 ↔ social-svc reconcile" admin job** that periodically diffs the two user sets and emits a metric. Until #1 lands, drift is the enemy.
+4. **mem0 admin endpoint that exposes `auth.users` (email + name)** so social-svc can backfill `fullName` for users created without it (the 6 stranded users from this audit). Today they auto-populate on next sign-in; an explicit reconcile path would close the loop deterministically.
+5. **Stream empty-state polish** — surface follow-suggestions when `[]` is returned. Working as designed today (no foreign events) but the cold-start experience could nudge harder.
 
 ## See also
 

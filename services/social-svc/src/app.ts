@@ -211,7 +211,14 @@ export function createApp(opts: AppOpts) {
         displayFirst: handle.charAt(0).toUpperCase() + handle.slice(1),
         ageBand: "adult",
         profileMode: "open",
-        showFullName: false,
+        // Default to showing the user's full name on public surfaces.
+        // The leaderboard / Stream / `/u/<handle>` are the primary
+        // discovery seams of LearnAI's social fabric — surfacing
+        // "Dan Shtr" instead of "Dan" or "Danshtr" matches the
+        // operator's intent of "social by default." Users can flip
+        // this off in Settings → Network for a privacy-first view.
+        // See `docs/entity-wiring-audit.md` Issue #1.
+        showFullName: true,
         showCurrent: true,
         showMap: true,
         showActivity: true,
@@ -1181,7 +1188,9 @@ export function createApp(opts: AppOpts) {
           displayFirst: handle.charAt(0).toUpperCase() + handle.slice(1),
           ageBand: "adult",
           profileMode: "open",
-          showFullName: false,
+          // Match the lazy-create default — see `requireUser` above
+          // and `docs/entity-wiring-audit.md` Issue #1.
+          showFullName: true,
           showCurrent: true,
           showMap: true,
           showActivity: true,

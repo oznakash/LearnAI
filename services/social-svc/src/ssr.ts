@@ -31,12 +31,147 @@
 //   - `<details>` collapsibles keep the layout tight while still
 //     surfacing keyword-rich content to bots that read the full DOM.
 
+import * as fs from "node:fs";
 import type { ProfileRecord, AggregateRecord } from "./types.js";
 import { getTopicSnippet, TOPIC_SNIPPETS } from "./topic-snippets.js";
+import { log } from "./log.js";
 
 const SITE_NAME = "LearnAI";
 const SITE_TAGLINE = "The AI-native learning network for builders.";
 const DEFAULT_OG_IMAGE = "https://learnai.cloud-claude.com/og.png";
+
+// -- SPA hydration --------------------------------------------------------
+//
+// Why this matters. nginx routes `/u/<handle>` to social-svc so crawlers
+// and link-unfurlers get a server-rendered HTML they can read. Without
+// hydration, a SIGNED-IN human refreshing on `/u/<handle>` would see the
+// same bare SSR — no TopBar, no TabBar, no Follow button, no SPA
+// pushState history. The leaderboard's "back" button stops working,
+// follow status appears unset, and the page looks frozen.
+//
+// Fix: read the SPA's `index.html` once at module load, extract the
+// hashed `<script type="module">` and `<link rel="stylesheet">` tags
+// emitted by Vite, and inject them into every SSR page. The SPA
+// bundle then loads on top of the pre-rendered DOM, mounts to
+// `<div id="root">` (which we wrap the SSR body content in), and
+// React replaces the static tree with the live, signed-in version.
+// Bots without a JS engine still index the SSR content directly —
+// no SEO regression.
+//
+// Injection is idempotent and cached. If `index.html` isn't found
+// (e.g. tests, dev runs against a bare social-svc), the helpers
+// return empty strings and the SSR shape is unchanged.
+
+interface SpaAssets {
+  /** `<link rel="stylesheet">` tag(s) from the SPA's index.html, joined. */
+  cssTags: string;
+  /** `<script type="module">` tag(s) from the SPA's index.html, joined. */
+  jsTags: string;
+}
+
+let cachedAssets: SpaAssets | null = null;
+
+/**
+ * Resolve where the SPA's `index.html` lives. In production it's at
+ * `/usr/share/nginx/html/index.html` (set by the Dockerfile). In tests
+ * we never read it. Override path via `LEARNAI_SPA_INDEX` for forks /
+ * non-standard layouts.
+ */
+function spaIndexPath(): string {
+  return (
+    process.env.LEARNAI_SPA_INDEX || "/usr/share/nginx/html/index.html"
+  );
+}
+
+/**
+ * Read + parse the SPA index, caching the result. Safe to call
+ * repeatedly — opens the file at most once. Returns empty tags when
+ * the file is missing or unparseable so the SSR caller gracefully
+ * degrades to the pre-fix behavior.
+ */
+export function getSpaAssets(): SpaAssets {
+  if (cachedAssets) return cachedAssets;
+  cachedAssets = loadSpaAssets(spaIndexPath());
+  return cachedAssets;
+}
+
+/** Reset the cache. Test-only seam. */
+export function _resetSpaAssetsCache(): void {
+  cachedAssets = null;
+}
+
+function loadSpaAssets(indexPath: string): SpaAssets {
+  let html = "";
+  try {
+    html = fs.readFileSync(indexPath, "utf8");
+  } catch (err) {
+    log.warn("ssr_spa_index_missing", {
+      path: indexPath,
+      err: (err as NodeJS.ErrnoException).code ?? String(err),
+    });
+    return { cssTags: "", jsTags: "" };
+  }
+  // Vite emits one or two of each. Pull every <script type="module"> and
+  // every <link rel="stylesheet"> that points at /assets/. Other link tags
+  // (favicon, etc.) are already in our SSR head — don't duplicate.
+  const cssTags = extractTags(html, /<link[^>]+rel="stylesheet"[^>]+href="\/assets\/[^"]+"[^>]*>/g);
+  const jsTags = extractTags(html, /<script[^>]+type="module"[^>]+src="\/assets\/[^"]+"[^>]*><\/script>/g);
+  if (!cssTags && !jsTags) {
+    log.warn("ssr_spa_index_no_assets", { path: indexPath, htmlBytes: html.length });
+  }
+  return { cssTags, jsTags };
+}
+
+function extractTags(html: string, re: RegExp): string {
+  const tags = html.match(re) ?? [];
+  return tags.join("\n  ");
+}
+
+/**
+ * Final-HTML transform that:
+ *   1. Injects the SPA's hashed `<link rel="stylesheet">` tag into
+ *      `<head>` so SPA-styled components don't flash unstyled when
+ *      React hydrates over the SSR body.
+ *   2. Wraps the existing `<body>` inner content in `<div id="root">`
+ *      so the SPA's `createRoot(document.getElementById("root"))` has
+ *      a mount point. React then replaces the SSR content with the
+ *      live, signed-in tree (TopBar, TabBar, follow status, history-
+ *      aware back).
+ *   3. Appends the SPA's `<script type="module">` tag(s) before
+ *      `</body>` so the bundle loads in module order without blocking
+ *      the SSR first-paint.
+ *
+ * Pure string transform — caller is responsible for the assets via
+ * {@link getSpaAssets}. When assets are empty (test runs, missing
+ * dist/), the input is returned with the `<div id="root">` wrap only,
+ * so an offline test can still assert the mount-point is present.
+ */
+export function injectSpaHydration(html: string, assets: SpaAssets): string {
+  let out = html;
+
+  // 1. CSS into head (idempotent — only inject if not already present).
+  if (assets.cssTags && !out.includes('rel="stylesheet" href="/assets/')) {
+    out = out.replace(/<\/head>/, `  ${assets.cssTags}\n</head>`);
+  }
+
+  // 2. Wrap body inner content in <div id="root">. Only re-wrap if no
+  //    existing #root div is in the body — guards against double-injection
+  //    if a future refactor renders #root inline.
+  if (!/<div\s+id="root"/.test(out)) {
+    out = out.replace(
+      /(<body[^>]*>)([\s\S]*?)(<\/body>)/,
+      (_match, openTag, inner, closeTag) =>
+        `${openTag}\n  <div id="root">${inner}</div>\n${closeTag}`,
+    );
+  }
+
+  // 3. Append JS module before </body>.
+  if (assets.jsTags && !out.includes('type="module" src="/assets/')) {
+    out = out.replace(/<\/body>/, `  ${assets.jsTags}\n</body>`);
+  }
+
+  return out;
+}
 
 export interface RenderOpts {
   profile: ProfileRecord;
@@ -173,18 +308,19 @@ export function renderProfileHtml(opts: RenderOpts): string {
         links: linkValues.length > 0 ? linkValues : undefined,
       });
 
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html lang="en">
 ${head}
 ${body}
 </html>`;
+  return injectSpaHydration(html, getSpaAssets());
 }
 
 /** Empty/404 page when the handle is unknown or banned. Still SEO-correct. */
 export function renderNotFoundHtml(handle: string, origin?: string): string {
   const o = origin || "https://learnai.cloud-claude.com";
   const safeHandle = escape(handle);
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html lang="en">
 ${renderHead({
   title: `@${handle} — not found · ${SITE_NAME}`,
@@ -205,6 +341,7 @@ ${renderHead({
   </main>
 </body>
 </html>`;
+  return injectSpaHydration(html, getSpaAssets());
 }
 
 // -- Section renderers ---------------------------------------------------
