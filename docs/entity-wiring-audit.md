@@ -233,11 +233,27 @@ mem0's cascade endpoint returns a structured `steps` map per store; the SPA's `A
 
 ## Recommended next steps
 
-1. **Schema-level pinning**: move handle generation into a single source-of-truth file shared by both packages (e.g. via a workspace package). Today the duplication is enforced by tests; tomorrow it should be a single import.
-2. **Per-environment hidden-account flag** (deferred from `docs/test-personas.md`).
-3. **A "mem0 ↔ social-svc reconcile" admin job** that periodically diffs the two user sets and emits a metric. Until #1 lands, drift is the enemy.
-4. **mem0 admin endpoint that exposes `auth.users` (email + name)** so social-svc can backfill `fullName` for users created without it (the 6 stranded users from this audit). Today they auto-populate on next sign-in; an explicit reconcile path would close the loop deterministically.
-5. **Stream empty-state polish** — surface follow-suggestions when `[]` is returned. Working as designed today (no foreign events) but the cold-start experience could nudge harder.
+The post-audit remediation work is tracked as **[Sprint 2.6 — Identity & operational hardening](./roadmap.md#sprint-26--identity--operational-hardening-new-follows-25)** in the roadmap. That sprint owns:
+
+| Priority | Item | Audit origin |
+|---|---|---|
+| P1 | Workspace package for `handles.ts` + `hidden-accounts.ts` (eliminate the SPA ↔ sidecar duplication) | Bug A / Bug B |
+| P1 | Backfill `display_name` for the 8 pre-#21 users (re-populates on next session refresh) | Bug G.1 |
+| P2 | `/auth/google` fan-out should also push initial `xp` / `streak` / `activity_14d` | Bug E |
+| P2 | Reconcile alert via email or Slack on `created > 0` or `errors > 0` | Bug E reliability |
+| P2 | Biweekly automated entity-wiring audit cron (catches regressions before the next manual audit) | This whole document |
+
+**Already shipped from prior versions of this list:**
+
+- ✅ mem0 `auth.users` admin endpoint (closed Bug F)
+- ✅ Reconcile cron + structured `created`/`updated`/`skipped`/`errors` payload (closed Bug E)
+- ✅ Stream empty-state with follow-suggestions (closed Bug G.2)
+- ✅ Persistent Google identity columns on `user_states` (closed Bug G.1 going forward)
+- ✅ Admin "Reset progress" vs "Remove permanently" split (closed Bug G.3)
+
+**Postponed to Sprint 5** (paired with the server-side content fetcher infrastructure):
+
+- Avatar re-host shim for `lh3.googleusercontent.com` URLs that rotate ~30 days after signin.
 
 ## See also
 
