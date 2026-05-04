@@ -147,9 +147,10 @@ describe("Network editor — Change-photo button opens the crop dialog", () => {
     await act(async () => {
       fireEvent.click(button);
     });
-    // Dialog mounted with the avatar copy.
+    // Dialog mounted with the avatar copy. The refined dialog uses
+    // "Crop your profile photo" as the aria-label / heading.
     const dialog = screen.getByRole("dialog");
-    expect(dialog.getAttribute("aria-label")).toMatch(/profile picture/i);
+    expect(dialog.getAttribute("aria-label")).toMatch(/profile photo/i);
     // Native file input is mounted (sr-only, identified by accept).
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null;
     expect(fileInput).toBeTruthy();
@@ -166,6 +167,6 @@ describe("Network editor — Change-photo button opens the crop dialog", () => {
       fireEvent.click(button);
     });
     const dialog = screen.getByRole("dialog");
-    expect(dialog.getAttribute("aria-label")).toMatch(/banner image/i);
+    expect(dialog.getAttribute("aria-label")).toMatch(/Crop your banner/i);
   });
 });
