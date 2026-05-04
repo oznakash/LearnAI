@@ -78,6 +78,35 @@ What landed (9 PRs, 287 tests):
 
 ---
 
+## Sprint 2.6 — Identity & operational hardening (NEW, follows 2.5)
+
+**Goal:** harden the cross-service identity guarantees from the entity-wiring audit ([`entity-wiring-audit.md`](./entity-wiring-audit.md)). Three months of accumulated drift surfaced as a single empty-leaderboard report; that audit closed seven bugs (A–G) plus added an inline mem0 → social-svc fan-out, a daily reconcile, and a cascade-delete admin path. This sprint closes the *next-most-likely-recurring* seams + the operator visibility gaps. None block production, but each is one fewer surprise the next time we do an audit.
+
+### P1 — refactor + identity backfill
+
+| # | Item | Why now |
+|---|---|---|
+| 2.6-1 | **Move `handles.ts` and `hidden-accounts.ts` into a shared workspace package** | Today both files are duplicated in `app/src/social/` and `services/social-svc/src/`, drift-protected by tests. Every new behavior added to handle generation needs both copies updated; the longer the duplication lives, the higher the chance of drift. Workspace package eliminates the duplication entirely. Pure refactor — drift tests delete; SPA + sidecar import from one place. |
+| 2.6-2 | **Backfill identity for the 8 existing users (`display_name` = NULL today)** | Sister problem to #21 in mem0 — that PR persists Google identity going forward, but the 8 users who signed up before it shipped have NULL `display_name` until they re-sign-in. They show as title-cased handles ("Hmatasmagen") on every public surface. Two viable paths: (a) email each user a "we improved profiles, please re-sign-in" link with one-click reauth; (b) extend `/auth/session` to refresh-and-persist on the existing JWT's next call. Option (b) is invisible to the user; pick that. |
+
+### P2 — operator surfaces + cold-start polish
+
+| # | Item | Why now |
+|---|---|---|
+| 2.6-3 | **`/auth/google` fanout also pushes initial xp/streak/14d snapshot** | Today the inline fan-out from mem0 → social-svc carries identity only. A fresh Google signin lands the profile in social-svc instantly, but xp / streak / activity_14d wait until the SPA's first `pushSnapshot`. Means the leaderboard / Stream presence is delayed by one navigation. Adding a server-side snapshot push closes the gap. |
+| 2.6-4 | **Reconcile alert wired to email or Slack on `created.length > 0` or `errors.length > 0`** | The daily reconcile cron alerts the operator's session today, which is silent unless the operator is watching. Wiring to mem0's existing email service (or Slack webhook) means drift gets surfaced within 24 hours, every time. Spec: only alert when non-zero — steady-state silent. |
+| 2.6-5 | **Biweekly automated entity-wiring audit cron** | The first audit was prompted by an "empty leaderboard" report. The fix landed but the system trusts that no future regression introduces a new seam. A scheduled audit run (every 14 days, separate from the daily reconcile) re-checks the invariants: every mem0 user has a social-svc profile, every profile has a `/u/<handle>` 200, no smoke-test profiles, no drift in handle gen. Outputs a delta report; alerts on anything non-empty. |
+
+### Postponed (decision: revisit at Sprint 5)
+
+| Item | Why deferred |
+|---|---|
+| Avatar re-host shim — `lh3.googleusercontent.com` URLs rotate ~30 days after signin and break avatar rendering | Not currently visible (no user reports). Pairs naturally with the image-hosting infrastructure work in Sprint 5 ("server-side content fetcher" already lives there). Move it to that sprint when fetched-content image hosting is being designed — they share the proxy-and-cache shape. |
+
+**Done when:** Sprint 2.6's five P1+P2 items land, the daily reconcile is silent for 14 consecutive runs, and the next entity-wiring audit (manual or automated) finds zero drift.
+
+---
+
 ## Sprint 3 — The community curriculum
 
 **Goal:** community-contributed Sparks, AI-assisted review, attribution. The curriculum starts compounding.
