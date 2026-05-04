@@ -17,6 +17,16 @@ Source: **`https://github.com/oznakash/learnai`**.
 - Game mechanics: XP (display name configurable in admin → Branding; default just "XP"), Focus (lives that regen every 18 min), Build Streak (daily), Guild Tiers (Builder → Architect → Visionary → Founder → Singularity), 14 Badges.
 - Anti-spam lock: each Spark can only award XP once (regression-tested).
 
+### "Today in AI" Pulse strip
+
+- Daily-trend strip on Home above the fold — admin-curated `PulseConfig` with up to 6 items.
+- Each item: 1-line headline, 2-3 line zoom-in body, optional source credit, optional Constellation deep-link.
+- **Tap-to-zoom** affordance (collapsed by default, expands on click), with "Start a Spark on this →" CTA that hands off to Play and writes a `preference` memory so the cognition layer picks up the interest.
+- **Audience-aware**: `audience: "kid" | "adult" | "all"` shapes who sees what — kids/teens skip adult-only frontier cards, adults skip kid-tone evergreens.
+- Coarse freshness chip (`Added today` / `Nd ago` / stale-grey) derived from `addedAt`.
+- Ships with 3 evergreen-but-current seed items so a fresh install isn't empty before the operator curates.
+- 100% offline — items live in admin localStorage; no network calls, no third-party trackers.
+
 ### Onboarding & personalization
 
 - **Role-aware 8-step wizard** (~90–120 seconds): name, **role**, age, **AI-fluency probe**, interests, daily minutes, goal, **first-Spark preview**.

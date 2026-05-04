@@ -193,6 +193,52 @@ export interface SocialConfig {
   };
 }
 
+/**
+ * "Today in AI" Pulse — short-form daily-trend strip on the Home view.
+ *
+ * Each `PulseItem` is a single 1-line trend headline + a 2-3 line
+ * zoom-in body + an optional `topicId` to deep-link into Play (so the
+ * trend → learning loop closes in one tap). Items are content, not code:
+ * an admin (or a future steward bot) edits the list in
+ * Admin → Content → Pulse to reflect what's hot today.
+ *
+ * The strip is age-band-aware:
+ *   - kids / teens see items tagged `audience: "all"` or `"kid"`
+ *   - adults see items tagged `audience: "all"` or `"adult"`
+ *
+ * Ships with 3 evergreen-but-current defaults so a brand-new install
+ * has something on Home. The vision pillar (#3) — "always current" —
+ * starts here without a backend.
+ *
+ * Privacy: the strip is rendered *entirely from admin localStorage*.
+ * No network calls, no third-party trackers, no external assets. The
+ * SPA's "works without backend" contract holds.
+ */
+export interface PulseItem {
+  /** Stable id — used for React keys and zoom-state. */
+  id: string;
+  /** ≤ 80 chars. The hot-trend one-liner. */
+  headline: string;
+  /** 2-3 short sentences. Shown when the user taps "Zoom in". */
+  body: string;
+  /** Optional source attribution (rendered as a small "via …" link). */
+  source?: { name: string; url: string };
+  /** Optional Constellation deep-link for the "Start a Spark" CTA. */
+  topicId?: TopicId;
+  /** Audience-shape — defaults to "all". Used to skip kid-inappropriate trends. */
+  audience?: "all" | "kid" | "adult";
+  /** ISO date the item was last reviewed. Drives the freshness chip. */
+  addedAt: string;
+}
+
+export interface PulseConfig {
+  /** Master switch for the Home pulse strip. Default: true. */
+  enabled: boolean;
+  /** Up to 6 items in the rotation. Strip shows the first N visible to
+   *  the player's age band; users can also "Show all". */
+  items: PulseItem[];
+}
+
 export interface MemoryConfig {
   /** Base URL of the self-hosted mem0 server (e.g. https://mem0.example.com). */
   serverUrl: string;
@@ -331,6 +377,8 @@ export interface AdminConfig {
   memoryConfig: MemoryConfig;
   socialConfig: SocialConfig;
   serverAuth: ServerAuthConfig;
+  /** "Today in AI" Pulse — daily-trend strip on Home. See {@link PulseConfig}. */
+  pulse: PulseConfig;
 }
 
 export interface QueuedEmail {

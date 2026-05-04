@@ -128,6 +128,14 @@ export function loadAdminConfig(): AdminConfig {
         },
       },
       serverAuth: { ...base.serverAuth, ...(parsed.serverAuth ?? {}) },
+      // Forward-compat for the Pulse strip introduced in #130. Saved
+      // configs from before pulse shipped get the seeded defaults filled
+      // in. Operator's own items + enabled flag win on collisions; if the
+      // operator has an empty list saved, we keep it empty (intentional).
+      pulse: {
+        enabled: parsed.pulse?.enabled ?? base.pulse.enabled,
+        items: parsed.pulse?.items ?? base.pulse.items,
+      },
     };
   } catch {
     return defaultAdminConfig();
