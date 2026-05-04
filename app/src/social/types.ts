@@ -21,6 +21,33 @@ export interface ProfileLinks {
   website?: string;
 }
 
+/**
+ * LinkedIn identity record. Mirrors `services/social-svc/src/types.ts`'s
+ * `LinkedinIdentity`; kept duplicated rather than shared because the
+ * SPA and sidecar are separate npm packages. See
+ * `docs/profile-linkedin.md` §2 for the two-bucket rationale.
+ */
+export interface LinkedinIdentity {
+  email: string;
+  visible: {
+    name: string;
+    givenName?: string;
+    familyName?: string;
+    pictureUrl?: string;
+    email?: string;
+  };
+  context: {
+    sub: string;
+    emailVerified?: boolean;
+    locale?: string;
+    emailDomain?: string;
+    pictureCdnHost?: string;
+    rawClaims?: Record<string, unknown>;
+    connectedAt: number;
+    refreshedAt: number;
+  };
+}
+
 /** Two values: discoverable to all (`open`), or gated by approval (`closed`). */
 export type ProfileMode = "open" | "closed";
 

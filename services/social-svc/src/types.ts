@@ -102,6 +102,48 @@ export type ReportReason =
   | "impersonation"
   | "other";
 
+/**
+ * LinkedIn identity record — stored 1:1 with `ProfileRecord` when a user
+ * has connected their LinkedIn. Two buckets, distinct semantics; see
+ * `docs/profile-linkedin.md` §2.
+ *
+ *   visible  — one-time grab on connect, seeded into ProfileRecord.
+ *              Snapshot kept here so we can offer "revert to LinkedIn"
+ *              and diff what the user has changed since connect.
+ *
+ *   context  — maximal capture; immutable by the user. Powers recs,
+ *              suggestions, share copy, the future verified-human
+ *              badge, and email-domain matching (our cold-start
+ *              substitute for the closed connections API).
+ */
+export interface LinkedinIdentity {
+  /** LearnAI account this LinkedIn is bound to (lowercased email). */
+  email: string;
+  visible: {
+    name: string;
+    givenName?: string;
+    familyName?: string;
+    pictureUrl?: string;
+    /** What LinkedIn says the primary email is. May differ from `email`. */
+    email?: string;
+  };
+  context: {
+    /** OIDC `sub` claim. Stable LinkedIn user ID; the dedup key. */
+    sub: string;
+    /** OIDC `email_verified`. Drives the future Verified-Human badge. */
+    emailVerified?: boolean;
+    locale?: string;
+    /** Derived from email — `oz@stripe.com` → `stripe.com`. */
+    emailDomain?: string;
+    /** Derived from picture URL host. */
+    pictureCdnHost?: string;
+    /** Frozen OIDC userinfo response. Source-of-truth re-derivation buffer. */
+    rawClaims?: Record<string, unknown>;
+    connectedAt: number;
+    refreshedAt: number;
+  };
+}
+
 export interface ReportRecord {
   id: number;
   reporter: string;

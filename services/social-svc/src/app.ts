@@ -46,6 +46,17 @@ import {
   type ImageKind,
 } from "./uploads.js";
 import { isHiddenAccount } from "./hidden-accounts.js";
+import {
+  buildAuthorizeUrl,
+  exchangeCodeForToken,
+  fetchUserInfo,
+  inMemoryNonceTracker,
+  projectUserInfo,
+  signStateToken,
+  verifyStateToken,
+  type LinkedinConfig,
+  type NonceTracker,
+} from "./linkedin.js";
 
 interface AppOpts {
   store: Store;
@@ -78,6 +89,21 @@ interface AppOpts {
    * `/data/uploads`. In tests, point at a tmp dir.
    */
   uploadsRoot?: string;
+  /**
+   * LinkedIn OIDC config. When `clientId` is empty the integration is
+   * **disabled** — the SPA's config probe returns `enabled: false` and
+   * falls back to the intent-capture CTA. Operator drops creds via the
+   * Cloud-Claude MCP to flip the switch. See `docs/profile-linkedin.md`.
+   */
+  linkedin?: Partial<LinkedinConfig>;
+  /**
+   * Where the SPA lives. Used to redirect back to `/network` after the
+   * OAuth callback (`?linkedin=connected` or `?linkedin=error&...`).
+   * Defaults to `/` (same-origin).
+   */
+  appOrigin?: string;
+  /** For tests. Defaults to `inMemoryNonceTracker()`. */
+  linkedinNonceTracker?: NonceTracker;
 }
 
 export function createApp(opts: AppOpts) {
@@ -97,6 +123,21 @@ export function createApp(opts: AppOpts) {
     .filter(Boolean);
   const rateBucket = opts.rateBucket ?? inMemoryBucket();
   const uploadsRoot = opts.uploadsRoot ?? "/data/uploads";
+
+  // LinkedIn OAuth config. Disabled when `clientId` is empty.
+  const linkedinCfg = (() => {
+    const li = opts.linkedin ?? {};
+    if (!li.clientId || !li.clientSecret || !li.redirectUri) return null;
+    return {
+      clientId: li.clientId,
+      clientSecret: li.clientSecret,
+      redirectUri: li.redirectUri,
+      hmacSecret: li.hmacSecret || jwtSecret || "linkedin-fallback-hmac",
+      fetcher: li.fetcher,
+    } satisfies LinkedinConfig;
+  })();
+  const linkedinNonces = opts.linkedinNonceTracker ?? inMemoryNonceTracker();
+  const appOrigin = (opts.appOrigin ?? "/").replace(/\/$/, "") || "/";
 
   if (!jwtSecret && !demoTrustHeader) {
     log.warn(
@@ -554,6 +595,116 @@ export function createApp(opts: AppOpts) {
     const capped = Array.from(new Set(topics)).slice(0, 5);
     const saved = store.upsertProfile({ ...me, signals: capped });
     res.json({ topics: saved.signals });
+  });
+
+  // -- LinkedIn Connect (OIDC) --------------------------------------------
+  // Full strategy: docs/profile-linkedin.md.
+  //
+  // Routes:
+  //   GET    /v1/social/me/linkedin/config    public; SPA probes "is OAuth wired?"
+  //   GET    /v1/social/me/linkedin/start     auth'd; signs state, 302 to LinkedIn
+  //   GET    /v1/social/me/linkedin/callback  state-authenticated; exchanges code
+  //   GET    /v1/social/me/linkedin           auth'd; reads visible+context bucket
+  //   DELETE /v1/social/me/linkedin           auth'd; clears both buckets
+
+  app.get("/v1/social/me/linkedin/config", (_req, res) => {
+    res.json({ enabled: !!linkedinCfg });
+  });
+
+  // POST (not GET) so the SPA can authenticate via the Authorization
+  // header. A direct browser redirect to a GET handler would lose the
+  // bearer token; the SPA instead POSTs here with auth, gets the
+  // authorize URL, and then does `window.location.href = url`.
+  app.post("/v1/social/me/linkedin/start", requireUser, (req, res) => {
+    if (!linkedinCfg) {
+      return res.status(503).json({ error: "linkedin_not_configured" });
+    }
+    const me = (req as Request & { profile: ProfileRecord }).profile;
+    const { token } = signStateToken(me.email, linkedinCfg.hmacSecret);
+    const url = buildAuthorizeUrl(linkedinCfg, token);
+    res.json({ url });
+  });
+
+  app.get("/v1/social/me/linkedin/callback", async (req, res) => {
+    if (!linkedinCfg) {
+      return res.status(503).json({ error: "linkedin_not_configured" });
+    }
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    const state = typeof req.query.state === "string" ? req.query.state : "";
+    const oauthErr = typeof req.query.error === "string" ? req.query.error : "";
+    if (oauthErr) {
+      return res.redirect(
+        302,
+        `${appOrigin}/network?linkedin=error&reason=${encodeURIComponent(oauthErr)}`,
+      );
+    }
+    if (!code || !state) {
+      return res.status(400).json({ error: "missing_code_or_state" });
+    }
+    const verified = verifyStateToken(state, linkedinCfg.hmacSecret);
+    if (!verified.ok) {
+      log.warn("linkedin_state_invalid", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        reason: verified.reason,
+      });
+      return res.status(400).json({ error: "invalid_state", reason: verified.reason });
+    }
+    const consume = linkedinNonces.consume(verified.payload.n, verified.payload.x);
+    if (consume === "replay") {
+      log.warn("linkedin_state_replay", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        email_hash: emailHash(verified.payload.e),
+      });
+      return res.status(400).json({ error: "state_replayed" });
+    }
+    let claims;
+    try {
+      const tokenResp = await exchangeCodeForToken(code, linkedinCfg);
+      claims = await fetchUserInfo(tokenResp.access_token, linkedinCfg);
+    } catch (e) {
+      log.warn("linkedin_exchange_failed", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        err: (e as Error).message,
+      });
+      return res.redirect(
+        302,
+        `${appOrigin}/network?linkedin=error&reason=exchange_failed`,
+      );
+    }
+    // Dedup guard: one LinkedIn `sub` → one LearnAI account.
+    const existing = store.findLinkedinIdentityBySub(claims.sub);
+    if (existing && existing.email.toLowerCase() !== verified.payload.e) {
+      log.warn("linkedin_already_linked", {
+        req_id: (req as Request & { _reqId: string })._reqId,
+        email_hash: emailHash(verified.payload.e),
+      });
+      return res.redirect(
+        302,
+        `${appOrigin}/network?linkedin=error&reason=already_linked`,
+      );
+    }
+    const identity = projectUserInfo(verified.payload.e, claims);
+    store.upsertLinkedinIdentity(identity);
+    log.info("linkedin_connected", {
+      req_id: (req as Request & { _reqId: string })._reqId,
+      email_hash: emailHash(verified.payload.e),
+      email_verified: identity.context.emailVerified === true,
+      domain: identity.context.emailDomain ?? null,
+    });
+    return res.redirect(302, `${appOrigin}/network?linkedin=connected`);
+  });
+
+  app.get("/v1/social/me/linkedin", requireUser, (req, res) => {
+    const me = (req as Request & { profile: ProfileRecord }).profile;
+    const identity = store.getLinkedinIdentity(me.email);
+    if (!identity) return res.json({ connected: false });
+    res.json({ connected: true, identity });
+  });
+
+  app.delete("/v1/social/me/linkedin", requireUser, (req, res) => {
+    const me = (req as Request & { profile: ProfileRecord }).profile;
+    const removed = store.deleteLinkedinIdentity(me.email);
+    res.json({ ok: true, removed });
   });
 
   app.post("/v1/social/me/snapshot", requireUser, (req, res) => {

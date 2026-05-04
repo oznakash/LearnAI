@@ -11,6 +11,7 @@ import {
 import { useAdmin } from "../admin/AdminContext";
 import { usePlayer } from "../store/PlayerContext";
 import { selectSocialService, withSocialGuard } from "./index";
+import { LinkedinClient } from "./linkedin-client";
 import { buildSnapshot, snapshotSignature } from "./snapshot";
 import type { PlayerState } from "../types";
 import type {
@@ -40,6 +41,15 @@ import type { TopicId } from "../types";
 
 interface Ctx {
   service: SocialService;
+  /**
+   * LinkedIn-Connect HTTP client. Non-null only when running against the
+   * online sidecar (offline mode: there's no OAuth flow). The CTA in
+   * Network.tsx still renders in offline mode, but it falls back to
+   * intent capture instead of calling these methods.
+   *
+   * See `docs/profile-linkedin.md`.
+   */
+  linkedin: LinkedinClient | null;
   backend: "offline" | "online";
   status: SocialStatus | null;
   /** Fire-and-forget health refresh. */
@@ -160,6 +170,16 @@ export function SocialProvider({ children }: { children: ReactNode }) {
       profileDefaults,
     ],
   );
+
+  // LinkedIn-Connect HTTP client. Online mode only.
+  const linkedin = useMemo(() => {
+    if (!config.flags.socialEnabled || !serverUrl || !email) return null;
+    return new LinkedinClient({
+      serverUrl,
+      apiKey: bearerToken,
+      userEmail: email,
+    });
+  }, [config.flags.socialEnabled, serverUrl, bearerToken, email]);
 
   // Keep a ref so callbacks don't capture a stale service after a flag
   // flip. Update the ref *synchronously* during render — not in a
@@ -388,6 +408,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       service,
+      linkedin,
       backend,
       status,
       refreshHealth,
@@ -416,6 +437,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     }),
     [
       service,
+      linkedin,
       backend,
       status,
       refreshHealth,
