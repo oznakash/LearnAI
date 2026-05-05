@@ -203,6 +203,5 @@ you to re-acknowledge. The full revision history is the git log of
 
 ## 10. Contact
 
-- **Email:** oznakash@gmail.com
+- **Email:** learnai@useyl.com
 - **GitHub issue:** https://github.com/oznakash/learnai/issues
-- **Operator:** Oz Akan, individual operator of `learnai.cloud-claude.com`
