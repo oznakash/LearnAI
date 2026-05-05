@@ -18,6 +18,13 @@ WORKDIR /workspace
 COPY app/package.json app/package-lock.json* ./app/
 RUN npm install --prefix ./app
 COPY app/ ./app/
+# Legal MD content: app/src/views/Legal.tsx imports
+# `../../../docs/legal/{privacy,terms}.md?raw` so Vite can bundle the
+# canonical text into the SPA. Without this COPY the build fails with
+# "Denied ID /workspace/docs/legal/privacy.md?raw" — docs/ wouldn't
+# exist in the build context. Same canonical source the runtime stage
+# copies into /opt/social-svc/legal/ for the sidecar SSR.
+COPY docs/legal/ ./docs/legal/
 ARG VITE_SERVER_AUTH_DEFAULT
 ARG VITE_MEM0_URL
 ARG VITE_GOOGLE_CLIENT_ID
