@@ -73,7 +73,29 @@ export function Profile({ handle, onNav }: Props) {
         return;
       }
       const fetcher = isOwner ? social.getMyProfile() : social.getProfile(handle);
-      const got = await fetcher;
+      let got = await fetcher;
+      // Share-link path: an anonymous visitor lands on /u/<handle>.
+      // The offline service only mirrors the *current* user's data,
+      // so a non-owner lookup returns null and we'd render
+      // "Couldn't find @<handle>" right after the SSR'd page loaded.
+      // Fall through to a same-origin fetch — the sidecar's public
+      // profile route allows anon reads (services/social-svc/app.ts
+      // PR #140). Forks without a sidecar get the SPA-fallback HTML;
+      // content-type filter catches that and we leave got=null so
+      // ProfileNotFound renders cleanly.
+      if (!got && !isOwner && typeof fetch === "function") {
+        try {
+          const res = await fetch(
+            `/v1/social/profiles/${encodeURIComponent(handle)}`,
+          );
+          const ct = res.headers.get("content-type") ?? "";
+          if (res.ok && ct.includes("application/json")) {
+            got = (await res.json()) as PublicProfile;
+          }
+        } catch {
+          /* network blip: keep got=null and render ProfileNotFound */
+        }
+      }
       if (!cancelled) {
         setProfile(got);
         setLoading(false);

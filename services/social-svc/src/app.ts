@@ -45,7 +45,7 @@ import {
   UploadError,
   type ImageKind,
 } from "./uploads.js";
-import { isHiddenAccount } from "./hidden-accounts.js";
+import { isHiddenAccount, isHiddenProfile } from "./hidden-accounts.js";
 import {
   buildAuthorizeUrl,
   exchangeCodeForToken,
@@ -426,7 +426,7 @@ export function createApp(opts: AppOpts) {
     // even if a viewer types the URL directly. Owner views still go
     // through the SPA at runtime; only the unauthenticated SSR path is
     // gated here.
-    if (isHiddenAccount(profile.email)) {
+    if (isHiddenProfile(profile)) {
       res.status(404).type("text/html; charset=utf-8");
       return res.send(renderNotFoundHtml(raw, ssrOrigin(req)));
     }
@@ -451,7 +451,7 @@ export function createApp(opts: AppOpts) {
     // never enter search-engine indices.
     const visibleProfiles = store
       .listProfiles()
-      .filter((p) => !isHiddenAccount(p.email));
+      .filter((p) => !isHiddenProfile(p));
     return res.send(renderSitemapXml(visibleProfiles, ssrOrigin(req)));
   });
 
@@ -890,10 +890,11 @@ export function createApp(opts: AppOpts) {
     if (me && store.isBlockedEitherWay(me.email, target.email)) {
       return res.status(404).json({ error: "not_found" });
     }
-    // Internal QA persona (`docs/test-personas.md`): only the owner can
-    // resolve their own profile; everyone else (including anon) gets 404.
+    // Internal QA persona (`docs/test-personas.md`) or smoke-test
+    // profile (hidden by handle): only the owner can resolve their
+    // own; everyone else (including anon) gets 404.
     if (
-      isHiddenAccount(target.email) &&
+      isHiddenProfile(target) &&
       (!me || target.email.toLowerCase() !== me.email.toLowerCase())
     ) {
       return res.status(404).json({ error: "not_found" });
@@ -1173,7 +1174,7 @@ export function createApp(opts: AppOpts) {
       if (p.banned || p.bannedSocial) { drops.banned++; return false; }
       // Internal QA personas are filtered before any sort/limit work —
       // they never appear on the leaderboard for any viewer.
-      if (isHiddenAccount(p.email)) { drops.hidden++; return false; }
+      if (isHiddenProfile(p)) { drops.hidden++; return false; }
       if (meIsKid !== (p.ageBand === "kid")) { drops.ageBandMismatch++; return false; }
       if (followingApproved) {
         if (!followingApproved.has(lc)) { drops.notFollowing++; return false; }
