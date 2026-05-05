@@ -14,6 +14,7 @@ import type {
   AggregateRecord,
   BlockEdge,
   FollowEdge,
+  LinkedinIdentity,
   ProfileRecord,
   ReportRecord,
   StreamEventRecord,
@@ -28,6 +29,8 @@ interface Snapshot {
   reports: ReportRecord[];
   events: StreamEventRecord[];
   visits: VisitRecord[];
+  /** LinkedIn identities; keyed by email. See `docs/profile-linkedin.md`. */
+  linkedinIdentities: LinkedinIdentity[];
   ids: { reportId: number; eventId: number };
 }
 
@@ -75,6 +78,17 @@ export interface Store {
   insertReport(r: Omit<ReportRecord, "id">): ReportRecord;
   listReports(opts?: { status?: ReportRecord["status"] }): ReportRecord[];
   resolveReport(id: number, by: string, resolution: string): ReportRecord | null;
+
+  // LinkedIn identities (see docs/profile-linkedin.md §2)
+  upsertLinkedinIdentity(id: LinkedinIdentity): LinkedinIdentity;
+  getLinkedinIdentity(email: string): LinkedinIdentity | null;
+  /**
+   * Look up a LinkedIn identity by its OIDC `sub`. Used by the dedup
+   * guard so the same LinkedIn account can't link to two LearnAI
+   * accounts.
+   */
+  findLinkedinIdentityBySub(sub: string): LinkedinIdentity | null;
+  deleteLinkedinIdentity(email: string): boolean;
 
   // Visits (anonymous traffic tracking)
   recordVisit(v: Omit<VisitRecord, "ts">): VisitRecord;
@@ -143,6 +157,7 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
     reports: [],
     events: [],
     visits: [],
+    linkedinIdentities: [],
     ids: { reportId: 0, eventId: 0 },
   };
 
@@ -160,6 +175,7 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       state.reports ??= [];
       state.events ??= [];
       state.visits ??= [];
+      state.linkedinIdentities ??= [];
       state.ids ??= { reportId: 0, eventId: 0 };
     } catch (e) {
       console.warn("[social-svc] failed to load db file:", (e as Error).message);
@@ -215,6 +231,9 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
         (r) => lc(r.reporter) !== lcEmail && lc(r.reported) !== lcEmail,
       );
       state.events = state.events.filter((e) => lc(e.email) !== lcEmail);
+      state.linkedinIdentities = state.linkedinIdentities.filter(
+        (li) => lc(li.email) !== lcEmail,
+      );
       flush();
       return true;
     },
@@ -325,6 +344,39 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       state.reports[idx] = next;
       flush();
       return next;
+    },
+
+    // LinkedIn identities --------------------------------------------------
+    upsertLinkedinIdentity(id) {
+      const idx = state.linkedinIdentities.findIndex(
+        (x) => lc(x.email) === lc(id.email),
+      );
+      const next: LinkedinIdentity = {
+        ...id,
+        email: id.email.toLowerCase(),
+        context: { ...id.context, refreshedAt: Date.now() },
+      };
+      if (idx >= 0) state.linkedinIdentities[idx] = next;
+      else state.linkedinIdentities.push(next);
+      flush();
+      return next;
+    },
+    getLinkedinIdentity(email) {
+      return (
+        state.linkedinIdentities.find((x) => lc(x.email) === lc(email)) ?? null
+      );
+    },
+    findLinkedinIdentityBySub(sub) {
+      return state.linkedinIdentities.find((x) => x.context.sub === sub) ?? null;
+    },
+    deleteLinkedinIdentity(email) {
+      const before = state.linkedinIdentities.length;
+      state.linkedinIdentities = state.linkedinIdentities.filter(
+        (x) => lc(x.email) !== lc(email),
+      );
+      const removed = state.linkedinIdentities.length < before;
+      if (removed) flush();
+      return removed;
     },
 
     // Visits ---------------------------------------------------------------
@@ -504,6 +556,7 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       state.reports = [];
       state.events = [];
       state.visits = [];
+      state.linkedinIdentities = [];
       state.ids = { reportId: 0, eventId: 0 };
       flush();
     },

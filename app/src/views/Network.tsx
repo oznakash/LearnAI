@@ -1145,11 +1145,14 @@ function ProfileDetailsEditor({
               onChange={(v) => setDraft((d) => ({ ...d, website: v }))}
             />
           </div>
-          {/* Intent-capture CTA for the LinkedIn import path (`docs/profile.md`
-              §6.3). Real OAuth lands in v2; until then, clicking the button
-              writes a localStorage flag (`learnai:linkedin:intent`) so we can
-              measure how many builders actually want the import. */}
-          <ConnectLinkedinCta />
+          {/* LinkedIn Connect CTA — real OAuth when the server reports
+              `enabled: true`, intent-capture fallback otherwise. The
+              post-connect "Use LinkedIn name" panel writes through to
+              this draft via `onApplyName`. Full strategy:
+              `docs/profile-linkedin.md`. */}
+          <ConnectLinkedinCta
+            onApplyName={(name) => setDraft((d) => ({ ...d, fullName: name }))}
+          />
         </div>
 
         <div className="flex items-center gap-3 pt-1">
@@ -1208,15 +1211,54 @@ function Field({
   );
 }
 
-// -- LinkedIn intent-capture CTA ---------------------------------------
+// -- LinkedIn Connect CTA ----------------------------------------------
 //
-// V1: capture intent, no OAuth. We store a localStorage flag the first
-// time the user clicks so we can ship a panel + suggested-follows UX
-// in v2 without a follow-up code change. See `docs/profile.md` §6.3.
+// Two-mode component (full strategy: docs/profile-linkedin.md):
+//
+//   1. **OAuth mode** (server reports `enabled: true` from
+//      `/v1/social/me/linkedin/config`): real flow. The button POSTs
+//      to /start, gets the LinkedIn authorize URL, and navigates the
+//      browser to it. The callback returns to /network with
+//      ?linkedin=connected. When the identity exists, we surface the
+//      "Use LinkedIn name?" panel + the transparency disclosure of
+//      Bucket B (context fields).
+//
+//   2. **Intent-capture mode** (server returns `enabled: false`, OR
+//      we're offline / haven't probed yet, OR the probe errored): the
+//      pre-OAuth fallback. Clicks set a localStorage flag so we can
+//      tell the operator how many builders wanted the import before
+//      OAuth shipped. Same shape as the original v0 CTA.
+//
+// State flow:
+//   loading        ─┬─→ unavailable (enabled=false / offline / error)
+//                   ├─→ available (enabled=true, identity=null)
+//                   └─→ connected (enabled=true, identity≠null)
 const LINKEDIN_INTENT_KEY = "learnai:linkedin:intent";
 
-function ConnectLinkedinCta() {
-  const [clicked, setClicked] = useState<boolean>(() => {
+interface ConnectLinkedinCtaProps {
+  /** Called when the user accepts the post-connect "Use LinkedIn name" offer. */
+  onApplyName?: (fullName: string) => void;
+}
+
+export function ConnectLinkedinCta({ onApplyName }: ConnectLinkedinCtaProps) {
+  const social = useSocial();
+  const linkedin = social.linkedin;
+
+  type Mode = "loading" | "unavailable" | "available" | "connected";
+  const [mode, setMode] = useState<Mode>("loading");
+  const [identity, setIdentity] = useState<import("../social/types").LinkedinIdentity | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [showTransparency, setShowTransparency] = useState(false);
+  const [justConnected, setJustConnected] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return new URLSearchParams(window.location.search).get("linkedin") === "connected";
+    } catch {
+      return false;
+    }
+  });
+  const [intentClicked, setIntentClicked] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try {
       return !!window.localStorage.getItem(LINKEDIN_INTENT_KEY);
@@ -1225,48 +1267,276 @@ function ConnectLinkedinCta() {
     }
   });
 
-  const onClick = () => {
+  // Probe config + identity on mount.
+  useEffect(() => {
+    if (!linkedin) {
+      setMode("unavailable");
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const cfg = await linkedin.config();
+        if (cancelled) return;
+        if (!cfg.enabled) {
+          setMode("unavailable");
+          return;
+        }
+        const me = await linkedin.me();
+        if (cancelled) return;
+        if (me.connected && me.identity) {
+          setIdentity(me.identity);
+          setMode("connected");
+        } else {
+          setMode("available");
+        }
+      } catch {
+        if (!cancelled) setMode("unavailable");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedin]);
+
+  // Surface a one-shot URL-param error from the callback redirect.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("linkedin") === "error") {
+      const reason = params.get("reason") ?? "unknown";
+      setErrMsg(
+        reason === "already_linked"
+          ? "That LinkedIn is already connected to a different LearnAI account. Disconnect it there first."
+          : reason === "exchange_failed"
+            ? "We couldn't finish the LinkedIn handshake. Please try again."
+            : "Something went wrong connecting LinkedIn.",
+      );
+      // Clear the param so a refresh doesn't re-show the error.
+      params.delete("linkedin");
+      params.delete("reason");
+      const next = window.location.pathname + (params.toString() ? `?${params}` : "");
+      window.history.replaceState({}, "", next);
+    } else if (params.get("linkedin") === "connected") {
+      params.delete("linkedin");
+      const next = window.location.pathname + (params.toString() ? `?${params}` : "");
+      window.history.replaceState({}, "", next);
+    }
+  }, []);
+
+  const startOAuth = async () => {
+    if (!linkedin) return;
+    setBusy(true);
+    setErrMsg(null);
+    try {
+      const { url } = await linkedin.start();
+      window.location.href = url;
+    } catch (e) {
+      setBusy(false);
+      setErrMsg(`Couldn't open LinkedIn — ${(e as Error).message.slice(0, 120)}`);
+    }
+  };
+
+  const disconnect = async () => {
+    if (!linkedin) return;
+    setBusy(true);
+    try {
+      await linkedin.disconnect();
+      setIdentity(null);
+      setMode("available");
+      setJustConnected(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyName = () => {
+    if (!identity || !onApplyName) return;
+    const name = identity.visible.name?.trim();
+    if (name) onApplyName(name);
+    setJustConnected(false);
+  };
+
+  const captureIntent = () => {
     try {
       window.localStorage.setItem(LINKEDIN_INTENT_KEY, String(Date.now()));
     } catch {
       /* localStorage may be unavailable; the click still counts via UI state */
     }
-    setClicked(true);
+    setIntentClicked(true);
   };
 
-  return (
-    <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 sm:p-4">
-      <div className="flex items-start sm:items-center gap-3 flex-wrap">
-        <div className="w-10 h-10 rounded-lg bg-[#0a66c2] grid place-items-center text-white font-bold text-sm shrink-0">
-          in
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm text-white font-semibold">
-            Connect with LinkedIn
+  // -- Intent-capture / pre-OAuth fallback ---------------------------------
+  if (mode === "unavailable" || mode === "loading") {
+    // While loading, still render the CTA chrome so layout doesn't jump.
+    return (
+      <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 sm:p-4">
+        <div className="flex items-start sm:items-center gap-3 flex-wrap">
+          <LinkedinBadge />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-white font-semibold">Connect with LinkedIn</div>
+            <p className="text-[11px] text-white/60 leading-snug mt-0.5">
+              Auto-fill your name and photo from LinkedIn in five seconds.
+              No posts, no connections pulled.
+            </p>
           </div>
-          <p className="text-[11px] text-white/60 leading-snug mt-0.5">
-            Auto-fill your profile + headline. We'll suggest builders you already
-            know on LearnAI from your connections.
-          </p>
+          {intentClicked ? (
+            <span
+              data-testid="linkedin-intent-captured"
+              className="text-xs text-good font-semibold whitespace-nowrap"
+            >
+              ✓ We'll let you know when it's ready
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={captureIntent}
+              data-testid="linkedin-intent-cta"
+              className="btn-ghost text-sm whitespace-nowrap"
+              disabled={mode === "loading"}
+            >
+              Connect with LinkedIn
+            </button>
+          )}
         </div>
-        {clicked ? (
-          <span
-            data-testid="linkedin-intent-captured"
-            className="text-xs text-good font-semibold whitespace-nowrap"
-          >
-            ✓ We'll let you know when it's ready
-          </span>
-        ) : (
+      </div>
+    );
+  }
+
+  // -- Real OAuth, not yet connected --------------------------------------
+  if (mode === "available") {
+    return (
+      <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 sm:p-4">
+        <div className="flex items-start sm:items-center gap-3 flex-wrap">
+          <LinkedinBadge />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-white font-semibold">Connect with LinkedIn</div>
+            <p className="text-[11px] text-white/60 leading-snug mt-0.5">
+              We'll read your name, photo, and email — nothing else. No posts,
+              no connections pulled (LinkedIn doesn't allow that any more).
+            </p>
+          </div>
           <button
             type="button"
-            onClick={onClick}
-            data-testid="linkedin-intent-cta"
-            className="btn-ghost text-sm whitespace-nowrap"
+            onClick={startOAuth}
+            disabled={busy}
+            data-testid="linkedin-oauth-cta"
+            className="btn-primary text-sm whitespace-nowrap"
           >
-            Connect with LinkedIn
+            {busy ? "Opening LinkedIn…" : "Connect with LinkedIn"}
           </button>
-        )}
+        </div>
+        {errMsg && <p className="text-[11px] text-bad mt-2">{errMsg}</p>}
       </div>
+    );
+  }
+
+  // -- Connected — show identity panel + transparency disclosure ----------
+  const v = identity?.visible;
+  const c = identity?.context;
+  return (
+    <div
+      data-testid="linkedin-connected-panel"
+      className="mt-3 rounded-xl border border-[#0a66c2]/40 bg-[#0a66c2]/10 p-3 sm:p-4"
+    >
+      <div className="flex items-start gap-3 flex-wrap">
+        <LinkedinBadge />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm text-white font-semibold">
+            ✓ Connected as {v?.name || "your LinkedIn account"}
+          </div>
+          <p className="text-[11px] text-white/60 leading-snug mt-0.5">
+            {v?.email ?? "—"}
+            {c?.emailVerified && (
+              <span className="ml-2 chip text-[10px] align-middle">verified</span>
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={disconnect}
+          disabled={busy}
+          data-testid="linkedin-disconnect"
+          className="btn-ghost text-xs whitespace-nowrap"
+        >
+          {busy ? "…" : "Disconnect"}
+        </button>
+      </div>
+
+      {justConnected && v?.name && onApplyName && (
+        <div
+          data-testid="linkedin-apply-panel"
+          className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3 flex items-center gap-3 flex-wrap"
+        >
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-white">Use your LinkedIn name?</div>
+            <p className="text-[11px] text-white/60 leading-snug mt-0.5">
+              We'll set your LearnAI name to <strong>{v.name}</strong>. You can
+              still edit it below before saving.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={applyName}
+            data-testid="linkedin-apply-name"
+            className="btn-primary text-xs whitespace-nowrap"
+          >
+            Use this name
+          </button>
+          <button
+            type="button"
+            onClick={() => setJustConnected(false)}
+            className="btn-ghost text-xs whitespace-nowrap"
+          >
+            Skip
+          </button>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setShowTransparency((s) => !s)}
+        data-testid="linkedin-transparency-toggle"
+        className="mt-3 text-[11px] text-white/50 hover:text-white/80 underline-offset-2 hover:underline"
+      >
+        {showTransparency ? "▾" : "▸"} What we know about you from LinkedIn
+      </button>
+      {showTransparency && c && (
+        <div
+          data-testid="linkedin-transparency-panel"
+          className="mt-2 rounded-lg border border-white/10 bg-black/20 p-3 text-[11px] text-white/70 space-y-1 font-mono"
+        >
+          <Row k="LinkedIn ID">{c.sub}</Row>
+          <Row k="Email verified">{c.emailVerified ? "yes" : "no"}</Row>
+          {c.locale && <Row k="Locale">{c.locale}</Row>}
+          {c.emailDomain && <Row k="Email domain">{c.emailDomain}</Row>}
+          {c.pictureCdnHost && <Row k="Photo host">{c.pictureCdnHost}</Row>}
+          <Row k="Connected">{new Date(c.connectedAt).toLocaleString()}</Row>
+          <p className="text-[10px] text-white/40 leading-snug pt-2 border-t border-white/10">
+            Used silently to power recommendations and the future
+            verified-human badge. Not shown on your public profile. Disconnect
+            to delete completely.
+          </p>
+        </div>
+      )}
+      {errMsg && <p className="text-[11px] text-bad mt-2">{errMsg}</p>}
+    </div>
+  );
+}
+
+function LinkedinBadge() {
+  return (
+    <div className="w-10 h-10 rounded-lg bg-[#0a66c2] grid place-items-center text-white font-bold text-sm shrink-0">
+      in
+    </div>
+  );
+}
+
+function Row({ k, children }: { k: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2">
+      <span className="text-white/40 w-28 shrink-0">{k}</span>
+      <span className="break-all">{children}</span>
     </div>
   );
 }

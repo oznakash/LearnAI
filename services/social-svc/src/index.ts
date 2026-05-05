@@ -14,6 +14,16 @@
 //                                holds SOCIAL_DB_PATH. nginx serves it via
 //                                `location /i/`.)
 //   NODE_ENV                    (set to "production" on the live deploy)
+//   LINKEDIN_CLIENT_ID          LinkedIn OIDC client id. When unset the
+//                                Connect-with-LinkedIn flow is disabled and
+//                                the SPA falls back to intent capture.
+//                                See docs/profile-linkedin.md.
+//   LINKEDIN_CLIENT_SECRET      paired secret.
+//   LINKEDIN_REDIRECT_URI       absolute callback URL, e.g.
+//                                https://learnai.cloud-claude.com/v1/social/me/linkedin/callback
+//   SOCIAL_APP_ORIGIN           absolute origin of the SPA (used to redirect
+//                                back to /network after the OAuth callback).
+//                                Defaults to "" (same-origin).
 //
 // Storage path: in-memory + JSON-file persistence on the mounted volume.
 // A Postgres adapter is intentionally NOT shipped here — the engineering
@@ -34,6 +44,10 @@ const jwtSecret = process.env.JWT_SECRET || "";
 const allowedOrigins = process.env.SOCIAL_ALLOWED_ORIGINS || "*";
 const demoTrustHeader = process.env.SOCIAL_DEMO_TRUST_HEADER === "1";
 const uploadsRoot = process.env.SOCIAL_UPLOADS_ROOT || undefined;
+const linkedinClientId = process.env.LINKEDIN_CLIENT_ID || "";
+const linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET || "";
+const linkedinRedirectUri = process.env.LINKEDIN_REDIRECT_URI || "";
+const appOrigin = process.env.SOCIAL_APP_ORIGIN || "";
 
 if (process.env.NODE_ENV === "production") {
   if (!jwtSecret) {
@@ -55,6 +69,15 @@ const app = createApp({
   allowedOrigins,
   demoTrustHeader,
   uploadsRoot,
+  linkedin: linkedinClientId
+    ? {
+        clientId: linkedinClientId,
+        clientSecret: linkedinClientSecret,
+        redirectUri: linkedinRedirectUri,
+        // hmacSecret defaults to JWT_SECRET inside createApp.
+      }
+    : undefined,
+  appOrigin,
 });
 
 // Spotlight cron — emits one `kind="spotlight"` event per Topic
@@ -69,5 +92,6 @@ app.listen(port, () => {
     admins: admins.length,
     jwt: jwtSecret ? "configured" : "missing",
     demo_trust_header: demoTrustHeader,
+    linkedin: linkedinClientId ? "configured" : "disabled",
   });
 });

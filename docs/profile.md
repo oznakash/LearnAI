@@ -141,23 +141,41 @@ LearnAI doesn't pay for.
 
 ### 6.3 Connect with LinkedIn (the import path)
 
-The LinkedIn link is the highest-signal external link a builder owns. We
-ship a "Connect with LinkedIn" CTA below the LinkedIn input that captures
-intent first (we keep a `linkedinConnectIntent` flag) and, when the
-real OAuth path lands, will:
+> **Full strategy + two-bucket data model:** [`profile-linkedin.md`](./profile-linkedin.md).
+> This section is the summary; the linked doc is the contract.
 
-1. Pull the public profile URL and headline (auto-fills the LinkedIn link
-   + bio).
-2. Pull the public connections graph (with consent) so we can suggest
-   "people you know are also on LearnAI" — the strongest possible cold-
-   start signal for follows.
-3. Pull recent posts so we can match content to Topics for default Signals.
+The LinkedIn link is the highest-signal external link a builder owns. The
+"Connect with LinkedIn" CTA below the LinkedIn input is now a two-mode
+component that **switches automatically based on whether the operator
+has wired up a LinkedIn Developer App**:
 
-**The intent capture matters even before OAuth ships.** It tells us how
-many builders *want* the import, which is the gating signal for whether
-to invest in the OAuth integration this sprint.
+- **OAuth mode** (`LINKEDIN_CLIENT_ID` set on the social-svc): real
+  OIDC flow. We ask for `openid profile email` (auto-approved by
+  LinkedIn). On callback we get name, photo, email, verified-email
+  flag, locale. Stored in two buckets:
+  - **Bucket A — visible & editable.** Name, photo, email. One-time
+    grab; seeded into `ProfileRecord`. The user owns it from there.
+  - **Bucket B — context & hidden.** `sub` (dedup key),
+    `emailVerified`, locale, derived `emailDomain` (powers cold-start
+    "people you may know"), `pictureCdnHost`, raw OIDC claims frozen
+    for re-derivation. Immutable by the user; visible only via a
+    "🔍 What we know about you from LinkedIn" transparency panel.
+- **Intent-capture mode** (no `LINKEDIN_CLIENT_ID`): the v0 fallback
+  — clicking sets a `learnai:linkedin:intent` flag so we measure how
+  many builders *want* the import. Identical visuals to the v1 CTA;
+  the SPA picks the mode at runtime via a config probe so the
+  operator can flip the switch without an SPA redeploy.
 
-**KPI:** intent_capture rate · post-OAuth: connections_imported / signed_up.
+The honest read on what LinkedIn's API actually offers in 2026:
+**no connections graph, no positions, no posts.** Those APIs have been
+closed for nearly a decade. We substitute for the closed connections
+graph with the derived `emailDomain` field — *"3 builders from
+@stripe.com are on LearnAI"* — which is the highest-value cold-start
+signal we can build without enterprise-API access.
+
+**KPIs:** intent-capture rate (mode 1) · OAuth-completion rate
+(mode 2) · % of connected accounts with `emailVerified === true` ·
+30-day retention delta (connected vs. non-connected cohort).
 
 ### 6.4 Topics → discoverability flywheel
 
@@ -247,9 +265,12 @@ A redesign of the profile editor passes the bar when:
 
 These are explicit "punted to v2" calls so we don't pretend they don't exist:
 
-- LinkedIn OAuth proper (the sidecar gets a `/v1/social/me/linkedin/connect`
-  endpoint that round-trips through LinkedIn's OAuth and stores a non-
-  refreshing access token). Intent capture in v1 → real import in v2.
+- ~~LinkedIn OAuth proper.~~ **Shipped** in PR-this-session. The
+  sidecar exposes `/v1/social/me/linkedin/{config,start,callback}` plus
+  `GET` and `DELETE` for the identity record. Two-bucket storage
+  (visible + context). Feature-flagged on `LINKEDIN_CLIENT_ID`. Full
+  strategy: [`profile-linkedin.md`](./profile-linkedin.md). Operator
+  setup checklist: same doc, §10.
 - Profile renaming. The handle is currently immutable. We expect to ship a
   one-time rename in v2 once we're confident the impersonation surface is
   managed by the reserved-handles list + the moderation queue.

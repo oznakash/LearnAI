@@ -22,6 +22,7 @@
 | [`social-mvp-status.md`](./social-mvp-status.md) | Sprint-2 changelog (9 PRs) · open P0/P1 punch list from the post-merge review · what Sprint 2.5 closes | Anyone shipping Sprint 2.5 or asking "is the social layer production-ready?" |
 | [`profile-enhancements.md`](./profile-enhancements.md) | Three additive lifts on top of the public-profile MVP — Public/Private terminology, profile completeness gauge, native-share, per-profile SEO + JSON-LD | Touching `Profile.tsx`, `Network.tsx`, `Settings.tsx`, or anything in `app/src/profile/`. |
 | [`profile.md`](./profile.md) | **The senior-PM contract for profiles.** Five jobs · users' mental model · interests-+-signals merge into Topics · identity consistency rules · five growth levers · UX checklist · anti-patterns · implementation map | Read **first** before touching `Network.tsx`, `Settings.tsx`, the TopBar avatar, or any naming / discoverability surface. |
+| [`profile-linkedin.md`](./profile-linkedin.md) | **The senior-PM contract for LinkedIn Connect.** Two-bucket data model (visible + editable; context + hidden) · OIDC scopes · what we don't ask for · phased rollout (v0 intent → v1 OIDC → v2 verified-human → v3 share) · privacy posture · operator setup checklist · the honest read on LinkedIn's API in 2026 | Touching anything LinkedIn-shaped: the CTA in `Network.tsx`, the routes in `services/social-svc`, the `LinkedinIdentity` shape. |
 
 ## Technical & operator
 
