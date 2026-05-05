@@ -860,25 +860,49 @@ export function createApp(opts: AppOpts) {
   });
 
   // -- Profiles ------------------------------------------------------------
-  app.get("/v1/social/profiles/:handle", requireUser, (req, res) => {
-    const me = (req as Request & { profile: ProfileRecord }).profile;
+  // Public profiles are *public*. Anonymous reads must work — otherwise
+  // a share-link visitor gets the SSR'd HTML for one frame, the SPA
+  // hydrates, calls this endpoint with no JWT, gets 401, and replaces
+  // the page with "not found." Allow optional auth: if present, the
+  // viewer's email is used for blocks / closed-mode follower check /
+  // owner-only field projection; if absent, the viewer is treated as
+  // "not the owner, not an approved follower" — i.e. closed profiles
+  // get the gate stub, hidden accounts get 404, and the public
+  // projection drops owner-only fields.
+  app.get("/v1/social/profiles/:handle", async (req, res) => {
+    // Optional auth — same JWT path as requireUser, but null is OK.
+    const meEmail = await authenticate(req);
+    // Rate limit: per-email when authenticated, per-IP for anon. Same
+    // generous read-rule the auth path uses.
+    const rule = pickRateRule(req);
+    const ip = (req.ip || req.socket?.remoteAddress || "unknown").toString();
+    const rateKey = meEmail ?? `ip:${ip}`;
+    const limited = rateBucket.hit(rateKey, rule);
+    if (!limited.ok) {
+      res.setHeader("retry-after", String(limited.retryAfter ?? 60));
+      return res.status(429).json({ error: "rate_limited", reason: limited.reason });
+    }
+    const me = meEmail ? store.getProfileByEmail(meEmail) : null;
+    if (me?.banned) return res.status(403).json({ error: "banned" });
+
     const target = store.getProfileByHandle(String(req.params.handle));
     if (!target || target.banned) return res.status(404).json({ error: "not_found" });
-    if (store.isBlockedEitherWay(me.email, target.email)) {
+    if (me && store.isBlockedEitherWay(me.email, target.email)) {
       return res.status(404).json({ error: "not_found" });
     }
     // Internal QA persona (`docs/test-personas.md`): only the owner can
-    // resolve their own profile; everyone else gets a 404 — matches what
-    // the SPA does for cross-viewers.
+    // resolve their own profile; everyone else (including anon) gets 404.
     if (
       isHiddenAccount(target.email) &&
-      target.email.toLowerCase() !== me.email.toLowerCase()
+      (!me || target.email.toLowerCase() !== me.email.toLowerCase())
     ) {
       return res.status(404).json({ error: "not_found" });
     }
     // Closed-mode: only self and approved followers see the full payload.
-    if (target.profileMode === "closed" && me.email !== target.email) {
-      const edge = store.getFollow(me.email, target.email);
+    // Anonymous visitors are never self / never approved-followers, so
+    // they always fall through to the closed-stub.
+    if (target.profileMode === "closed" && (!me || me.email !== target.email)) {
+      const edge = me ? store.getFollow(me.email, target.email) : null;
       if (!edge || edge.status !== "approved") {
         // P1-5 fix: closed-mode stub no longer leaks email, pictureUrl,
         // or ageBandIsKid. Visitors see only the bare minimum needed
@@ -902,7 +926,10 @@ export function createApp(opts: AppOpts) {
       }
     }
     const agg = store.getAggregate(target.email);
-    res.json(projectProfile(target, agg, me.email));
+    // viewerEmail = empty string for anon → projectProfile drops the
+    // owner-only `ownerPrefs` block. Same shape the SPA already
+    // tolerates (Profile.tsx checks `profile.ownerPrefs?.…`).
+    res.json(projectProfile(target, agg, me?.email ?? ""));
   });
 
   // -- Follow graph --------------------------------------------------------

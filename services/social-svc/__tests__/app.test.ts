@@ -123,6 +123,34 @@ describe("/v1/social/profiles/:handle", () => {
       .set(userHeaders("maya@gmail.com"));
     expect(r.status).toBe(404);
   });
+
+  // --- anonymous-read path (the share-link / SPA-hydration case) ---
+  // Public profiles must be readable WITHOUT a JWT. Otherwise a cold
+  // visitor lands on /u/<handle>, sees the SSR'd HTML, the SPA
+  // hydrates, calls /v1/social/profiles/<handle> with no auth, gets
+  // 401, and replaces the page with "not found." Pin the contract.
+  it("returns the public projection for an anonymous viewer (Open profile)", async () => {
+    const r = await request(app).get("/v1/social/profiles/maya"); // no x-user-email
+    expect(r.status).toBe(200);
+    expect(r.body.handle).toBe("maya");
+    // Owner-only fields are scrubbed for anon (same as for non-owner auth).
+    expect(r.body.ownerPrefs).toBeUndefined();
+  });
+
+  it("returns the closed-stub for an anonymous viewer of a Closed profile", async () => {
+    const r = await request(app).get("/v1/social/profiles/priya");
+    expect(r.status).toBe(200);
+    expect(r.body.profileMode).toBe("closed");
+    expect(r.body.topicMap).toBeUndefined();
+    expect(r.body.activity14d).toBeUndefined();
+    // The closed-stub never leaks an email even for anon callers.
+    expect(r.body.email).toBe("");
+  });
+
+  it("returns 404 for an unknown handle to an anonymous viewer", async () => {
+    const r = await request(app).get("/v1/social/profiles/nobody");
+    expect(r.status).toBe(404);
+  });
 });
 
 describe("follow / unfollow / block", () => {
