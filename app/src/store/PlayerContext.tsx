@@ -236,9 +236,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const prevEmail = s.identity?.email?.trim().toLowerCase();
       const shouldWipe = !prevEmail || prevEmail !== newEmail;
       const base = shouldWipe ? clearForNewIdentity(s) : s;
+      // Stamp `agreedToLegalAt` on first sign-in (or on every fresh
+      // sign-in for a new identity). This is the audit ledger that the
+      // user accepted the Terms + Privacy. See `docs/legal/`.
+      const prevAgreedAt = !shouldWipe ? s.identity?.agreedToLegalAt : undefined;
       return {
         ...base,
-        identity: { ...identity, provider: "google" },
+        identity: {
+          ...identity,
+          provider: "google",
+          agreedToLegalAt: prevAgreedAt ?? Date.now(),
+        },
       };
     });
   }, [setState]);
@@ -250,6 +258,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         const prevEmail = s.identity?.email?.trim().toLowerCase();
         const shouldWipe = !prevEmail || prevEmail !== newEmail;
         const base = shouldWipe ? clearForNewIdentity(s) : s;
+        const prevAgreedAt = !shouldWipe ? s.identity?.agreedToLegalAt : undefined;
         return {
           ...base,
           identity: {
@@ -257,6 +266,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             name: session.name,
             picture: session.picture,
             provider: "google",
+            agreedToLegalAt: prevAgreedAt ?? Date.now(),
           },
           serverSession: session,
         };

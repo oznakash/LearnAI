@@ -57,6 +57,7 @@ import {
   type LinkedinConfig,
   type NonceTracker,
 } from "./linkedin.js";
+import { renderLegalHtml } from "./legal.js";
 
 interface AppOpts {
   store: Store;
@@ -104,6 +105,14 @@ interface AppOpts {
   appOrigin?: string;
   /** For tests. Defaults to `inMemoryNonceTracker()`. */
   linkedinNonceTracker?: NonceTracker;
+  /**
+   * Directory containing the legal MD files (privacy.md, terms.md).
+   * Production: `/opt/social-svc/legal` (Dockerfile copies docs/legal/
+   * here). Tests / local dev: pass an explicit path. When the
+   * directory is missing or unreadable, the routes return 503 instead
+   * of crashing — operator hasn't deployed the volume layer yet.
+   */
+  legalDir?: string;
 }
 
 export function createApp(opts: AppOpts) {
@@ -138,6 +147,7 @@ export function createApp(opts: AppOpts) {
   })();
   const linkedinNonces = opts.linkedinNonceTracker ?? inMemoryNonceTracker();
   const appOrigin = (opts.appOrigin ?? "/").replace(/\/$/, "") || "/";
+  const legalDir = opts.legalDir;
 
   if (!jwtSecret && !demoTrustHeader) {
     log.warn(
@@ -444,6 +454,41 @@ export function createApp(opts: AppOpts) {
       .filter((p) => !isHiddenAccount(p.email));
     return res.send(renderSitemapXml(visibleProfiles, ssrOrigin(req)));
   });
+
+  // Legal pages — Privacy Policy + Terms of Use. Public, no auth.
+  // SSR'd here (rather than relying on the SPA fallback) so that
+  // LinkedIn's OAuth review crawler, search engines, and Slack /
+  // Twitter unfurls get real HTML with the policy text rather than a
+  // JS-empty SPA shell. Source-of-truth is `docs/legal/{kind}.md`,
+  // copied into the container at /opt/social-svc/legal by the
+  // Dockerfile. See `docs/profile-linkedin.md` §10 for the operator
+  // submission checklist.
+  function legalHandler(kind: "privacy" | "terms") {
+    return (req: Request, res: Response) => {
+      try {
+        const html = renderLegalHtml(kind, {
+          dir: legalDir,
+          origin: ssrOrigin(req),
+        });
+        res.status(200).type("text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+        return res.send(html);
+      } catch (e) {
+        // legalDir missing or files unreadable. Surface 503 so the
+        // operator can fix the volume / Dockerfile mount; the SPA
+        // fallback at the same path will also handle browsers in this
+        // case (just not crawlers).
+        log.warn("legal_render_failed", {
+          req_id: (req as Request & { _reqId: string })._reqId,
+          kind,
+          err: (e as Error).message,
+        });
+        return res.status(503).type("text/plain").send("legal docs unavailable");
+      }
+    };
+  }
+  app.get("/privacy", legalHandler("privacy"));
+  app.get("/terms", legalHandler("terms"));
 
   // -- /me -----------------------------------------------------------------
   app.get("/v1/social/me", requireUser, (req, res) => {

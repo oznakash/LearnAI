@@ -324,7 +324,10 @@ When we'd un-ship this:
 
 **One-time, when you're ready to flip the switch:**
 
-1. Create a LinkedIn Developer App at https://www.linkedin.com/developers/apps.
+1. **Create a LinkedIn Developer App** at https://www.linkedin.com/developers/apps.
+   - **App URL:** `https://learnai.cloud-claude.com`
+   - **Privacy Policy URL:** `https://learnai.cloud-claude.com/privacy`
+   - **Terms of Use URL:** `https://learnai.cloud-claude.com/terms`
    - **Auth tab → Authorized redirect URLs:** add
      `https://learnai.cloud-claude.com/v1/social/me/linkedin/callback`
      (and your dev hostname if testing locally).
@@ -342,6 +345,29 @@ When we'd un-ship this:
    OAuth screen (not the intent-capture fallback).
 6. Tap the button, complete the flow, verify `?linkedin=connected`
    lands on the editor and the "Use these details?" panel shows.
+
+**Privacy + Terms URLs to paste into LinkedIn's submission form:**
+
+- Privacy: `https://learnai.cloud-claude.com/privacy`
+- Terms: `https://learnai.cloud-claude.com/terms`
+
+Both are server-rendered by the social-svc sidecar (see
+[`docs/legal/`](./legal/) and `services/social-svc/src/legal.ts`)
+so LinkedIn's review crawler gets real HTML with the policy text,
+not a JS-empty SPA shell.
+
+**App logo for the LinkedIn submission:**
+
+- 400×400 PNG: `https://learnai.cloud-claude.com/icon-400.png` (the
+  size LinkedIn's dev portal expects)
+- Other sizes: `/icon-{32,64,128,180,192,256,400,512}.png`
+- Source: `app/public/icon.svg` (square brand-gradient background +
+  the "LA" lightning-bolt glyph)
+- Regenerate: `cd app && node ../scripts/generate-icons.mjs`
+
+Either upload the PNG file directly from `app/public/icon-400.png`,
+or paste the URL above into the LinkedIn submission form (whichever
+LinkedIn prefers in their current portal).
 
 The SPA needs no rebuild for any of this — it probes the config
 endpoint at runtime and silently switches modes.

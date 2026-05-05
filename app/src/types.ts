@@ -593,6 +593,13 @@ export interface PlayerState {
     picture?: string;
     sub?: string;
     provider: "google";
+    /**
+     * Epoch ms; stamped on first sign-in. Audit ledger that the user
+     * accepted the Terms + Privacy at this point. If we materially change
+     * either document, we'll re-prompt and bump this. Required by
+     * LinkedIn's OAuth review process and is just good practice.
+     */
+    agreedToLegalAt?: number;
   };
   /**
    * Present iff the SPA is in production server-auth mode and the user has

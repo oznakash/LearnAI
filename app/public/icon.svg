@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="LearnAI">
+  <!--
+    LearnAI app icon — square, brand-gradient background, the existing
+    favicon glyph (the lightning-bolt "LA" shape) centered on top.
+    Sized to 512×512 so a single render scales cleanly down to the
+    standard app-icon set (256, 192, 180, 128, 96, 64, 48, 32). The
+    glyph occupies ~60% of the canvas so it stays legible at every
+    target. Used by:
+      - LinkedIn OAuth app submission (operator pastes the rendered
+        PNG; see docs/profile-linkedin.md §10)
+      - PWA manifest in v2
+      - any future "share to X with our logo" flow
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a1245"/>
+      <stop offset="0.55" stop-color="#321b78"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#a283ff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#a283ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glyph" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ede6ff"/>
+    </linearGradient>
+    <filter id="inner-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded-square background. iOS / Android masks will round the
+       corners further; the explicit rx keeps the silhouette consistent
+       on platforms that don't mask. -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Subtle radial glow behind the glyph -->
+  <circle cx="256" cy="256" r="200" fill="url(#halo)"/>
+
+  <!--
+    The favicon glyph, scaled up. Original viewBox 0 0 48 46.
+    Center of the glyph: (24.5, 22.5). To scale by ~6.4× and center on
+    (256, 256), translate by (256 - 24.5*6.4, 256 - 22.5*6.4) =
+    (99.2, 112).
+  -->
+  <g transform="translate(99.2, 112) scale(6.4)">
+    <path
+      fill="url(#glyph)"
+      d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"
+    />
+  </g>
+</svg>

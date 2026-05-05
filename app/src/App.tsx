@@ -24,6 +24,7 @@ import { TopBar } from "./components/TopBar";
 import { TabBar } from "./components/TabBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Unsubscribe } from "./views/Unsubscribe";
+import { Legal, type LegalKind } from "./views/Legal";
 
 export type View =
   | { name: "home" }
@@ -39,7 +40,8 @@ export type View =
   | { name: "profile"; handle: string }
   | { name: "network" }
   | { name: "stream" }
-  | { name: "unsubscribe" };
+  | { name: "unsubscribe" }
+  | { name: "legal"; kind: LegalKind };
 
 function Shell() {
   const { state, hydrated } = usePlayer();
@@ -68,7 +70,10 @@ function Shell() {
   // cold load (nginx routes `/u/*` there); this branch covers the case
   // where a signed-in user signs out while parked on a profile, or any
   // SPA-internal navigation that lands on a profile without identity.
-  const isPublicView = view.name === "profile";
+  // `/privacy` + `/terms` are also public — required for LinkedIn's
+  // OAuth review submission and for cold-link visitors reading the legal
+  // docs before signing in.
+  const isPublicView = view.name === "profile" || view.name === "legal";
 
   if (!isPublicView && !state.identity) return <SignIn />;
   if (!isPublicView && state.identity && !state.profile) return <Onboarding />;
@@ -111,9 +116,63 @@ function Shell() {
         {view.name === "network" && <Network onNav={go} />}
         {view.name === "stream" && <SparkStream onNav={go} />}
         {view.name === "admin" && <AdminConsole onExit={() => go({ name: "home" })} />}
+        {view.name === "legal" && <Legal kind={view.kind} />}
       </main>
       {!isAnonymous && <TabBar view={view} onNav={go} />}
+      <LegalFooter onNav={go} />
     </div>
+  );
+}
+
+/**
+ * Site-wide legal footer. Visible at the bottom of every screen.
+ * Required by the LinkedIn OAuth review submission (must surface
+ * privacy + terms reachably from anywhere on the app) and also a basic
+ * trust signal for everyone else. Sits *below* the TabBar's
+ * `pb-28` zone so signed-in users don't see it overlapping the bar;
+ * anonymous users get it visible at the bottom of the page.
+ */
+function LegalFooter({ onNav }: { onNav: (v: View) => void }) {
+  return (
+    <footer
+      className="w-full border-t border-white/5 mt-auto pb-32 sm:pb-28"
+      data-testid="legal-footer"
+    >
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-white/40">
+        <span className="text-white/50 font-semibold">LearnAI</span>
+        <a
+          href="/privacy"
+          onClick={(e) => {
+            e.preventDefault();
+            onNav({ name: "legal", kind: "privacy" });
+          }}
+          className="hover:text-white"
+        >
+          Privacy
+        </a>
+        <a
+          href="/terms"
+          onClick={(e) => {
+            e.preventDefault();
+            onNav({ name: "legal", kind: "terms" });
+          }}
+          className="hover:text-white"
+        >
+          Terms
+        </a>
+        <a
+          href="https://github.com/oznakash/learnai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-white"
+        >
+          Source
+        </a>
+        <span className="ml-auto text-white/30 text-[10px]">
+          © {new Date().getFullYear()} LearnAI
+        </span>
+      </div>
+    </footer>
   );
 }
 
