@@ -65,6 +65,38 @@ describe("hidden-accounts allowlist", () => {
       expect(spaText, `SPA allowlist must include ${email}`).toContain(email);
     }
   });
+
+  it("hidden-handles list filters smoke-test artifacts (auth-cascade)", async () => {
+    const { isHiddenHandle, isHiddenProfile, listHiddenHandles } = await import(
+      "../src/hidden-accounts.js"
+    );
+    expect(listHiddenHandles().length).toBeGreaterThan(0);
+    expect(isHiddenHandle("auth-cascade")).toBe(true);
+    expect(isHiddenHandle("AUTH-CASCADE")).toBe(true); // case-insensitive
+    expect(isHiddenHandle("oznakash")).toBe(false);
+    expect(isHiddenHandle(undefined)).toBe(false);
+    // isHiddenProfile combines both checks.
+    expect(isHiddenProfile({ handle: "auth-cascade", email: "x@y.com" })).toBe(true);
+    expect(isHiddenProfile({ handle: "oznakash", email: HIDDEN })).toBe(true);
+    expect(isHiddenProfile({ handle: "oznakash", email: "x@y.com" })).toBe(false);
+    expect(isHiddenProfile(null)).toBe(false);
+  });
+
+  it("SPA mirror also carries the explicit hidden handles (auth-cascade)", async () => {
+    const fs = await import("node:fs/promises");
+    const url = await import("node:url");
+    const here = url.fileURLToPath(import.meta.url);
+    const path = await import("node:path");
+    const repoRoot = path.resolve(path.dirname(here), "../../..");
+    const spaText = await fs.readFile(
+      path.join(repoRoot, "app/src/lib/hidden-accounts.ts"),
+      "utf8",
+    );
+    const { listHiddenHandles } = await import("../src/hidden-accounts.js");
+    for (const handle of listHiddenHandles()) {
+      expect(spaText, `SPA hidden-handles must include ${handle}`).toContain(handle);
+    }
+  });
 });
 
 describe("/u/:handle SSR", () => {

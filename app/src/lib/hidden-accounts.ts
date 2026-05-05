@@ -46,11 +46,21 @@ export function listHiddenAccountEmails(): readonly string[] {
   return Array.from(HIDDEN_ACCOUNT_EMAILS);
 }
 
-// Pre-computed set of canonical handles derived from each hidden email.
-// Built once at module load so the per-call check is just a Set hit.
-const HIDDEN_HANDLES: ReadonlySet<string> = new Set(
-  Array.from(HIDDEN_ACCOUNT_EMAILS).map((e) => baseHandleFromEmail(e)),
-);
+// Handles to filter even when we don't have / don't want the email
+// locally. Smoke-test artifacts go here.
+//
+// Keep in sync with `services/social-svc/src/hidden-accounts.ts`.
+const EXPLICIT_HIDDEN_HANDLES = [
+  "auth-cascade", // smoke-test profile from the auth-cascade audit run
+] as const;
+
+// Pre-computed set of canonical handles derived from each hidden email,
+// plus any explicit handles. Built once at module load so the per-call
+// check is just a Set hit.
+const HIDDEN_HANDLES: ReadonlySet<string> = new Set([
+  ...Array.from(HIDDEN_ACCOUNT_EMAILS).map((e) => baseHandleFromEmail(e)),
+  ...EXPLICIT_HIDDEN_HANDLES,
+]);
 
 /**
  * True when `handle` matches the canonical handle of a hidden account.
