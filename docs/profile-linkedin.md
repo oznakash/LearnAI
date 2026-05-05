@@ -356,6 +356,19 @@ Both are server-rendered by the social-svc sidecar (see
 so LinkedIn's review crawler gets real HTML with the policy text,
 not a JS-empty SPA shell.
 
+**App logo for the LinkedIn submission:**
+
+- 400×400 PNG: `https://learnai.cloud-claude.com/icon-400.png` (the
+  size LinkedIn's dev portal expects)
+- Other sizes: `/icon-{32,64,128,180,192,256,400,512}.png`
+- Source: `app/public/icon.svg` (square brand-gradient background +
+  the "LA" lightning-bolt glyph)
+- Regenerate: `cd app && node ../scripts/generate-icons.mjs`
+
+Either upload the PNG file directly from `app/public/icon-400.png`,
+or paste the URL above into the LinkedIn submission form (whichever
+LinkedIn prefers in their current portal).
+
 The SPA needs no rebuild for any of this — it probes the config
 endpoint at runtime and silently switches modes.
 
