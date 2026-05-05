@@ -291,6 +291,26 @@ export function SignIn() {
 
           {err && <div className="text-xs text-bad bg-bad/10 border border-bad/30 rounded-lg p-2">{err}</div>}
 
+          {/* LinkedIn requires that OAuth-using apps surface their privacy
+              + terms before sign-in (and a non-LinkedIn user expects it
+              too). Acceptance is implicit on continuing — same model as
+              Google / Notion / Linear. We stamp `agreedToLegalAt` on
+              first sign-in for an audit trail. */}
+          <p
+            className="text-[11px] text-white/40 leading-snug"
+            data-testid="signin-legal-notice"
+          >
+            By continuing, you agree to our{" "}
+            <a href="/terms" className="text-white/70 hover:text-white underline-offset-2 hover:underline">
+              Terms of Use
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" className="text-white/70 hover:text-white underline-offset-2 hover:underline">
+              Privacy Policy
+            </a>
+            .
+          </p>
+
           {!isProduction && (
             <div className="border-t border-white/5 pt-3">
               <button

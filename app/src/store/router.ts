@@ -20,6 +20,10 @@ export function viewFromPath(pathname: string): View {
   switch (head) {
     case "":
       return { name: "home" };
+    case "privacy":
+      return { name: "legal", kind: "privacy" };
+    case "terms":
+      return { name: "legal", kind: "terms" };
     case "tasks":
     case "dashboard":
     case "settings":
@@ -77,6 +81,8 @@ export function pathForView(v: View): string {
       return `/${v.name}`;
     case "profile":
       return `/u/${encodeURIComponent(v.handle)}`;
+    case "legal":
+      return v.kind === "privacy" ? "/privacy" : "/terms";
   }
 }
 

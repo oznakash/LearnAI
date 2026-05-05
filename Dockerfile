@@ -47,10 +47,15 @@ COPY --from=spa-build /workspace/dist/ /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # social-svc artifacts.
-RUN mkdir -p /opt/social-svc /data
+RUN mkdir -p /opt/social-svc /opt/social-svc/legal /data
 COPY --from=social-build /workspace/dist/ /opt/social-svc/dist/
 COPY --from=social-build /workspace/node_modules/ /opt/social-svc/node_modules/
 COPY --from=social-build /workspace/package.json /opt/social-svc/package.json
+# Legal MD content (privacy + terms). The sidecar SSRs /privacy + /terms
+# from these files for crawlers + the LinkedIn app-review bot. Same
+# canonical source the SPA imports via `?raw`. See docs/profile-linkedin.md
+# §10 for the operator submission checklist.
+COPY docs/legal/ /opt/social-svc/legal/
 
 # Entrypoint runs nginx + Node sidecar with signal forwarding so SIGTERM
 # from cloud-claude / docker stops both cleanly.

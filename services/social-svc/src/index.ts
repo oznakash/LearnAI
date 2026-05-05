@@ -48,6 +48,10 @@ const linkedinClientId = process.env.LINKEDIN_CLIENT_ID || "";
 const linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET || "";
 const linkedinRedirectUri = process.env.LINKEDIN_REDIRECT_URI || "";
 const appOrigin = process.env.SOCIAL_APP_ORIGIN || "";
+// Where the privacy.md / terms.md files live in the container. The
+// Dockerfile COPYs docs/legal/ here. Override with LEGAL_CONTENT_DIR
+// for local dev or alternative deploy layouts.
+const legalDir = process.env.LEGAL_CONTENT_DIR || "/opt/social-svc/legal";
 
 if (process.env.NODE_ENV === "production") {
   if (!jwtSecret) {
@@ -78,6 +82,7 @@ const app = createApp({
       }
     : undefined,
   appOrigin,
+  legalDir,
 });
 
 // Spotlight cron — emits one `kind="spotlight"` event per Topic
