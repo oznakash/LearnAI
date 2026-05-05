@@ -143,11 +143,11 @@ actors.
 
 ## 12. Governing law & disputes
 
-These Terms are governed by the law of the operator's residence
-(see the Privacy Policy contact section). Disputes go to the
-competent courts of that jurisdiction. If you're a consumer in the
-EU/EEA, this doesn't deprive you of mandatory consumer-protection
-rights you have under your local law.
+These Terms are governed by the law applicable where the Service is
+operated. Disputes go to the competent courts of that jurisdiction.
+If you're a consumer in the EU/EEA, this doesn't deprive you of
+mandatory consumer-protection rights you have under your local law,
+and you keep the right to bring a claim in your country of residence.
 
 ## 13. Changes to these Terms
 
@@ -158,7 +158,5 @@ log of
 
 ## 14. Contact
 
-- **Email:** oznakash@gmail.com
+- **Email:** learnai@useyl.com
 - **GitHub issue:** https://github.com/oznakash/learnai/issues
-- **Operator:** Oz Akan, individual operator of
-  `learnai.cloud-claude.com`.
