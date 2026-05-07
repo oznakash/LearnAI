@@ -15,12 +15,12 @@ export const aiTrends: Topic = {
       spark("The reasoning era", {
         type: "microread",
         title: "Why reasoning models exploded",
-        body: "Through 2025-2026, every frontier lab shipped 'thinking' modes. Claude with extended thinking, o-series from OpenAI, Gemini Thinking, DeepSeek-R1 open weights. The pattern: same base model, but allowed to generate hidden reasoning before the answer. Effect: huge gains on math, code, planning. Cost: more tokens, more latency. Builders learn to route — fast model for chat, reasoning for hard.",
+        body: "By mid-2026, every frontier lab ships a 'thinking' mode and the open-weights side keeps up. Claude with extended thinking, OpenAI o-series, Gemini Thinking, and DeepSeek's open lineage from R1 to V4 (1M-token context, agent-shaped). Same base model — but allowed to generate hidden reasoning before the answer. Effect: huge gains on math, code, planning. Cost: more tokens, more latency. Builders learn to route — fast model for chat, reasoning for hard.",
         takeaway: "Reasoning is now an option, not a feature. Route per task.",
         category: "news",
-        addedAt: "2026-02-01",
+        addedAt: "2026-05-07",
         bodyByAgeBand: {
-          teen: "Models can now 'think out loud' before answering. Claude, GPT, Gemini all have a thinking mode. Same brain, but it pauses to reason. Better at hard math, code, logic — but slower and pricier. Builders pick the mode per question: snappy for chat, thinky for hard.",
+          teen: "Models can now 'think out loud' before answering. Claude, GPT, Gemini all have a thinking mode, and open-weight models like DeepSeek-V4 caught up too. Same brain, but it pauses to reason. Better at hard math, code, logic — but slower and pricier. Builders pick the mode per question: snappy for chat, thinky for hard.",
         },
       }),
       spark("50/50 odds on superintelligence by 2028", {
@@ -64,6 +64,18 @@ export const aiTrends: Topic = {
         category: "news",
         addedAt: "2026-05-01",
         source: { name: "Hugging Face", url: "https://huggingface.co/blog" },
+      }),
+      spark("DeepSeek-V4: open weights, agent-shaped", {
+        type: "microread",
+        title: "1M context built for agents, not retrofitted",
+        body: "DeepSeek-V4 (Apr 2026) ships open-weight Pro and Flash variants with a 1M-token context window designed from scratch for agent workflows. Per the release: ~27% of the per-token inference FLOPs of V3.2 and ~10% of the KV-cache memory — meaning long-running agents stop dying from cache exhaustion. V4-Pro-Max scores 80.6 on SWE Verified, matching Gemini-3.1-Pro and within 0.2 of Opus-4.6-Max.",
+        takeaway: "Long-context isn't a closed-lab moat anymore. Agent shape is now the design target, not a retrofit.",
+        category: "news",
+        addedAt: "2026-05-07",
+        source: {
+          name: "Hugging Face",
+          url: "https://huggingface.co/blog/deepseekv4",
+        },
       }),
       spark("Hidden reasoning tokens", {
         type: "tip",
