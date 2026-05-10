@@ -350,6 +350,15 @@ export const aiBuilder: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Ask for HTML, not Markdown", {
+        type: "microread",
+        title: "The unreasonable effectiveness of HTML",
+        body: "Most of us still ask Claude for Markdown out of muscle memory — that habit dates to the GPT-4 era when every extra token hurt. With modern context budgets, HTML barely costs more, and it gives you SVG diagrams, color-coded callouts, collapsible sections, and in-page navigation inline. Simon Willison shows a Linux-exploit explainer rendered as one HTML page that's clearer than any Markdown version. Try ending your next big-explainer prompt with 'reply as a single self-contained HTML document' and see what comes back.",
+        takeaway: "Stop defaulting to Markdown for explanations. HTML output is barely costlier and unlocks diagrams, color, and structure.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/May/8/unreasonable-effectiveness-of-html/" },
+        category: "pattern",
+        addedAt: "2026-05-10",
+      }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
