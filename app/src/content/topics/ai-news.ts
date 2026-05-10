@@ -27,11 +27,11 @@ export const aiNews: Topic = {
       spark("Long-context is a refactor signal", {
         type: "microread",
         title: "Claude Opus 4.7 (1M context) is GA",
-        body: "Anthropic shipped Claude Opus 4.7 with a 1M-token context window, available to API customers and inside Claude Code. That's roughly 750k words — a full mid-size codebase or every email you've sent this year. The pricing tier above 200k tokens is higher per token, so the practical pattern is still RAG for hot paths and 1M context for one-shot codebase reasoning. If you've been chunking aggressively to fit 200k, audit which of those pipelines are now just noise.",
+        body: "Anthropic shipped Claude Opus 4.7 with a 1M-token context window, available to API customers and inside Claude Code. That's roughly 750k words — a full mid-size codebase or every email you've sent this year. The pricing tier above 200k tokens is higher per token, so the practical pattern is still RAG for hot paths and 1M context for one-shot codebase reasoning. If you've been chunking aggressively to fit 200k, audit which of those pipelines are now just noise. The next chapter is compute: Anthropic just leased all of SpaceX/xAI's Colossus 1 data center — long context only ships as fast as the megawatts behind it.",
         takeaway: "Long-context isn't a gimmick anymore — it's a refactor signal for any RAG pipeline you built before 2026.",
-        source: { name: "AlphaSignal", url: "https://alphasignal.ai/archive" },
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/May/7/xai-anthropic/" },
         category: "news",
-        addedAt: "2026-04-22",
+        addedAt: "2026-05-10",
       }),
       spark("The two-sources rule", {
         type: "microread",
