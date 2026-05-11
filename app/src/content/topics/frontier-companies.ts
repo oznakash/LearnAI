@@ -122,6 +122,18 @@ export const frontierCompanies: Topic = {
         category: "company",
         addedAt: "2026-05-01",
       }),
+      spark("Anthropic leases Colossus from xAI", {
+        type: "microread",
+        title: "When your rival owns the data center",
+        body: "On May 7 2026, Anthropic announced it would run workloads out of xAI's Colossus 1 data center — Elon Musk publicly said he approved the lease but reserved the right to reclaim compute 'if Claude causes harm to humanity'. The site has a contested environmental record: gas turbines reportedly ran without Clean Air Act permits early on. Two lessons for builders: (1) frontier compute is so scarce that even direct competitors trade GPU time, and (2) when your supplier is also a rival, your supply chain has a politics problem, not just a contract problem.",
+        takeaway: "Compute supply is now a political dependency, not just a vendor relationship.",
+        category: "news",
+        addedAt: "2026-05-11",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/May/7/xai-anthropic/",
+        },
+      }),
     ]),
     level(T, 2, "Anthropic in depth", "Mission, models, products.", 6, [
       spark("Anthropic 101", {
