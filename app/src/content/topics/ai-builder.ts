@@ -431,6 +431,15 @@ export const aiBuilder: Topic = {
         category: "pattern",
         addedAt: "2025-10-01",
       }),
+      spark("The maintenance-cost test", {
+        type: "microread",
+        title: "Coding agents have to cut maintenance, not just typing",
+        body: "James Shore's mid-2026 take, going viral on HN: if your AI coding agent makes you 2x faster but the code it ships costs 4x more to maintain, you've quietly traded short-term velocity for long-term debt. The honest scoreboard isn't lines-per-day or PRs-merged — it's total cost of ownership: bugs filed, on-call pages, time spent re-reading agent-written code six months later. Treat agent output like any contractor's: tests, types, docs, and a human who can defend every line in a review.",
+        takeaway: "Score agents on maintenance cost, not output volume. Reviewable code > fast code.",
+        source: { name: "James Shore", url: "https://www.jamesshore.com/v2/blog/2026/you-need-ai-that-reduces-your-maintenance-costs" },
+        category: "principle",
+        addedAt: "2026-05-12",
+      }),
       spark("Retry with backoff", {
         type: "microread",
         title: "The single biggest reliability win",

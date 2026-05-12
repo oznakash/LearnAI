@@ -377,12 +377,13 @@ export const aiTrends: Topic = {
       spark("Closed vs open gap", {
         type: "microread",
         title: "The open weights wave",
-        body: "Open-weight frontier-class models (DeepSeek, Llama, Qwen, Mistral) closed much of the gap with closed APIs in 2025. They run on your own infra, fine-tune freely, and are perfect for regulated industries. They lag closed models on the hardest benchmarks, but for 80% of product use cases they're plenty.",
-        takeaway: "Open is a real option now. Pick by use case + regulation.",
+        body: "The gap that mattered through 2025 — frontier-class capability gated behind closed APIs — narrowed sharply in early 2026. DeepSeek-V4 shipped in April with a million-token context aimed explicitly at agents, IBM dropped Granite 4.1 as an open Apache-2.0 lineup, and Hugging Face is now seeing fine-tunes, GGUF quants, and Ollama recipes within hours of each release. They still trail closed models on the hardest evals, but for 80% of product use cases (and 100% of regulated-data ones) they're the default option, not the fallback.",
+        takeaway: "Open is the default now. Pick closed only when the eval gap is real for your task.",
+        source: { name: "Hugging Face", url: "https://huggingface.co/blog/deepseekv4" },
         category: "news",
-        addedAt: "2026-02-01",
+        addedAt: "2026-05-12",
         bodyByAgeBand: {
-          teen: "Free-to-download models like Llama, DeepSeek, Qwen, Mistral got nearly as good as Claude or GPT in 2025. You can run them on your own laptop or server, change them, fine-tune them. They aren't best-in-class on the hardest stuff yet, but for most apps they work fine — and they're free.",
+          teen: "Free-to-download models like Llama, DeepSeek, Qwen, Granite, Mistral kept catching up in 2026. DeepSeek-V4 even shipped with a million-token context — enough for an agent to read a whole codebase in one go. You can run them on your own laptop or server, change them, fine-tune them. They aren't best-in-class on the hardest stuff yet, but for most apps they work fine — and they're free.",
         },
       }),
       spark("Llama 4 ships open MoE", {
