@@ -13,6 +13,14 @@
 //   SOCIAL_UPLOADS_ROOT         (default "/data/uploads"; same volume that
 //                                holds SOCIAL_DB_PATH. nginx serves it via
 //                                `location /i/`.)
+//   EMAIL_LOG_PATH              (default "/data/email-log.jsonl"; append-only
+//                                JSONL audit of every /v1/email/send. See
+//                                docs/email-audit.md.)
+//   STALWART_ADMIN_URL          When set together with STALWART_ADMIN_TOKEN,
+//   STALWART_ADMIN_TOKEN        enables /v1/email/log/:id/status to proxy
+//                                Stalwart's /api/queue/messages/{id} for
+//                                per-message delivery state. Both unset →
+//                                endpoint returns { state: "local_only" }.
 //   NODE_ENV                    (set to "production" on the live deploy)
 //   LINKEDIN_CLIENT_ID          LinkedIn OIDC client id. When unset the
 //                                Connect-with-LinkedIn flow is disabled and
