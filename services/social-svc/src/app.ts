@@ -33,6 +33,12 @@ import { log, emailHash } from "./log.js";
 import { verifySessionJwt } from "./verify.js";
 import { DEFAULT_RULES, inMemoryBucket, type RateBucket, type RateRule } from "./rate-limit.js";
 import { sendEmail, smtpStatus } from "./email.js";
+import { EmailLog, newEnvId, type EmailLogEntry } from "./email-log.js";
+import {
+  stalwartConfigFromEnv,
+  fetchQueueMessage,
+  summariseStatus,
+} from "./stalwart.js";
 import {
   renderProfileHtml,
   renderNotFoundHtml,
@@ -113,6 +119,12 @@ interface AppOpts {
    * of crashing — operator hasn't deployed the volume layer yet.
    */
   legalDir?: string;
+  /**
+   * Append-only audit log of every `POST /v1/email/send`. When omitted,
+   * defaults to `EMAIL_LOG_PATH` env var or `/data/email-log.jsonl`.
+   * Pass an explicit instance in tests.
+   */
+  emailLog?: EmailLog;
 }
 
 export function createApp(opts: AppOpts) {
@@ -148,6 +160,9 @@ export function createApp(opts: AppOpts) {
   const linkedinNonces = opts.linkedinNonceTracker ?? inMemoryNonceTracker();
   const appOrigin = (opts.appOrigin ?? "/").replace(/\/$/, "") || "/";
   const legalDir = opts.legalDir;
+  const emailLog =
+    opts.emailLog ??
+    new EmailLog(process.env.EMAIL_LOG_PATH ?? "/data/email-log.jsonl");
 
   if (!jwtSecret && !demoTrustHeader) {
     log.warn(
@@ -1336,9 +1351,15 @@ export function createApp(opts: AppOpts) {
       // working one-click button while RFC 8058 silently disabled it.
       return res.status(400).json({ error: "unsubscribe_url_must_be_https" });
     }
+    // Allocate the envId BEFORE the SMTP submission so it lands on the
+    // outgoing MAIL FROM line (RFC 3461 ENVID). Any bounce that comes
+    // back to the return-path mailbox will carry this id in the
+    // Original-Envelope-Id header — the join key for ingestion (deferred).
+    const envId = newEnvId();
     log.info("email_attempt", {
       sent_by_hash: emailHash(me.email),
       to_domain: to.split("@")[1] ?? "?",
+      env_id: envId,
     });
     const r = await sendEmail({
       to,
@@ -1351,9 +1372,129 @@ export function createApp(opts: AppOpts) {
         typeof unsubscribeUrl === "string" && unsubscribeUrl.length > 0
           ? unsubscribeUrl
           : undefined,
+      envId,
     });
-    if (!r.ok) return res.status(503).json({ error: "send_failed", reason: r.reason });
-    res.json({ ok: true, messageId: r.messageId });
+    // Append to the audit log regardless of ok/failure — we want failures
+    // in the record too, so operators can see "we tried and the relay
+    // rejected" instead of silent gaps in the timeline.
+    const logEntry: EmailLogEntry = {
+      id: envId,
+      ts: new Date().toISOString(),
+      to,
+      toDomain: to.split("@")[1]?.toLowerCase() ?? "?",
+      subject,
+      ok: r.ok,
+      rfcMessageId: r.messageId,
+      stalwartQueueId: r.stalwartQueueId,
+      smtpResponse: r.smtpResponse,
+      providerError: r.ok ? undefined : r.reason,
+      submittedByHash: emailHash(me.email),
+      hasUnsubUrl: typeof unsubscribeUrl === "string" && unsubscribeUrl.length > 0,
+    };
+    try {
+      await emailLog.append(logEntry);
+    } catch (e) {
+      // Audit failures are not fatal for the send — we don't want to
+      // mark a delivered email as failed just because the disk is full.
+      // But we DO log loudly so the operator can fix.
+      log.error("email_log_append_failed", {
+        env_id: envId,
+        err: (e as Error).message,
+      });
+    }
+    if (!r.ok) return res.status(503).json({ error: "send_failed", reason: r.reason, envId });
+    res.json({ ok: true, messageId: r.messageId, envId, stalwartQueueId: r.stalwartQueueId });
+  });
+
+  // -- Email audit log (admin-only) ----------------------------------------
+  // List recent submissions. Source of truth for "what did we hand to
+  // the relay?" — bypasses per-browser localStorage. Newest first.
+  app.get("/v1/email/log", requireUser, requireAdmin, async (req, res) => {
+    const limitRaw = parseInt(String(req.query.limit ?? "50"), 10);
+    const offsetRaw = parseInt(String(req.query.offset ?? "0"), 10);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, limitRaw)) : 50;
+    const offset = Number.isFinite(offsetRaw) ? Math.max(0, offsetRaw) : 0;
+    try {
+      const items = await emailLog.read({ limit, offset });
+      const total = await emailLog.count();
+      res.json({
+        items,
+        total,
+        stalwartConfigured: !!stalwartConfigFromEnv(),
+      });
+    } catch (e) {
+      log.error("email_log_read_failed", { err: (e as Error).message });
+      res.status(500).json({ error: "email_log_read_failed" });
+    }
+  });
+
+  // Per-message Stalwart status. Behind a feature flag: when
+  // STALWART_ADMIN_URL/_TOKEN are unset, returns { state: "local_only" }
+  // so the UI can still render the row without crashing on the lookup.
+  app.get("/v1/email/log/:id/status", requireUser, requireAdmin, async (req, res) => {
+    const id = String(req.params.id ?? "");
+    const entry = await emailLog.findById(id);
+    if (!entry) return res.status(404).json({ error: "not_found" });
+    const cfg = stalwartConfigFromEnv();
+    if (!cfg) {
+      return res.json({
+        source: "local_only",
+        state: "local_only",
+        reason: "stalwart_not_configured",
+        envId: entry.id,
+      });
+    }
+    if (!entry.stalwartQueueId) {
+      return res.json({
+        source: "local_only",
+        state: "missing_queue_id",
+        reason: "stalwart_queue_id_not_parsed",
+        envId: entry.id,
+      });
+    }
+    const r = await fetchQueueMessage(cfg, entry.stalwartQueueId);
+    if (r.kind === "found") {
+      const summary = summariseStatus(r.domains);
+      return res.json({
+        source: "stalwart",
+        state: summary.state,
+        worstErrorCategory: summary.worstErrorCategory,
+        domains: r.domains,
+        created: r.created,
+        size: r.size,
+        envId: entry.id,
+        stalwartQueueId: entry.stalwartQueueId,
+      });
+    }
+    if (r.kind === "not_found") {
+      // Stalwart prunes the queue entry once delivery completes
+      // successfully, so a 404 is ambiguous. If the submission is
+      // more than 1h old, "delivered and reaped" is overwhelmingly
+      // more likely than "never enqueued" (we have the queue id from
+      // the original 250 response, so we know it was enqueued).
+      const ageMs = Date.now() - new Date(entry.ts).getTime();
+      const aged = ageMs > 60 * 60 * 1000;
+      return res.json({
+        source: "stalwart",
+        state: aged ? "completed_aged_out" : "scheduled_or_completed",
+        reason: "queue_entry_not_found",
+        envId: entry.id,
+        stalwartQueueId: entry.stalwartQueueId,
+      });
+    }
+    // r.kind === "error"
+    log.warn("stalwart_lookup_error", {
+      env_id: entry.id,
+      stalwart_queue_id: entry.stalwartQueueId,
+      reason: r.reason,
+      status: r.status,
+    });
+    return res.status(502).json({
+      source: "stalwart",
+      state: "unknown",
+      reason: r.reason,
+      envId: entry.id,
+    });
   });
 
   // -- Admin: profile audit + cleanup --------------------------------------

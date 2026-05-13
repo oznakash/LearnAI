@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAdmin } from "./AdminContext";
 import type { EmailProvider, EmailTemplate, EmailTemplateId } from "./types";
 import { renderEmail, sampleTemplateVars } from "./store";
+import { usePlayer } from "../store/PlayerContext";
 
 const ALL_PROVIDERS: EmailProvider[] = [
   "smtp-our-server",
@@ -333,9 +334,21 @@ export function AdminEmails() {
         <PolicyControls />
       </section>
 
+      {/* Server-side audit log. Source of truth for "what did we hand to */}
+      {/* the SMTP relay?" Populated by social-svc /v1/email/log; see     */}
+      {/* docs/email-audit.md. Survives browser-storage clears.           */}
+      <ServerEmailLog />
+
       {config.emailQueue.length > 0 && (
         <section className="card p-4">
-          <h3 className="font-display font-semibold text-white">Queue (latest 50)</h3>
+          <h3 className="font-display font-semibold text-white">
+            Drafts &amp; unflushed{" "}
+            <span className="text-xs font-normal text-white/50">(this browser only)</span>
+          </h3>
+          <p className="text-xs text-white/50 mt-1">
+            Per-browser localStorage queue. Not a system-wide record of sent emails — for that,
+            see <em>Server log</em> above (or <code>docs/email-audit.md</code>).
+          </p>
           <div className="overflow-x-auto mt-2">
             <table className="w-full text-xs">
               <thead className="text-white/50">
@@ -380,6 +393,256 @@ export function AdminEmails() {
         </section>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Server-side audit log of every POST /v1/email/send. The bearer JWT used
+// here is the same one the SPA uses for /v1/social/* — we don't fall back
+// to localStorage for the audit list because that's the very thing this
+// table replaces. When the player isn't signed in (or isn't an admin),
+// the endpoint 401s and we render an unobtrusive hint.
+//
+// Per-row "Delivery" state is lazy-fetched on demand. Stalwart's queue
+// API is cheap but it does a real network hop per call — we don't want
+// to fan out N requests on mount.
+// ---------------------------------------------------------------------------
+
+interface ServerLogEntry {
+  id: string;
+  ts: string;
+  to: string;
+  toDomain: string;
+  subject: string;
+  ok: boolean;
+  rfcMessageId?: string;
+  stalwartQueueId?: string;
+  smtpResponse?: string;
+  providerError?: string;
+  submittedByHash: string;
+  hasUnsubUrl: boolean;
+}
+
+type DeliveryFetchState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | {
+      kind: "loaded";
+      state: string;
+      reason?: string;
+      worstErrorCategory?: string;
+      source: string;
+    }
+  | { kind: "error"; reason: string };
+
+function ServerEmailLog() {
+  const { state: player } = usePlayer();
+  const token = player.serverSession?.token;
+  const [items, setItems] = useState<ServerLogEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [stalwartConfigured, setStalwartConfigured] = useState<boolean>(false);
+  const [deliveryById, setDeliveryById] = useState<Record<string, DeliveryFetchState>>({});
+
+  const reload = useCallback(async () => {
+    if (!token) {
+      setError("sign-in required");
+      return;
+    }
+    setError(null);
+    try {
+      const r = await fetch("/v1/email/log?limit=50", {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (r.status === 401 || r.status === 403) {
+        setError("not authorised (admin only)");
+        return;
+      }
+      if (!r.ok) {
+        setError(`HTTP ${r.status}`);
+        return;
+      }
+      const data = (await r.json()) as {
+        items: ServerLogEntry[];
+        stalwartConfigured: boolean;
+      };
+      setItems(data.items ?? []);
+      setStalwartConfigured(!!data.stalwartConfigured);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const checkDelivery = useCallback(
+    async (id: string) => {
+      if (!token) return;
+      setDeliveryById((prev) => ({ ...prev, [id]: { kind: "loading" } }));
+      try {
+        const r = await fetch(`/v1/email/log/${encodeURIComponent(id)}/status`, {
+          headers: { authorization: `Bearer ${token}` },
+        });
+        const data = (await r.json().catch(() => ({}))) as {
+          state?: string;
+          reason?: string;
+          worstErrorCategory?: string;
+          source?: string;
+        };
+        if (!r.ok && r.status !== 502) {
+          setDeliveryById((prev) => ({
+            ...prev,
+            [id]: { kind: "error", reason: data?.reason ?? `HTTP ${r.status}` },
+          }));
+          return;
+        }
+        setDeliveryById((prev) => ({
+          ...prev,
+          [id]: {
+            kind: "loaded",
+            state: data.state ?? "unknown",
+            reason: data.reason,
+            worstErrorCategory: data.worstErrorCategory,
+            source: data.source ?? "stalwart",
+          },
+        }));
+      } catch (e) {
+        setDeliveryById((prev) => ({
+          ...prev,
+          [id]: { kind: "error", reason: (e as Error).message },
+        }));
+      }
+    },
+    [token],
+  );
+
+  if (!token) return null;
+  return (
+    <section className="card p-4">
+      <header className="flex items-center justify-between gap-2 flex-wrap">
+        <div>
+          <h3 className="font-display font-semibold text-white">
+            Server log (latest 50){" "}
+            <span className="text-xs font-normal text-white/50">— authoritative</span>
+          </h3>
+          <p className="text-xs text-white/50 mt-1">
+            Append-only audit from <code>social-svc</code>. Every send the SPA submits
+            via <code>POST /v1/email/send</code> appears here.{" "}
+            {stalwartConfigured
+              ? "Click a row to fetch delivery state from Stalwart."
+              : "Delivery state requires STALWART_ADMIN_URL + STALWART_ADMIN_TOKEN — currently unset, so rows show submitted-only."}
+          </p>
+        </div>
+        <button className="btn-ghost text-xs" type="button" onClick={() => void reload()}>
+          Reload
+        </button>
+      </header>
+      {error && <div className="text-bad text-xs mt-2">{error}</div>}
+      {items && items.length === 0 && (
+        <div className="text-white/50 text-xs mt-3">
+          No sends recorded. The log starts populating the next time an admin
+          flushes the queue with <code>smtp-our-server</code> selected.
+        </div>
+      )}
+      {items && items.length > 0 && (
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-xs">
+            <thead className="text-white/50">
+              <tr>
+                <th className="text-left p-2">When</th>
+                <th className="text-left p-2">To</th>
+                <th className="text-left p-2">Subject</th>
+                <th className="text-left p-2">Submitted</th>
+                <th className="text-left p-2">Delivery</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it) => {
+                const delivery = deliveryById[it.id] ?? { kind: "idle" as const };
+                return (
+                  <tr key={it.id} className="border-t border-white/5 align-top">
+                    <td className="p-2 text-white/60 whitespace-nowrap">
+                      {new Date(it.ts).toLocaleString()}
+                    </td>
+                    <td className="p-2 text-white">
+                      {it.to}
+                      <div className="text-[10px] text-white/40 font-mono">{it.id}</div>
+                    </td>
+                    <td className="p-2 text-white/80">{it.subject}</td>
+                    <td className="p-2">
+                      <span
+                        className={`chip text-[10px] ${
+                          it.ok
+                            ? "bg-good/10 text-good border-good/30"
+                            : "bg-bad/10 text-bad border-bad/30"
+                        }`}
+                      >
+                        {it.ok ? "ok" : "failed"}
+                      </span>
+                      {it.providerError && (
+                        <div className="text-bad text-[10px] mt-0.5">{it.providerError}</div>
+                      )}
+                      {it.stalwartQueueId && (
+                        <div className="text-[10px] text-white/40 mt-0.5 font-mono">
+                          qid {it.stalwartQueueId}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {delivery.kind === "idle" && (
+                        <button
+                          type="button"
+                          className="btn-ghost text-[10px] px-2 py-0.5"
+                          disabled={!it.ok}
+                          onClick={() => void checkDelivery(it.id)}
+                        >
+                          {it.ok ? "Check" : "n/a"}
+                        </button>
+                      )}
+                      {delivery.kind === "loading" && (
+                        <span className="text-white/50 text-[10px]">checking…</span>
+                      )}
+                      {delivery.kind === "loaded" && (
+                        <div>
+                          <span
+                            className={`chip text-[10px] ${
+                              delivery.state === "completed" ||
+                              delivery.state === "completed_aged_out"
+                                ? "bg-good/10 text-good border-good/30"
+                                : delivery.state === "perm_fail"
+                                  ? "bg-bad/10 text-bad border-bad/30"
+                                  : delivery.state === "temp_fail"
+                                    ? "bg-warn/10 text-warn border-warn/30"
+                                    : "bg-white/5 text-white/60 border-white/15"
+                            }`}
+                          >
+                            {delivery.state}
+                          </span>
+                          {delivery.worstErrorCategory && (
+                            <div className="text-[10px] text-white/50 mt-0.5">
+                              {delivery.worstErrorCategory}
+                            </div>
+                          )}
+                          {delivery.reason && delivery.state !== "completed" && (
+                            <div className="text-[10px] text-white/40 mt-0.5">
+                              {delivery.reason}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {delivery.kind === "error" && (
+                        <span className="text-bad text-[10px]">{delivery.reason}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
