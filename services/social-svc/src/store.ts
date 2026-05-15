@@ -71,7 +71,12 @@ export interface Store {
   // Blocks
   addBlock(blocker: string, blocked: string): void;
   removeBlock(blocker: string, blocked: string): void;
+  /** Returns emails of blocked users. Internal use only — callers that
+   *  need handles for the API surface should use listBlockedHandles. */
   listBlocked(blocker: string): string[];
+  /** Returns handles of blocked users (for API responses). Falls back to
+   *  email when the target profile is not in the store (e.g. deleted). */
+  listBlockedHandles(blocker: string): string[];
   isBlockedEitherWay(a: string, b: string): boolean;
 
   // Reports
@@ -309,6 +314,14 @@ export function createStore(opts: { dbPath?: string } = {}): Store {
       return state.blocks
         .filter((b) => lc(b.blocker) === lc(blocker))
         .map((b) => b.blocked);
+    },
+    listBlockedHandles(blocker) {
+      return state.blocks
+        .filter((b) => lc(b.blocker) === lc(blocker))
+        .map((b) => {
+          const p = state.profiles.find((x) => lc(x.email) === lc(b.blocked));
+          return p?.handle ?? b.blocked;
+        });
     },
     isBlockedEitherWay(a, b) {
       return state.blocks.some(

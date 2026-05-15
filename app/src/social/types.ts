@@ -280,7 +280,7 @@ export interface SocialService {
   cancelMyPendingRequest(targetHandle: string): Promise<void>;
   setMuted(targetHandle: string, muted: boolean): Promise<void>;
   block(targetHandle: string): Promise<void>;
-  unblock(targetEmail: string): Promise<void>;
+  unblock(targetHandle: string): Promise<void>;
   report(
     targetHandle: string,
     reason: ReportReason,

@@ -239,7 +239,20 @@ describe("follow / unfollow / block", () => {
     const blocked = await request(app)
       .get("/v1/social/me/blocked")
       .set(userHeaders("maya@gmail.com"));
-    expect(blocked.body).toContain("priya@gmail.com");
+    expect(blocked.body).toContain("priya"); // GET /me/blocked now returns handles
+  });
+
+  it("unblock by handle removes the block", async () => {
+    await request(app)
+      .post("/v1/social/blocks/priya")
+      .set(userHeaders("maya@gmail.com"));
+    await request(app)
+      .delete("/v1/social/blocks/priya")
+      .set(userHeaders("maya@gmail.com"));
+    const blocked = await request(app)
+      .get("/v1/social/me/blocked")
+      .set(userHeaders("maya@gmail.com"));
+    expect(blocked.body).toEqual([]);
   });
 });
 

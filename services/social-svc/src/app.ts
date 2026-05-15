@@ -1097,15 +1097,17 @@ export function createApp(opts: AppOpts) {
     res.status(204).end();
   });
 
-  app.delete("/v1/social/blocks/:targetEmail", requireUser, (req, res) => {
+  app.delete("/v1/social/blocks/:handle", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
-    store.removeBlock(me.email, String(req.params.targetEmail));
+    const target = store.getProfileByHandle(String(req.params.handle));
+    if (!target) return res.status(404).json({ error: "not_found" });
+    store.removeBlock(me.email, target.email);
     res.status(204).end();
   });
 
   app.get("/v1/social/me/blocked", requireUser, (req, res) => {
     const me = (req as Request & { profile: ProfileRecord }).profile;
-    res.json(store.listBlocked(me.email));
+    res.json(store.listBlockedHandles(me.email));
   });
 
   // -- Reports -------------------------------------------------------------

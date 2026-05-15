@@ -619,11 +619,11 @@ export class OfflineSocialService implements SocialService {
     });
   }
 
-  async unblock(targetEmail: string): Promise<void> {
+  async unblock(targetHandle: string): Promise<void> {
     const state = this.read();
     this.write({
       ...state,
-      blocked: state.blocked.filter((b) => b.toLowerCase() !== targetEmail.toLowerCase()),
+      blocked: state.blocked.filter((b) => b.toLowerCase() !== targetHandle.toLowerCase()),
     });
   }
 
