@@ -64,6 +64,20 @@ describe("router — viewFromPath", () => {
     expect(viewFromPath("/dashboard/")).toEqual({ name: "dashboard" });
     expect(viewFromPath("//tasks//")).toEqual({ name: "tasks" });
   });
+
+  it("decodes /u/<handle> to profile view", () => {
+    expect(viewFromPath("/u/maya")).toEqual({ name: "profile", handle: "maya" });
+    expect(viewFromPath("/u/some-user")).toEqual({ name: "profile", handle: "some-user" });
+  });
+
+  it("falls back to home for /u/ with invalid or reserved handle", () => {
+    expect(viewFromPath("/u/")).toEqual({ name: "home" }); // no handle
+    expect(viewFromPath("/u/admin")).toEqual({ name: "home" }); // reserved
+    expect(viewFromPath("/u/claude_official")).toEqual({ name: "home" }); // reserved
+    expect(viewFromPath("/u/-bad-start")).toEqual({ name: "home" }); // invalid syntax
+    expect(viewFromPath("/u/has spaces")).toEqual({ name: "home" }); // invalid chars
+    expect(viewFromPath("/u/toolonghandlethatexceedstwentyfourcharacterslimit")).toEqual({ name: "home" }); // too long
+  });
 });
 
 describe("router — sameView", () => {
