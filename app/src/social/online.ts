@@ -27,6 +27,7 @@ import type {
   StreamCard,
 } from "./types";
 import type { TopicId } from "../types";
+import { baseHandleFromEmail } from "./handles";
 
 export interface OnlineOpts {
   /**
@@ -40,6 +41,14 @@ export interface OnlineOpts {
   apiKey?: string;
   /** Used for the X-User-Email demo-mode fallback header. */
   userEmail: string;
+  /**
+   * The signed-in player's own handle. Used for client-side self-action
+   * guards (mirror of the offline service's isSelf() checks). Defaults
+   * to baseHandleFromEmail(userEmail) — covers most cases since handle
+   * disambiguation is rare. The server enforces self-action checks too;
+   * this is a UX-layer defence in depth.
+   */
+  myHandle?: string;
   /** Per-call hard timeout, default 6000ms. */
   timeoutMs?: number;
 }
@@ -48,6 +57,7 @@ export class OnlineSocialService implements SocialService {
   private readonly base: string;
   private readonly apiKey?: string;
   private readonly email: string;
+  private readonly myHandle: string;
   private readonly timeoutMs: number;
 
   constructor(opts: OnlineOpts) {
@@ -57,7 +67,15 @@ export class OnlineSocialService implements SocialService {
     this.base = url && url !== "/" ? url.replace(/\/+$/, "") : "";
     this.apiKey = opts.apiKey;
     this.email = opts.userEmail;
+    this.myHandle = opts.myHandle ?? baseHandleFromEmail(opts.userEmail);
     this.timeoutMs = opts.timeoutMs ?? 6000;
+  }
+
+  /** True when the target string matches the signed-in player's email or handle. */
+  private isSelf(target: string): boolean {
+    if (!target) return false;
+    const t = target.toLowerCase();
+    return t === this.email.toLowerCase() || t === this.myHandle.toLowerCase();
   }
 
   private headers(extra: Record<string, string> = {}): Record<string, string> {
@@ -192,6 +210,7 @@ export class OnlineSocialService implements SocialService {
 
   // -- write (graph) -----------------------------------------------------
   follow(targetHandle: string): Promise<FollowEdge> {
+    if (this.isSelf(targetHandle)) throw new Error("Cannot follow yourself");
     return this.request<FollowEdge>(
       `/v1/social/follow/${encodeURIComponent(targetHandle)}`,
       { method: "POST" },
@@ -226,6 +245,7 @@ export class OnlineSocialService implements SocialService {
   }
 
   async setMuted(targetHandle: string, muted: boolean): Promise<void> {
+    if (this.isSelf(targetHandle)) return; // silent no-op, mirrors offline service
     await this.request(
       `/v1/social/follow/${encodeURIComponent(targetHandle)}/mute`,
       { method: "PUT", body: JSON.stringify({ muted }) },
@@ -233,6 +253,7 @@ export class OnlineSocialService implements SocialService {
   }
 
   async block(targetHandle: string): Promise<void> {
+    if (this.isSelf(targetHandle)) throw new Error("Cannot block yourself");
     await this.request(`/v1/social/blocks/${encodeURIComponent(targetHandle)}`, {
       method: "POST",
     });
@@ -250,6 +271,7 @@ export class OnlineSocialService implements SocialService {
     note?: string,
     context?: Record<string, unknown>,
   ): Promise<void> {
+    if (this.isSelf(targetHandle)) throw new Error("Cannot report yourself");
     await this.request("/v1/social/reports", {
       method: "POST",
       body: JSON.stringify({ targetHandle, reason, note, context }),
