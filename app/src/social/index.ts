@@ -48,6 +48,13 @@ export interface SelectSocialOpts {
   identityName?: string;
   identityPicture?: string;
   /**
+   * The signed-in player's own handle. Passed to OnlineSocialService for
+   * client-side self-action guards. If omitted, the online service derives
+   * it from baseHandleFromEmail(email) — good enough for the vast majority
+   * of accounts where the handle was never disambiguated.
+   */
+  myHandle?: string;
+  /**
    * Operator-level field defaults from
    * `admin.socialConfig.publicProfile`. Applied only on first
    * profile creation — existing users keep their saved values.
@@ -102,6 +109,7 @@ export function selectSocialService(opts: SelectSocialOpts): SocialService {
     serverUrl,
     apiKey: opts.bearerToken,
     userEmail: email,
+    myHandle: opts.myHandle,
   });
 }
 
