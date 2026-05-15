@@ -238,8 +238,8 @@ export class OnlineSocialService implements SocialService {
     });
   }
 
-  async unblock(targetEmail: string): Promise<void> {
-    await this.request(`/v1/social/blocks/${encodeURIComponent(targetEmail)}`, {
+  async unblock(targetHandle: string): Promise<void> {
+    await this.request(`/v1/social/blocks/${encodeURIComponent(targetHandle)}`, {
       method: "DELETE",
     });
   }
