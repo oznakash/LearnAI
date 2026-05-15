@@ -500,10 +500,14 @@ export function AdminMemory() {
             <div className="text-white/50">SESSION_TTL_DAYS</div>
             <div className="text-white text-[13px] font-mono">{serverStatus.sessionTtlDays}</div>
             <div className="text-white/50">HISTORY_DB_PATH</div>
-            <div className="text-white text-[13px] font-mono break-all">
-              {serverStatus.historyDbPath}
-              {serverStatus.historyDbPath.startsWith("/tmp") && (
-                <span className="ml-2 text-warn text-[11px]">⚠ ephemeral — mount /app/data + unset to persist</span>
+            <div className="text-[13px]">
+              {serverStatus.historyDbPath.startsWith("/tmp") ? (
+                <span className="text-warn font-mono">
+                  (ephemeral)
+                  <span className="ml-2 text-warn text-[11px]">⚠ mount /app/data + unset HISTORY_DB_PATH to persist</span>
+                </span>
+              ) : (
+                <span className="text-good font-mono">(persisted)</span>
               )}
             </div>
             <div className="text-white/50">OPENAI_API_KEY</div>
