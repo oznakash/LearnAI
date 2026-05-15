@@ -11,6 +11,7 @@
 
 import type { TopicId } from "../types";
 import type { View } from "../App";
+import { isValidHandle } from "../social/handles";
 
 /** Decode the current pathname into a View. Unknown paths → home. */
 export function viewFromPath(pathname: string): View {
@@ -46,11 +47,14 @@ export function viewFromPath(pathname: string): View {
       return { name: "play", topicId: topicId as TopicId, levelId };
     }
     case "u": {
-      // /u/<handle> → Public Profile. The handle is path-decoded; we
-      // don't validate here (the Profile view handles 404).
       const handle = parts[1];
       if (!handle) return { name: "home" };
-      return { name: "profile", handle: decodeURIComponent(handle) };
+      const decoded = decodeURIComponent(handle);
+      // Reject syntactically invalid or reserved handles before they
+      // reach the Profile view — avoids a pointless 404 round-trip and
+      // prevents probing reserved names via the URL bar.
+      if (!isValidHandle(decoded)) return { name: "home" };
+      return { name: "profile", handle: decoded };
     }
     default:
       return { name: "home" };
