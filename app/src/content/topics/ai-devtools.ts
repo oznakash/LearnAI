@@ -227,6 +227,15 @@ export const aiDevtools: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Ask for HTML, not Markdown", {
+        type: "microread",
+        title: "The unreasonable effectiveness of HTML",
+        body: "Models default to Markdown for token-thrift — a holdover from tight context windows. With 2026-scale contexts that thrift no longer pays. Ask Claude (or any frontier model) for an explanation as a self-contained HTML page and you unlock SVG diagrams, interactive widgets, in-page navigation, color, and layout — for the same prompt. Simon Willison's worked example: paste an obfuscated payload, ask for a 'self-contained HTML/CSS/JS explainer.' Out comes a dark-themed page with a summary section and a pattern-analysis pane. Use it for one-off teaching artifacts you'd otherwise screenshot.",
+        takeaway: "Default your one-off explainer prompts to HTML — you get diagrams, interactivity, and layout for free.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/May/8/unreasonable-effectiveness-of-html/" },
+        category: "tooling",
+        addedAt: "2026-05-16",
+      }),
       spark("Microread: context discipline", {
         type: "microread",
         title: "Don't paste the world",
