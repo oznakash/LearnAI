@@ -149,10 +149,11 @@ export const aiTrends: Topic = {
       spark("Beyond toy demos", {
         type: "microread",
         title: "Agents become work",
-        body: "By 2026, agentic coding (Claude Code, Devin, Cursor Agent) became default in many engineering teams. Customer-support agents, research agents, ops agents quietly handle most ticket triage at top SaaS. Pattern: narrow scope + tight tools + good evals + human approval for risky steps. Wide-open 'do anything' agents still flop.",
-        takeaway: "Narrow, tool-rich, supervised agents — that's what works.",
+        body: "May 2026: the agent stack stopped being a feature and became a form factor. Latent Space's 'Everything is Conductor' essay names the convergence — GitHub Copilot App, OpenAI's coding agent, Conductor.build all settled on the same shape: a long-running session, a panel of running tasks, a reviewer-in-the-loop. DeepSeek-V4 (Apr) pushed open weights to million-token agent workflows with ~10% of V3's KV-cache footprint. The pattern still wins: narrow scope + tight tools + good evals + human approval on risk. Wide-open 'do anything' agents still flop — they just flop on a fancier UI now.",
+        takeaway: "The agent UX converged on 'conductor' — long-running sessions, parallel tasks, human reviewer. Pick a narrow job and ship.",
+        source: { name: "Latent Space", url: "https://www.latent.space/p/ainews-everything-is-conductor" },
         category: "news",
-        addedAt: "2026-02-01",
+        addedAt: "2026-05-16",
       }),
       spark("Tip & Trick", {
         type: "tip",
