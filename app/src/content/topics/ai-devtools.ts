@@ -150,6 +150,18 @@ export const aiDevtools: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Ask for HTML, not Markdown", {
+        type: "microread",
+        title: "The unreasonable effectiveness of HTML",
+        body: "The Markdown-as-default-output habit dates to the GPT-4 era when every token was precious. With Claude in 2026 the calculus flips: ask for HTML. The model will drop in SVG diagrams, small interactive widgets, and CSS styling that make a long explanation actually navigable. Simon Willison demoed this by asking Claude to explain a Linux kernel exploit as a styled HTML page — diagrams of the stack layout, inline expandable sections, the works. Same prompt in Markdown is a wall of fenced code blocks.",
+        takeaway: "When the explanation matters more than the token bill, ask for styled HTML — you'll get diagrams + widgets, not a wall of bullets.",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/May/8/unreasonable-effectiveness-of-html/",
+        },
+        category: "tooling",
+        addedAt: "2026-05-18",
+      }),
       spark("Build it: tiny utility", {
         type: "buildcard",
         title: "Build: tiny utility with Claude Code",

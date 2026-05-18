@@ -494,10 +494,10 @@ export const aiTrends: Topic = {
       spark("Edge models", {
         type: "microread",
         title: "AI without the cloud",
-        body: "Apple Intelligence, Gemini Nano, on-device Phi models bring small but capable models to phones and laptops. Wins: privacy, latency, offline. Use cases: smart text replies, summarization, image edits, intent detection. Hybrid stacks (small on-device + big in cloud) are the new frontier UX.",
-        takeaway: "Hybrid: small fast on-device + big smart cloud.",
-        category: "news",
-        addedAt: "2026-02-01",
+        body: "On-device AI is now the assumed substrate, not a bet. Apple Intelligence runs a 3B model locally on every recent iPhone, Gemini Nano ships inside Chrome via the Prompt API, and 4-bit Qwen / Llama / Granite quants land in Ollama or LM Studio within hours of release. The hybrid pattern is the contract: tiny model on-device for latency-sensitive and privacy-sensitive work (typing, summarization, intent detection), frontier model in the cloud for anything that actually needs world knowledge. Building an AI feature in 2026 without a cheap on-device fallback is the new performance regression.",
+        takeaway: "Hybrid is the contract: on-device for fast + private, cloud for hard. Build both lanes or expect a perf bug.",
+        category: "pattern",
+        addedAt: "2026-05-18",
       }),
       spark("Apple Intelligence's hybrid bet", {
         type: "microread",
