@@ -410,6 +410,15 @@ export const aiBuilder: Topic = {
           "Create a CLI tool aicommit in TypeScript that reads `git diff --cached` from the current repo, calls Claude Sonnet 4.6 with a prompt that asks for a conventional-commit style message, and writes the result to .git/COMMIT_EDITMSG. Add a fallback to Haiku 4.5 if Sonnet fails. Make it work as `git commit` (no -m).",
         successCriteria: "You commit something via your tool. Message is good. You ship it as a 1-page README + npm package by tonight.",
       }),
+      spark("Cursor Composer 2.5 lands", {
+        type: "microread",
+        title: "Cursor ships its own agent model",
+        body: "Cursor Composer 2.5 (May 2026) is Cursor's first agent-IDE running on a model the team trained themselves, fine-tuned from Moonshot's Kimi K2.5 with 25× more synthetic coding tasks than v1. It costs $0.50 / $2.50 per M input/output tokens — competitive with Sonnet for agent loops — and the headline gain is sustained focus over long tasks plus better recovery from tool-call errors. Pattern to notice: agent IDEs are starting to ship their own models, not just route to OpenAI and Anthropic.",
+        takeaway: "Agent IDEs are now model labs too. Pick by behavior on long tasks, not by underlying model brand.",
+        source: { name: "Cursor", url: "https://cursor.com/blog/composer-2-5" },
+        category: "tooling",
+        addedAt: "2026-05-19",
+      }),
       spark("Cursor vs Claude Code vs Windsurf", {
         type: "patternmatch",
         prompt: "Match the agent IDE to its strongest fit",
