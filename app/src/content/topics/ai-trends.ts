@@ -77,6 +77,18 @@ export const aiTrends: Topic = {
           url: "https://huggingface.co/blog/deepseekv4",
         },
       }),
+      spark("Six months in five minutes", {
+        type: "microread",
+        title: "The last six months in LLMs, distilled",
+        body: "Simon Willison's May-2026 recap names the through-lines: coding agents are now the default user of frontier models; output quality plateaued so labs compete on agent reliability and price-per-token; every serious lab ships visible reasoning tokens; open-weights tracks closed within weeks, not years. The practical move for builders: stop chasing benchmarks, start picking models by agent failure-mode and per-task cost.",
+        takeaway: "Frontier competition shifted from raw quality to agent reliability and price.",
+        category: "news",
+        addedAt: "2026-05-19",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/May/19/5-minute-llms/",
+        },
+      }),
       spark("Hidden reasoning tokens", {
         type: "tip",
         title: "Tip: ask for the thinking",
