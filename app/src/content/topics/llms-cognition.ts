@@ -25,6 +25,15 @@ export const llmsCognition: Topic = {
           kid: "An LLM is a guess-the-next-word machine. It looks at all the words so far and picks the one that probably comes next. Then it does it again. And again. After thousands of guesses, you get a whole answer. There's no thinking — just guessing, really fast.",
         },
       }),
+      spark("Not every LM is next-token", {
+        type: "microread",
+        title: "Diffusion language models break the loop",
+        body: "The 'one token at a time, left-to-right' frame held for years. In May 2026, NVIDIA's Nemotron-Labs released open-weight 3B/8B/14B diffusion language models that generate many tokens in parallel and then iteratively refine them — the same trick image diffusion has used since DALL·E. They report 2.6× more tokens per forward pass than autoregressive baselines, 6.4× faster end-to-end in self-speculation mode, and 1.2% higher average accuracy than Qwen3 8B from a single checkpoint. The deployment win: one model, three inference modes (autoregressive, diffusion, self-speculation), pick at runtime — no code changes.",
+        takeaway: "Autoregressive is the default, not the only option. Diffusion LMs trade architecture complexity for parallel-token speed.",
+        source: { name: "Hugging Face — NVIDIA Nemotron-Labs", url: "https://huggingface.co/blog/nvidia/nemotron-labs-diffusion" },
+        category: "frontier",
+        addedAt: "2026-05-25",
+      }),
       spark("Quick check", {
         type: "quickpick",
         prompt: "What does an LLM literally output?",
