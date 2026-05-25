@@ -781,6 +781,15 @@ export const aiDevtools: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Datasette Agent: agents that extend themselves", {
+        type: "microread",
+        title: "Plug-in architecture for a database agent",
+        body: "Simon Willison shipped Datasette Agent — an AI assistant that runs SQL on Datasette databases via natural language. The live demo runs on Gemini 3.1 Flash-Lite ('cheap, fast, fine at SQLite'). What's interesting isn't the chatbot — it's the plugin system. Capabilities like chart generation (Observable Plot), image creation, and sandboxed code execution all land as plugins. The kicker Simon names: Claude Code and OpenAI Codex are *very good* at writing new Datasette Agent plugins when you hand them the repo as reference. The agent ecosystem extends itself.",
+        takeaway: "Build extensibility for the agent first; let the agent (and other agents) write the extensions.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/May/21/datasette-agent/" },
+        category: "tooling",
+        addedAt: "2026-05-25",
+      }),
     ]),
     level(T, 8, "Agent feedback loops", "Watch and adjust.", 6, [
       spark("Don't go silent", {

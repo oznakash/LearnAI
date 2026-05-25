@@ -682,10 +682,10 @@ export const aiTrends: Topic = {
       spark("Search 2.0", {
         type: "microread",
         title: "Answers replace links",
-        body: "Perplexity, ChatGPT search, Google AI Overviews changed search behavior. Builders need to think about being cited (LLM-friendly content, structured data, fast pages, clear factual statements). Direct traffic for many sites is dropping; AI-cited traffic is rising. Brand/product visibility now requires LLM-ready content.",
-        takeaway: "Optimize for being cited, not just ranked.",
+        body: "By mid-2026 the answer-engine pattern is the default: ChatGPT search, Perplexity (≈$9B valuation), Google AI Overviews on the majority of US English queries. The traffic math has flipped — informational queries that used to send users to publisher pages now resolve on the SERP itself. Builders should plan around two facts: (1) being *cited* in an AI answer is the new top-of-funnel; (2) the citation rate scales with content that's confident, self-contained, attributed, and parseable. The site that says one true thing per paragraph wins over the site that buries the answer in 1,200 words of intro.",
+        takeaway: "Optimize for being cited, not just ranked. One true thing per paragraph beats long-form padding.",
         category: "news",
-        addedAt: "2026-02-01",
+        addedAt: "2026-05-25",
       }),
       spark("Perplexity's product wedge", {
         type: "microread",
