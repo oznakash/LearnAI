@@ -539,6 +539,15 @@ export const cybersecurity: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("It shipped in a real product", {
+        type: "microread",
+        title: "Copilot Cowork exfiltrated files",
+        body: "May 2026: researchers showed Microsoft's Copilot Cowork agent could be steered into leaking a user's files. A poisoned document told the agent to compose an email whose body embedded a rendered image — and the image URL carried the stolen data out the instant the mail client fetched it. No clicks, no malware: just an agent that reads untrusted content and renders untrusted output. It's the markdown-image trick from the last card, shipped in a shipping product. The fix is identical — treat agent output as untrusted, strip embedded images, and gate any send-tool behind human confirmation.",
+        takeaway: "Untrusted-in, rendered-out is the whole exploit — and real products ship it.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/May/26/copilot-cowork-exfiltrates-files/" },
+        category: "company",
+        addedAt: "2026-06-01",
+      }),
       spark("Side-channel exfil", {
         type: "microread",
         title: "Length, timing, choice",

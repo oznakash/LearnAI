@@ -362,13 +362,14 @@ export const aiTrends: Topic = {
         promptToCopy: "Add a paste handler to my main input field. If the pasted item is an image, send it to Claude Sonnet with the prompt 'extract structured fields from this screenshot' and pre-fill the form with the result.",
         successCriteria: "User pastes a screenshot of a receipt → form auto-fills with vendor, total, date.",
       }),
-      spark("Synthesia + Sora moment", {
+      spark("From clips to video agents", {
         type: "microread",
-        title: "Generative video crosses 'good enough'",
-        body: "Sora 2, Veo 2, Runway Gen-4 — all crossed the 'commercials and ad shoots are noticing' bar in 2025-2026. Real shops use them for previz, ad variants, social content. Long-form film still loses; short-form social is now half-AI on platforms like TikTok and Reels.",
-        takeaway: "Generative video is good enough for short-form. Treat it as a tool, not a threat.",
+        title: "Video moves from clips to agents",
+        body: "2025 was the clip era — Sora, Veo, Runway crossing the bar where ad shops actually noticed. 2026's shift is video agents and world models: in June, NVIDIA shipped Cosmos 3 as an open omni-model for physical-AI reasoning, and the frontier conversation moved to systems that plan and act on video, not just render it. Short-form social is already half-AI on TikTok and Reels. What's new is video as a control surface — for robots, simulation, and agents — not just a one-shot content firehose.",
+        takeaway: "Generative video is moving from clips to agents — world models that plan and act, not just render.",
+        source: { name: "Hugging Face", url: "https://huggingface.co/blog/nvidia/cosmos-3-for-physical-ai" },
         category: "news",
-        addedAt: "2026-05-01",
+        addedAt: "2026-06-01",
       }),
       spark("Vision evals look different", {
         type: "tip",
