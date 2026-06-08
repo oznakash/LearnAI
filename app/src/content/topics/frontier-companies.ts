@@ -781,6 +781,24 @@ export const frontierCompanies: Topic = {
         category: "company",
         addedAt: "2026-05-01",
       }),
+      spark("AI Explained reads the Opus 4.8 card", {
+        type: "youtubenugget",
+        quote:
+          "The 'best' generally available model just dropped — but the real signal isn't the headline, it's the 244-page system card: private testing, capability evals, and the known-limitations section most people skip past.",
+        takeaway: "When a frontier model ships, the system card — not the launch post — is where you learn what it can't do.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=aJvP3nXWkwM",
+          videoTitle: "New Claude Opus 4.8: 15 Things You May've Missed",
+          channelName: "AI Explained",
+          publishedAt: "2026-05-29",
+          durationMinutes: 18,
+        },
+        ctaPrompt:
+          "Open the latest model card you can find and read only the 'known limitations' section. Note one limitation that would bite your use case.",
+        category: "news",
+        addedAt: "2026-06-08",
+      }),
       spark("Eval landmines", {
         type: "patternmatch",
         prompt: "Match each eval-reading mistake to the right caution.",
