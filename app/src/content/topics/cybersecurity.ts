@@ -475,6 +475,15 @@ export const cybersecurity: Topic = {
         category: "principle",
         addedAt: "2025-10-01",
       }),
+      spark("Lockdown Mode in the wild", {
+        type: "microread",
+        title: "Break the exfil leg",
+        body: "OpenAI's 'Lockdown Mode' (2026) is a concrete trifecta-breaker: when enabled, it limits the assistant's outbound network requests so a successful prompt injection can't phone private data home. It doesn't try to stop the model from being fooled — it removes leg #3, the exfiltration channel. That's the right instinct: assume the model will be tricked, then engineer so that being tricked can't leak anything. Look for the same shape in your own agents — the cheapest robust defense is usually cutting an output channel, not hardening the prompt.",
+        takeaway: "You can't stop every injection — so remove the exfil path the injection needs.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Jun/5/openai-help-lockdown-mode/" },
+        category: "tooling",
+        addedAt: "2026-06-08",
+      }),
       spark("Output-filter the model", {
         type: "tip",
         title: "Run a second model as judge",
