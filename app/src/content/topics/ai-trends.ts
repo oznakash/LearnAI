@@ -769,6 +769,15 @@ export const aiTrends: Topic = {
         category: "pattern",
         addedAt: "2025-10-01",
       }),
+      spark("If code isn't the bottleneck, what is?", {
+        type: "microread",
+        title: "Coding was never the whole job",
+        body: "AI writes code fast — but coding was never the whole job. In New York's first year of tracking AI-driven layoffs, not one of 160+ companies blamed AI for cuts. Why? Three things resist automation: deciding what to build, verifying it actually works, and owning accountability when it breaks. Add the deep context an engineer carries — codebase, business rules, users — and you see why faster typing just moves the bottleneck downstream to judgment.",
+        takeaway: "When writing code gets cheap, judgment becomes the job.",
+        category: "principle",
+        addedAt: "2026-06-15",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Jun/14/why-ai-hasnt-replaced-software-engineers/" },
+      }),
       spark("Productivity per engineer is up 200%", {
         type: "podcastnugget",
         creatorId: "lenny",
