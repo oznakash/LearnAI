@@ -875,10 +875,10 @@ export const aiTrends: Topic = {
       spark("Compliance landscape", {
         type: "microread",
         title: "Regulation lands",
-        body: "EU AI Act phased in through 2025-2026, classifying systems by risk. US states (CA, NY) ship narrower rules on automated decisions. Builders need: provenance for training data, model cards, risk assessments for high-risk uses. Compliance becomes a product feature — enterprise buyers ask for it before signing.",
+        body: "By mid-2026 the EU AI Act's high-risk rules are biting: conformity assessments, logging, and human-oversight duties now apply to hiring, credit, and education systems. General-purpose-model transparency obligations — training-data summaries, a copyright policy — are in force for new model releases. The US still has no federal law, so California (SB-53 safety reports, SB-942 content provenance) sets the de-facto floor. Builders now treat model cards, data provenance, and risk assessments as table stakes — enterprise security teams ask for them before they sign.",
         takeaway: "Treat compliance as a product axis, not a tax.",
         category: "news",
-        addedAt: "2026-02-01",
+        addedAt: "2026-06-22",
       }),
       spark("EU AI Act risk tiers", {
         type: "microread",

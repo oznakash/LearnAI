@@ -708,6 +708,18 @@ export const openSource: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("GLM-5.2: new open-weights leader", {
+        type: "microread",
+        title: "GLM-5.2 tops the open-weights board",
+        body: "On June 16 2026, Chinese lab Z.ai shipped GLM-5.2 under an MIT license — fully open weights. It's a 753B-parameter Mixture-of-Experts model (~40B active) with a 1M-token context, and it's now the top open-weights model on the Artificial Analysis Intelligence Index (score 51), edging past DeepSeek V4 Pro and MiniMax-M3. It ranks 2nd on Code Arena's WebDev board, behind only Claude Fable 5. Catch: it's text-only and burns more output tokens per task (~43k) than rivals, so it's not the cheapest to run.",
+        takeaway: "GLM-5.2 (MIT, open weights) is the new open-weights leader — text-only, token-hungry, state-of-the-art.",
+        category: "news",
+        addedAt: "2026-06-22",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Jun/17/glm-52/",
+        },
+      }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",
