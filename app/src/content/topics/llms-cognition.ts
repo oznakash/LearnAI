@@ -25,6 +25,24 @@ export const llmsCognition: Topic = {
           kid: "An LLM is a guess-the-next-word machine. It looks at all the words so far and picks the one that probably comes next. Then it does it again. And again. After thousands of guesses, you get a whole answer. There's no thinking — just guessing, really fast.",
         },
       }),
+      spark("3Blue1Brown: compression is intelligence", {
+        type: "youtubenugget",
+        quote:
+          "Cross-entropy is the loss every language model is trained on, and the deeper you push on what it means, the more you land on a provocative idea: compressing text well and predicting text well are the same skill. A model that guesses the next token efficiently is, in a precise sense, compressing what it has seen.",
+        takeaway: "Next-token prediction and compression are two views of one thing — predicting well *is* compressing well.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=l6DKRf-fAAM",
+          videoTitle: "Reinventing Entropy | Compression is Intelligence Part 1",
+          channelName: "3Blue1Brown",
+          publishedAt: "2026-06-07",
+          // Runtime not exposed by the channel Atom feed; main-series 3b1b
+          // explainer, comfortably over the 5-min pilot floor. VERIFY exact.
+          durationMinutes: 30,
+        },
+        category: "principle",
+        addedAt: "2026-06-22",
+      }),
       spark("Not every LM is next-token", {
         type: "microread",
         title: "Diffusion language models break the loop",
