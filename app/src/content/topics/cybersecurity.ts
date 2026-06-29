@@ -484,6 +484,15 @@ export const cybersecurity: Topic = {
         category: "tooling",
         addedAt: "2026-06-08",
       }),
+      spark("Injection is role confusion", {
+        type: "microread",
+        title: "Models judge trust by style, not content",
+        body: "New research (June 2026) reframes prompt injection as role confusion: models don't reliably track which text is privileged instruction and which is untrusted input — they lean on style. Text that merely looks like internal reasoning or system tags gets treated as trusted, even when its content is hostile. Researchers 'destyled' known jailbreaks — stripped the formatting camouflage without changing the meaning — and attack success on gpt-oss-20b fell from 61% to 10%. It's the architecture-over-delimiters rule with a sharper edge: you can't prompt your way out of a model that reads format, not meaning.",
+        takeaway: "Models judge trust by style, not content — so defenses must be architectural, not stylistic.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Jun/22/prompt-injection-as-role-confusion/" },
+        category: "frontier",
+        addedAt: "2026-06-29",
+      }),
       spark("Output-filter the model", {
         type: "tip",
         title: "Run a second model as judge",

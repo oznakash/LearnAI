@@ -691,10 +691,10 @@ export const aiBuilder: Topic = {
       spark("Multi-modal as default", {
         type: "microread",
         title: "Vision and audio are now table stakes",
-        body: "Claude Opus 4.7, Gemini 2.5, GPT-5 all handle images, audio, and (for some) video natively in 2026. If your product description starts with 'first the user uploads...', the user can probably take a photo or talk instead. Multi-modal isn't a feature anymore — it's a default. The product idea you didn't build last year because vision was unreliable: try it again now.",
+        body: "Claude Opus 4.8, GPT-5.6, and Google's Gemini all handle images, audio, and (for some) video natively in 2026. If your product description starts with 'first the user uploads...', the user can probably take a photo or talk instead. Multi-modal isn't a feature anymore — it's a default. The product idea you didn't build last year because vision was unreliable: try it again now.",
         takeaway: "Multi-modal is default in 2026. Photos and voice are first-class inputs now.",
         category: "frontier",
-        addedAt: "2026-05-01",
+        addedAt: "2026-06-29",
       }),
       spark("Pick the right tier", {
         type: "scenario",
