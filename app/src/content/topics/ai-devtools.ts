@@ -201,6 +201,18 @@ export const aiDevtools: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Newer model, worse at your tools", {
+        type: "microread",
+        title: "Better models, worse tools",
+        body: "A capability jump doesn't always help your integration. Armin Ronacher found Anthropic's newest models (Opus 4.8, Sonnet 5) are stronger overall yet worse at a third-party edit tool: they call it with extra, invented fields the schema never declared, so the harness rejects the call even though the edit itself is right. His theory — the models were RL-trained to nail the edit tools baked into Claude Code, and that specialization leaks into worse handling of other schemas. The fix isn't 'upgrade the model'; it's eval every custom tool against each model you ship on.",
+        takeaway: "A more capable model can still regress on your custom tool schema — eval per model; newer isn't automatically better at your tools.",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Jul/4/better-models-worse-tools/",
+        },
+        category: "pattern",
+        addedAt: "2026-07-06",
+      }),
       spark("Quickpick: small diffs", {
         type: "quickpick",
         prompt: "Why ask Claude Code for the smallest possible diff?",

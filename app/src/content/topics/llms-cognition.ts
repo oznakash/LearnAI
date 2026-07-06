@@ -647,6 +647,25 @@ export const llmsCognition: Topic = {
         category: "pattern",
         addedAt: "2025-10-01",
       }),
+      spark("Agents that skip English", {
+        type: "youtubenugget",
+        quote:
+          "Every time an agent communicates, it writes out full sentences, decodes tokens one by one, and the next agent has to read and re-encode the whole thing. Why? This work says forget English, forget letters — pass the raw undecoded numbers straight to the next agent. Call it cross-agent latent state transfer.",
+        takeaway:
+          "Multi-agent systems can hand each other raw latent state instead of text — cheaper rounds, and more rounds keep improving the answer.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=dUmT0OIGoqE",
+          videoTitle: "Scientists Found A Better Language For AI Agents",
+          channelName: "Two Minute Papers",
+          publishedAt: "2026-06-19",
+          durationMinutes: 7,
+        },
+        ctaPrompt:
+          "The paper reports competition-math accuracy climbing 73% → 86% with token use down ~75%, on sub-10B models. Sketch where a plan → critique → solve loop in your own stack burns the most tokens re-encoding each other's text.",
+        category: "frontier",
+        addedAt: "2026-07-06",
+      }),
       spark("Quickpick: MMLU vs reasoning", {
         type: "quickpick",
         prompt: "Why do reasoning models often score similar to base models on MMLU but crush them on AIME?",
