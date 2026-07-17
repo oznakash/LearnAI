@@ -566,6 +566,15 @@ export const cybersecurity: Topic = {
         category: "company",
         addedAt: "2026-06-01",
       }),
+      spark("The nested-link exfil trick", {
+        type: "microread",
+        title: "Claude's web-fetch link loophole",
+        body: "July 2026: a researcher stood up a honeypot dressed as a Cloudflare check and told Claude's web_fetch agent it could only proceed by visiting generated links one letter at a time — /a, then /b, then /c. The fetch tool blocks attacker-set URLs, but it happily followed links it discovered *inside* pages it had already fetched — so each hop smuggled out one character of the user's name, city, and employer. The honeypot even fingerprinted the 'Claude-User' user-agent to stay invisible in testing. Anthropic's fix: stop following links found within fetched content. The builder lesson — 'the attacker can't set the URL' is not 'the attacker can't exfiltrate.' Audit indirect navigation, not just direct.",
+        takeaway: "Blocking attacker-set URLs isn't enough — links found inside fetched pages are their own exfil channel.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Jul/15/claude-web-fetch-exfiltration/" },
+        category: "company",
+        addedAt: "2026-07-17",
+      }),
       spark("Side-channel exfil", {
         type: "microread",
         title: "Length, timing, choice",
