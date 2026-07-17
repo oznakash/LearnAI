@@ -85,11 +85,11 @@ export const aiNews: Topic = {
       spark("How to read a model-release post", {
         type: "microread",
         title: "Skip the quote, read the table",
-        body: "Look for these three things in any model release: (1) eval-bench moves vs. the lab's own prior model; (2) price-per-token at the new context length; (3) what's still gated or limited at launch. Anthropic's Claude 4.7 1M-context release is a clean example — it states bench numbers, names the higher tier above 200k tokens, and flags the rollout cohort. Skip the hero quotes. Read the table.",
+        body: "Look for these three things in any model release: (1) eval-bench moves vs. the lab's own prior model; (2) price-per-token at the new context length; (3) what's still gated or limited at launch. Anthropic's Claude Opus 4.8 release is a clean example — it posts bench numbers against the 4.7 line, keeps the 1M-token window, and names the higher price tier above 200k tokens. Skip the hero quotes. Read the table.",
         takeaway: "Bench + price + gating. Skip the hero quote.",
         source: { name: "Anthropic", url: "https://www.anthropic.com/news" },
         category: "news",
-        addedAt: "2026-05-01",
+        addedAt: "2026-07-17",
       }),
       spark("Tip & Trick", {
         type: "tip",
