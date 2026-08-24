@@ -39,14 +39,17 @@ export const aiTrends: Topic = {
           timestamp: "00:00:06",
         },
       }),
-      spark("Claude Opus 4.7 lands", {
+      spark("The best model isn't the most-used model", {
         type: "microread",
-        title: "Opus 4.7: thinking, but cheaper",
-        body: "Anthropic's Opus 4.7 ships with extended thinking on by default and a 1M-context option in beta. The headline: same SWE-bench numbers as 4.5, ~30% lower per-token price, and a new 'compact' thinking mode that uses fewer reasoning tokens before answering. Builders rotating off 4.5 see immediate cost wins on coding agents.",
-        takeaway: "Cheaper reasoning makes 'always think' affordable for more flows.",
+        title: "Price picks the model, not the leaderboard",
+        body: "Ramp's AI index tracks card spend across ~70,000 companies. July 2026: Opus 4.8 took 28.0% of Anthropic model spend, while Sonnet 4.6 sat at 8.3% and the pricier Fable 5 at just 8.0% — and Opus 5, three weeks after launch, at 3.5%. Anthropic's revenue is fine (annualized $65B in July, up from $47B in May, ~6,000 accounts spending $100k+/yr). But the mix is the lesson: the flagship isn't what teams actually run. They run the cheapest model that clears their bar.",
+        takeaway: "Adoption follows price-per-task, not benchmark rank. Pick the cheapest model that passes your eval.",
         category: "news",
-        addedAt: "2026-05-01",
-        source: { name: "Anthropic", url: "https://www.anthropic.com/news" },
+        addedAt: "2026-08-24",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Aug/23/anthropics-best-ai-model-struggles-to-attract-users-as-cheaper-t/",
+        },
       }),
       spark("Reasoning vs chat: cost gap", {
         type: "microread",

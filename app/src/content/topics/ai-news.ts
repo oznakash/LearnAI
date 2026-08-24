@@ -432,6 +432,18 @@ export const aiNews: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("What 2,226 ICML papers survived", {
+        type: "microread",
+        title: "Award-winning isn't reproduced",
+        body: "August 2026: a 19-day community hackathon tried to reproduce 2,226 ICML 2026 papers — 34% of the conference — judging 35,908 individual claims. Result: 51% of papers had at least one claim independently verified, but only 266 reproduced fully. 23% had a claim falsified or contested, 49 had everything falsified, and 242 saw two independent teams reach opposite verdicts on the same claim. The most common failure wasn't fraud — it was missing artifacts and toy-scale-only evidence. Agents did the grunt work, but the reliable runs all had a human redirecting them.",
+        takeaway: "Accepted at a top venue means reviewed, not reproduced. Before you build on a paper, check whether anyone re-ran it.",
+        category: "news",
+        addedAt: "2026-08-24",
+        source: {
+          name: "Hugging Face",
+          url: "https://huggingface.co/blog/icml-2026-open-reproductions",
+        },
+      }),
       spark("Workshops > main conference for builders", {
         type: "microread",
         title: "The hidden conference",

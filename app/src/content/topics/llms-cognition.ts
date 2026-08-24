@@ -666,6 +666,26 @@ export const llmsCognition: Topic = {
         category: "frontier",
         addedAt: "2026-07-06",
       }),
+      spark("The genius loop", {
+        type: "youtubenugget",
+        quote:
+          "You could call it the genius loop \u2014 you don't just make a mistake and move on. The genius loop is autopsying the failed approach until you can prove why it must fail. Speculate, test, autopsy. I can't find a qualitative wall between that and what you'd call genius in a human.",
+        takeaway:
+          "A reasoning loop gets its leverage from what it does with a failure \u2014 proving why the dead end had to be a dead end, not just trying the next thing.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=xGzseSSStnw",
+          videoTitle: "AI is getting a little out of control",
+          channelName: "AI Explained",
+          publishedAt: "2026-08-06",
+          durationMinutes: 31,
+          timestamp: "02:44",
+        },
+        ctaPrompt:
+          "Take the last prompt where your agent looped and gave up. Instead of re-running it, ask the model to write down why its failed approach could never have worked. See whether the next attempt changes.",
+        category: "pattern",
+        addedAt: "2026-08-24",
+      }),
       spark("Quickpick: MMLU vs reasoning", {
         type: "quickpick",
         prompt: "Why do reasoning models often score similar to base models on MMLU but crush them on AIME?",
