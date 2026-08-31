@@ -84,7 +84,11 @@ export const CONTENT_FEEDS: ContentFeed[] = [
   },
   {
     creatorId: "karpathy",
-    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCPk3RMMXAfLhMJPFpQhye9g",
+    // Was UCPk3RMMXAfLhMJPFpQhye9g — that is Tiësto's channel, which served
+    // DJ-set uploads under Karpathy's name. Corrected to the id published in
+    // youtube.com/@AndrejKarpathy's own <meta itemprop="identifier">; the feed
+    // now returns "Deep Dive into LLMs like ChatGPT", "Let's reproduce GPT-2".
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCXUPKJO5MZQN11PqgIvyuvQ",
     format: "atom",
     freshDays: 180,
     triageHint:

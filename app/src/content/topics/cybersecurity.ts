@@ -784,6 +784,18 @@ export const cybersecurity: Topic = {
         category: "principle",
         addedAt: "2025-10-01",
       }),
+      spark("Patch windows are closing", {
+        type: "microread",
+        title: "Ten minutes from hint to exploit",
+        body: "Anil Madhavapeddy — Cambridge professor and OCaml compiler maintainer — shared a patch for discussion and saw automated probes for the exact flaw within about ten minutes. Coding agents are now good enough that a hint of a bug is enough to reconstruct it. rclone's maintainer tells the same story: ~20 security disclosures in the project's first ten years, then 40+ in a single month, roughly 75% of them real. Meanwhile GitHub's CVE assignment slipped from 2-3 days to 3-4 weeks, so releases ship marked CVE-PENDING. The embargo model — quiet patch, disclose later — assumes attackers are slow. They aren't anymore.",
+        takeaway: "Assume a public patch is a public exploit. Upgrade on release, not on CVE.",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Aug/28/just-a-rumour-of-a-bug/",
+        },
+        category: "news",
+        addedAt: "2026-08-31",
+      }),
       spark("Pattern match: tools", {
         type: "patternmatch",
         prompt: "Match the supply-chain check to its tool",

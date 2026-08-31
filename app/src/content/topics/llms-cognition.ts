@@ -36,9 +36,8 @@ export const llmsCognition: Topic = {
           videoTitle: "Reinventing Entropy | Compression is Intelligence Part 1",
           channelName: "3Blue1Brown",
           publishedAt: "2026-06-07",
-          // Runtime not exposed by the channel Atom feed; main-series 3b1b
-          // explainer, comfortably over the 5-min pilot floor. VERIFY exact.
-          durationMinutes: 30,
+          // Verified against the video page: lengthSeconds 1939 = 32:19.
+          durationMinutes: 32,
         },
         category: "principle",
         addedAt: "2026-06-22",
