@@ -708,16 +708,16 @@ export const openSource: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
-      spark("GLM-5.2: new open-weights leader", {
+      spark("GLM-5.3: the gains came from post-training", {
         type: "microread",
-        title: "GLM-5.2 tops the open-weights board",
-        body: "On June 16 2026, Chinese lab Z.ai shipped GLM-5.2 under an MIT license — fully open weights. It's a 753B-parameter Mixture-of-Experts model (~40B active) with a 1M-token context, and it's now the top open-weights model on the Artificial Analysis Intelligence Index (score 51), edging past DeepSeek V4 Pro and MiniMax-M3. It ranks 2nd on Code Arena's WebDev board, behind only Claude Fable 5. Catch: it's text-only and burns more output tokens per task (~43k) than rivals, so it's not the cheapest to run.",
-        takeaway: "GLM-5.2 (MIT, open weights) is the new open-weights leader — text-only, token-hungry, state-of-the-art.",
+        title: "Same base model, much better agent",
+        body: "Z.ai shipped GLM-5.3 open-weights in late August 2026, and the interesting part is what didn't change: it runs the *same base model* as GLM-5.2. Every gain came from post-training. That bought a 50% jump on Z.ai's in-house code bench, Terminal Bench 3.0 going from 4.6 to 28.3, and open-source SOTA on Agents' Last Exam. Cyber capability grew fastest of all — it leads CyberGym (84.5) on vulnerability discovery and more than doubles 5.2 on exploitation benchmarks. Still a 1M-token MoE (256 experts, 8 active per token). Watch the license: 5.3 ships under Z.ai's own terms, not MIT like 5.2.",
+        takeaway: "Same base model, big gains — the frontier moved in post-training, not pre-training.",
         category: "news",
-        addedAt: "2026-06-22",
+        addedAt: "2026-08-31",
         source: {
-          name: "Simon Willison",
-          url: "https://simonwillison.net/2026/Jun/17/glm-52/",
+          name: "Hugging Face",
+          url: "https://huggingface.co/zai-org/GLM-5.3",
         },
       }),
       spark("Tip & Trick", {

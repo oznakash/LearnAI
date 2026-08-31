@@ -47,27 +47,28 @@ export const aiFoundations: Topic = {
         category: "principle",
         addedAt: "2025-10-01",
       }),
-      // Sprint #2 seed — YouTube source-anchored Spark. Pilot content
-      // per docs/content-freshness.md §7. Marked SEED — a human must
-      // verify the video URL + timestamp + exact quote before public
-      // ship. The pattern is the deliverable here, not the specific
-      // attribution.
-      spark("3Blue1Brown: why attention works", {
+      // Source-anchored YouTube Spark. Replaces an earlier SEED entry whose
+      // videoUrl pointed at the 3Blue1Brown channel rather than a real video.
+      // This one is feed-verified: the URL, title, publish date and 33:51
+      // runtime all come from the channel Atom feed + the video page, and the
+      // paraphrase below is drawn from the video's own transcript at ~18:00.
+      spark("3Blue1Brown: the loss function is surprise", {
         type: "youtubenugget",
         quote:
-          "Attention is doing something deceptively simple. Each token asks every other token a question, gets an answer weighted by relevance, and updates its own meaning. The magic isn't the math — it's that the questions and answers are themselves learned.",
-        takeaway: "Attention is *learned* questions and answers between tokens, not just weighted averaging.",
+          "Training loss is surprise, measured. For each token, ask what probability the model gave to the token that actually came next, then take the negative log. A model that's following what's going on is rarely surprised; a confused one is surprised constantly. Average that surprise over the data and you have cross-entropy loss.",
+        takeaway: "Training a model = driving down how surprised it is by the token that really came next.",
         source: {
           platform: "youtube",
-          videoUrl: "https://www.youtube.com/@3blue1brown", // SEED — VERIFY: replace with actual video URL
-          videoTitle: "Attention, Revisited",
+          videoUrl: "https://www.youtube.com/watch?v=GlYgs6v2YfU",
+          videoTitle: "But what is cross-entropy? | Compression is Intelligence Part 2",
           channelName: "3Blue1Brown",
-          publishedAt: "2026-04-11",
-          durationMinutes: 24,
-          timestamp: "08:55",
+          publishedAt: "2026-07-16",
+          durationMinutes: 34,
+          timestamp: "18:00",
         },
+        ctaPrompt: "Ask an API for per-token logprobs on a prompt you use daily. The lowest-probability tokens are where your model is most surprised — and most likely to be wrong.",
         category: "principle",
-        addedAt: "2026-05-01",
+        addedAt: "2026-08-31",
       }),
       spark("Match the type", {
         type: "patternmatch",
