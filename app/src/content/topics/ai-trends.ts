@@ -51,6 +51,28 @@ export const aiTrends: Topic = {
           url: "https://simonwillison.net/2026/Aug/23/anthropics-best-ai-model-struggles-to-attract-users-as-cheaper-t/",
         },
       }),
+      // Added 2026-09-21 by the daily steward from the AI Explained channel
+      // Atom feed. Video verified: 1493s runtime, published 2026-09-16.
+      // Quote transcribed from the video's own captions at ~09:16 — it is
+      // Noam Brown (OpenAI) speaking in a clip inside Philip's video.
+      spark("RL multiplies pre-training", {
+        type: "youtubenugget",
+        quote:
+          "OpenAI has also had an excellent reinforcement learning program... And the effects of these two are not additive, they're multiplicative. Now that both of these are extremely powerful and ramping up very quickly, I think we're going to see extremely powerful models.",
+        takeaway: "Noam Brown's point: scaling axes multiply, they don't add. Pre-training and RL compound — which is why capability jumps land in bursts instead of a gentle slope.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=J3ljHm57yU0",
+          videoTitle: "What AI Researchers Saw, Before Their Demand to ‘Pace’ AI",
+          channelName: "AI Explained",
+          publishedAt: "2026-09-16",
+          durationMinutes: 24,
+          timestamp: "09:16",
+        },
+        ctaPrompt: "Pick one workflow you benchmarked six months ago and re-run it on today's default model. The delta is the compounding, measured on your own task.",
+        category: "frontier",
+        addedAt: "2026-09-21",
+      }),
       spark("Reasoning vs chat: cost gap", {
         type: "microread",
         title: "Reasoning costs 5-15x chat",

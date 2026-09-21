@@ -21,17 +21,21 @@ export const aiNews: Topic = {
         category: "principle",
         addedAt: "2026-04-20",
       }),
-      // Sprint #2 seed — external-source nugget from AlphaSignal feed.
-      // Demonstrates the freshness chip on a `news`-category Spark with
-      // a recent addedAt date. SEED — VERIFY before public publish.
+      // Refreshed 2026-09-21 by the daily steward. The previous version named
+      // Opus 4.8 as the GA frontier — superseded by Opus 5 (released
+      // 2026-07-24). Grounded in a per-post Simon Willison link, not a
+      // homepage, so the claim stays checkable.
       spark("Long-context is a refactor signal", {
         type: "microread",
-        title: "Claude Opus 4.8 is the new GA frontier",
-        body: "Anthropic shipped Claude Opus 4.8 — now the strongest generally available model, succeeding the 4.7 line and keeping the 1M-token context window (~750k words, a full mid-size codebase). The tier above 200k tokens still costs more per token, so the practical pattern holds: RAG for hot paths, 1M context for one-shot codebase reasoning. If you wired a pipeline against 4.7 a month ago, re-run your house eval — half a point of reasoning often shifts which prompts need chunking at all. And read the 244-page system card's 'known limitations' before you trust any new capability claim.",
+        title: "Claude Opus 5 is the GA frontier",
+        body: "Anthropic's strongest generally available model is Claude Opus 5, released 24 July 2026 — it succeeds the whole Opus 4.x line (4.6, 4.7, 4.8) and keeps the 1M-token context window (~750k words, a full mid-size codebase). The tier above 200k tokens still costs more per token, so the practical pattern holds: RAG for hot paths, 1M context for one-shot codebase reasoning. If you wired a pipeline against an Opus 4.x model, re-run your house eval before you migrate — half a point of reasoning often shifts which prompts need chunking at all.",
         takeaway: "Long-context isn't a gimmick — every frontier bump is a refactor signal for the RAG pipeline you built last month.",
-        source: { name: "Anthropic", url: "https://www.anthropic.com/news" },
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Aug/23/anthropics-best-ai-model-struggles-to-attract-users-as-cheaper-t/",
+        },
         category: "news",
-        addedAt: "2026-06-08",
+        addedAt: "2026-09-21",
       }),
       spark("The two-sources rule", {
         type: "microread",

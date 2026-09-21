@@ -350,6 +350,21 @@ export const aiDevtools: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      // Added 2026-09-21 by the daily steward from Simon Willison's Atom
+      // feed (post dated 2026-09-11). Complements the BYOK tip above: once
+      // you bring your own key, *who serves the model* becomes your problem.
+      spark("One model name, many servers", {
+        type: "microread",
+        title: "OpenRouter routes on price, not on sameness",
+        body: "OpenRouter gives you one API key for hundreds of models — but a single model name can be served by several backend providers, each running different serving software with different optimizations and settings. So the same call can behave differently run to run: some providers don't support vision on a model you picked *for* vision, and the reasoning-effort option gets honored differently depending on who answered. Hit the `/endpoints` method to see which providers back a model, and pin one with `provider.only` when you need reproducibility more than the cheapest token.",
+        takeaway: "A gateway abstracts the model, not the server behind it — pin the provider when behavior has to be reproducible.",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Sep/11/so-you-want-to-use-openrouter/",
+        },
+        category: "tooling",
+        addedAt: "2026-09-21",
+      }),
       spark("Aider in the terminal", {
         type: "microread",
         title: "Open-source pair-programmer",
