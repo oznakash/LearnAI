@@ -609,6 +609,19 @@ export const aiBuilder: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("The consistency gap", {
+        type: "microread",
+        title: "77% accurate, 53% reliable",
+        body: "IBM Research ran a GPT-4.1 agent on AppWorld five times per task at temperature 0. Average success: 77.4%. Tasks it solved on all five runs: 53.0%. That 24-point gap is the difference between Mean@k (the leaderboard number) and Pass^k (every run succeeds), and users only feel the second. The cause: near-tied decisions that flip on tiny serving noise, compounded across dozens of steps. Their fix, turning the flip-prone steps into prompt guidelines, halved the gap without losing accuracy.",
+        takeaway: "Report Pass^k, not just the average. Temperature 0 doesn't make an agent repeatable.",
+        visual: "graph",
+        category: "pattern",
+        addedAt: "2026-09-28",
+        source: {
+          name: "Hugging Face",
+          url: "https://huggingface.co/blog/ibm-research/altk-evolve-consistency",
+        },
+      }),
       spark("Tip & Trick", {
         type: "tip",
         title: "💡 Tip & Trick",

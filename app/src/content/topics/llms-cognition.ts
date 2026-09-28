@@ -685,6 +685,27 @@ export const llmsCognition: Topic = {
         category: "pattern",
         addedAt: "2026-08-24",
       }),
+      spark("3Blue1Brown: a proof isn't understanding", {
+        type: "youtubenugget",
+        quote:
+          "Knowing a proof is actually only one very small part of what it feels like to deeply understand a given piece of math. What's useful is not the proof or even the result, it's all of that surrounding understanding. So if you're able to generate proofs that don't necessarily come with human understanding, that kind of completely defeats the point.",
+        takeaway:
+          "Public reasoning models now solve all six 2025 IMO problems. When the answer is cheap, the scarce skill is the explanation of why it's the answer.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=Nbwv5wHQoj0",
+          videoTitle: "The last IMO problem AI could not solve",
+          channelName: "3Blue1Brown",
+          publishedAt: "2026-09-18",
+          // Verified against the video page: lengthSeconds 3115 = 51:55.
+          durationMinutes: 52,
+          timestamp: "47:29",
+        },
+        ctaPrompt:
+          "Pick one fix your agent wrote this week. Explain in three sentences why it works, as if to a teammate. If you can't, you merged a result, not an understanding.",
+        category: "principle",
+        addedAt: "2026-09-28",
+      }),
       spark("Quickpick: MMLU vs reasoning", {
         type: "quickpick",
         prompt: "Why do reasoning models often score similar to base models on MMLU but crush them on AIME?",
