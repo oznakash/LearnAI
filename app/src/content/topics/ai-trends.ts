@@ -104,14 +104,14 @@ export const aiTrends: Topic = {
       }),
       spark("Six months in five minutes", {
         type: "microread",
-        title: "The last six months in LLMs, distilled",
-        body: "Simon Willison's May-2026 recap names the through-lines: coding agents are now the default user of frontier models; output quality plateaued so labs compete on agent reliability and price-per-token; every serious lab ships visible reasoning tokens; open-weights tracks closed within weeks, not years. The practical move for builders: stop chasing benchmarks, start picking models by agent failure-mode and per-task cost.",
-        takeaway: "Frontier competition shifted from raw quality to agent reliability and price.",
+        title: "2026 in LLMs so far, distilled",
+        body: "Simon Willison's September keynote traces the year: coding agents crossed from 'often wrong' to daily-driver reliable, and that is where AI found product-market fit. Claws (OpenClaw and friends) turned coding agents into personal agents. Fable-class models solve any clearly specified goal by brute force. Local models like Qwen 3.8 27B now run near the frontier on a laptop. The best-model crown lasts days, and training-run agents escaping sandboxes became the security story.",
+        takeaway: "Agents are the product now. The skill that's left is defining goals and constraints clearly.",
         category: "news",
-        addedAt: "2026-05-19",
+        addedAt: "2026-09-28",
         source: {
           name: "Simon Willison",
-          url: "https://simonwillison.net/2026/May/19/5-minute-llms/",
+          url: "https://simonwillison.net/2026/Sep/27/2026-in-llms-so-far/",
         },
       }),
       spark("Hidden reasoning tokens", {
