@@ -155,9 +155,13 @@ export const aiTrends: Topic = {
       spark("Thinking budgets", {
         type: "tip",
         title: "Tip: cap thinking tokens",
-        body: "Most APIs let you set a max thinking budget (e.g. 8k tokens). Without it, an Opus or o3 call can quietly burn 50k tokens on an easy task. Set per-route budgets — cheap routes 2k, hard routes 30k.",
+        body: "Max effort isn't max quality. Simon Willison's pelican test on Claude Sonnet 5.5: at \"max\" effort it thought for 128,000 tokens ($1.28), ran out, and returned nothing. At \"xhigh\" it finished in 41 seconds for under 6 cents. Pick the effort level per route and set a hard token cap.",
         category: "tooling",
-        addedAt: "2026-05-01",
+        addedAt: "2026-10-05",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Sep/28/claude-sonnet-5-5/",
+        },
       }),
       spark("Build a 2-line model router", {
         type: "buildcard",
@@ -311,6 +315,28 @@ export const aiTrends: Topic = {
         body: "Pick 20 real tasks. Write the expected output. THEN build the agent. Run the eval after every prompt change. Without this you're flying blind — an agent feels great until it fails on a Tuesday.",
         category: "pattern",
         addedAt: "2025-10-01",
+      }),
+      // Added 2026-10-05 by the daily steward from the AI Explained channel
+      // Atom feed. Video verified: 1974s runtime, published 2026-09-24.
+      // Quote transcribed from the video's own captions at ~19:53 — it is
+      // Noam Brown (OpenAI) speaking in a clip inside Philip's video.
+      spark("Evals can't keep up with horizons", {
+        type: "youtubenugget",
+        quote:
+          "If you're in a world where they can operate effectively over 3 months, but the model release cycle is every two months, then you don't have a way to evaluate the models at the full length of their capabilities before the next model release cycle. This isn't even an alignment issue. This is also just like a product issue.",
+        takeaway: "Noam Brown's point: as agents run longer, your eval has to run as long as the job does. A ten-minute test can't vouch for a ten-hour task.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=R9momwXV9w4",
+          videoTitle: "Opus 5.5: How Close Are We to Automated AI Research?",
+          channelName: "AI Explained",
+          publishedAt: "2026-09-24",
+          durationMinutes: 33,
+          timestamp: "19:53",
+        },
+        ctaPrompt: "Find the longest task your agent runs in production. Does any eval cover a run that long? If not, add one end-to-end case at full length.",
+        category: "pattern",
+        addedAt: "2026-10-05",
       }),
     ]),
     level(T, 3, "Multimodal as default", "Text, image, audio, video.", 4, [
