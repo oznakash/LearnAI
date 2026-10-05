@@ -546,6 +546,18 @@ export const aiBuilder: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Hard caps, not alert emails", {
+        type: "microread",
+        title: "Make the bill stop itself",
+        body: "Coding agents make it trivial to spin up things that cost money: paid APIs, hosted apps, storage that bills by the gigabyte. Simon Willison's case: soft caps that email you at midnight don't help when a runaway service keeps billing while you sleep. You want hard caps that cut the service off and return errors. Providers are catching up: Google Cloud shipped Spend Caps in July, and AWS began rolling out monthly spend limits that pause a project in September.",
+        takeaway: "Set a hard spend cap on every paid service your agent touches. A failed request beats a surprise $10k bill.",
+        category: "pattern",
+        addedAt: "2026-10-05",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Oct/3/default-hard-budget-caps/",
+        },
+      }),
       spark("Output tokens are 5× input", {
         type: "microread",
         title: "Where your bill actually comes from",
