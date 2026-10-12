@@ -566,6 +566,18 @@ export const aiBuilder: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Same price, more tokens", {
+        type: "microread",
+        title: "The price per token isn't the price",
+        body: "Claude Haiku 5.5 launched on 7 October at $0.10/$0.50 per million tokens, exactly matching GPT-6 Luna. Simon Willison spotted two catches. It uses a new tokenizer: the same long prompt counts about 1.25x as many tokens as on Haiku 4.5, a quiet price rise. And past 100,000 tokens the price jumps 5x, while Luna's step comes later (272k) and smaller. Under 100k, Haiku matches Luna on price with higher benchmarks; above it, Luna wins.",
+        takeaway: "Compare models on cost per real request: your prompt, their tokenizer, their price tiers. Not the headline rate.",
+        category: "tooling",
+        addedAt: "2026-10-12",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Oct/7/claude-haiku-5-5/",
+        },
+      }),
       spark("Pick the cheapest first move", {
         type: "scenario",
         setup: "Your AI feature works but costs $0.30 per user session. Investors don't love that.",
