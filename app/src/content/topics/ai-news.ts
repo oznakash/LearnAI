@@ -21,21 +21,22 @@ export const aiNews: Topic = {
         category: "principle",
         addedAt: "2026-04-20",
       }),
-      // Refreshed 2026-09-21 by the daily steward. The previous version named
-      // Opus 4.8 as the GA frontier — superseded by Opus 5 (released
-      // 2026-07-24). Grounded in a per-post Simon Willison link, not a
-      // homepage, so the claim stays checkable.
+      // Refreshed 2026-10-12 by the daily steward. The previous version named
+      // Opus 5 as the GA frontier — superseded by Opus 5.5 (released
+      // 2026-09-22, the first model in the Claude 5.5 family). Reached via the
+      // Two Minute Papers feed entry of 2026-09-24, which links the
+      // announcement; facts below are from the announcement itself.
       spark("Long-context is a refactor signal", {
         type: "microread",
-        title: "Claude Opus 5 is the GA frontier",
-        body: "Anthropic's strongest generally available model is Claude Opus 5, released 24 July 2026 — it succeeds the whole Opus 4.x line (4.6, 4.7, 4.8) and keeps the 1M-token context window (~750k words, a full mid-size codebase). The tier above 200k tokens still costs more per token, so the practical pattern holds: RAG for hot paths, 1M context for one-shot codebase reasoning. If you wired a pipeline against an Opus 4.x model, re-run your house eval before you migrate — half a point of reasoning often shifts which prompts need chunking at all.",
-        takeaway: "Long-context isn't a gimmick — every frontier bump is a refactor signal for the RAG pipeline you built last month.",
+        title: "Claude Opus 5.5 replaces Opus 5",
+        body: "Anthropic released Claude Opus 5.5 on 22 September 2026, the first model in the Claude 5.5 family (Sonnet 5.5 and Haiku 5.5 followed). Anthropic says it performs at the level of Claude Fable 5.1 on most work and costs about 40% less to run than Opus 5: $4/$20 per million input/output tokens, and cache reads, the bulk of agent and coding spend, drop 60% to $0.20. Thinking can no longer be switched off. If you wired a pipeline against Opus 5, re-run your house eval before you migrate.",
+        takeaway: "Every frontier bump is a refactor signal: re-check your prompts, your caching, and your bill, not just the benchmark.",
         source: {
-          name: "Simon Willison",
-          url: "https://simonwillison.net/2026/Aug/23/anthropics-best-ai-model-struggles-to-attract-users-as-cheaper-t/",
+          name: "Anthropic",
+          url: "https://www.anthropic.com/claude-opus-5-5",
         },
         category: "news",
-        addedAt: "2026-09-21",
+        addedAt: "2026-10-12",
       }),
       spark("The two-sources rule", {
         type: "microread",
