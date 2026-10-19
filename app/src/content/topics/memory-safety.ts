@@ -73,6 +73,29 @@ export const memorySafety: Topic = {
         category: "principle",
         addedAt: "2025-10-01",
       }),
+      // Added 2026-10-19 by the daily steward from the Two Minute Papers
+      // channel Atom feed. Video verified: lengthSeconds 337, published
+      // 2026-10-11. Quote transcribed from the video's own captions at ~00:54.
+      spark("Memory as a compressed picture", {
+        type: "youtubenugget",
+        quote:
+          "Now, DeepSeek OCR says not to worry. Let's take this big soup of information, even text, and render it as an image, and then compress that image, a bit like what JPEG compression does to images. But, this is learned and token-based. And now, this data is drastically smaller.",
+        takeaway:
+          "Old context doesn't have to be kept word-for-word. DeepSeek-OCR packs text into ~10x fewer vision tokens and still recovers 96% of it, dropping to ~60% near 20x. Forgetting can be a dial, not a cliff.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=4fLVq6HJsKc",
+          videoTitle: "DeepSeek Solved AI’s Memory Problem",
+          channelName: "Two Minute Papers",
+          publishedAt: "2026-10-11",
+          durationMinutes: 6,
+          timestamp: "00:54",
+        },
+        ctaPrompt:
+          "Look at the longest conversation your app replays into the prompt. Which turns need to stay verbatim, and which could survive as a lossy summary? Draw the line before your token bill draws it for you.",
+        category: "frontier",
+        addedAt: "2026-10-19",
+      }),
       spark("Why size matters", {
         type: "scenario",
         setup: "You're stuffing 50k tokens of legal text into Claude. Answers are slow and sometimes miss key clauses.",

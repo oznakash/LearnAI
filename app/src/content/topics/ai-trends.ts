@@ -90,16 +90,20 @@ export const aiTrends: Topic = {
         addedAt: "2026-05-01",
         source: { name: "Hugging Face", url: "https://huggingface.co/blog" },
       }),
+      // Refreshed 2026-10-19 by the daily steward. The previous version
+      // described the April DeepSeek-V4 launch (benchmarked against Opus 4.6).
+      // Reached via the Hacker News AI feed (944 points, 2026-10-17), which
+      // links the model card; every number below is from that card's own table.
       spark("DeepSeek-V4: open weights, agent-shaped", {
         type: "microread",
-        title: "1M context built for agents, not retrofitted",
-        body: "DeepSeek-V4 (Apr 2026) ships open-weight Pro and Flash variants with a 1M-token context window designed from scratch for agent workflows. Per the release: ~27% of the per-token inference FLOPs of V3.2 and ~10% of the KV-cache memory — meaning long-running agents stop dying from cache exhaustion. V4-Pro-Max scores 80.6 on SWE Verified, matching Gemini-3.1-Pro and within 0.2 of Opus-4.6-Max.",
-        takeaway: "Long-context isn't a closed-lab moat anymore. Agent shape is now the design target, not a retrofit.",
+        title: "Open weights vs last quarter's flagship",
+        body: "DeepSeek-V4.1-Flash-1017 (Oct 2026) is a point update to the open-weight V4.1 Flash: MIT license, 1M-token context. On DeepSeek's own table it beats Claude Opus 5 on DeepSWE v1.1 (77.0 vs 74.0) and Automation-Bench (60.5 vs 50.3), but trails it on Terminal-Bench 4.0 (42.3 vs 51.8) and Humanity's Last Exam (42.6 vs 56.3). It also writes shorter outputs and finishes tasks faster, so cost per task drops, not just price per token. These are vendor numbers: run your own eval before you switch.",
+        takeaway: "Open weights now trade blows with last quarter's closed flagship on agent work. Cost per finished task is the design target.",
         category: "news",
-        addedAt: "2026-05-07",
+        addedAt: "2026-10-19",
         source: {
-          name: "Hugging Face",
-          url: "https://huggingface.co/blog/deepseekv4",
+          name: "DeepSeek",
+          url: "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
         },
       }),
       spark("Six months in five minutes", {

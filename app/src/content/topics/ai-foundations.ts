@@ -872,6 +872,18 @@ export const aiFoundations: Topic = {
         category: "pattern",
         addedAt: "2025-10-01",
       }),
+      spark("Grade the database, not the agent", {
+        type: "microread",
+        title: "A tool call is not an outcome",
+        body: "Microsoft's ThinkingBox benchmark runs agents through 507 business workflows (refunds, insurance claims, bookings) and grades only what's left in the backend afterwards. Across 12 models and ~80,000 failed attempts, 67% of the failures ended cleanly: a state-changing tool call, no error, a confident 'done'. The records said otherwise: wrong field values in 78%, unintended extra changes in 43%. An agent that closes a ticket as 'solved' when it should be 'on hold' looks perfect in the transcript.",
+        takeaway: "For agents, the transcript is a claim and the database is the evidence. Assert on end state.",
+        category: "pattern",
+        addedAt: "2026-10-19",
+        source: {
+          name: "Hugging Face",
+          url: "https://huggingface.co/blog/microsoft/thinkingbox",
+        },
+      }),
       spark("Eval the eval set", {
         type: "scenario",
         setup: "Your eval scores keep going up — but users complain more. The team is starting to ignore the eval.",
