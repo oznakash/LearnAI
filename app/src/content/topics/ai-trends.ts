@@ -443,16 +443,20 @@ export const aiTrends: Topic = {
       }),
     ]),
     level(T, 4, "Open weights catching up", "Llama, DeepSeek, Mistral, Qwen.", 4, [
+      // Refreshed 2026-10-26 by the daily steward. The previous version
+      // described the April DeepSeek-V4 launch. Every number below is from
+      // Simon Willison's Kimi K3.1 Pro post (Atom feed, 2026-10-23), which
+      // quotes Moonshot's pricing and the Artificial Analysis score.
       spark("Closed vs open gap", {
         type: "microread",
         title: "The open weights wave",
-        body: "The gap that mattered through 2025 — frontier-class capability gated behind closed APIs — narrowed sharply in early 2026. DeepSeek-V4 shipped in April with a million-token context aimed explicitly at agents, IBM dropped Granite 4.1 as an open Apache-2.0 lineup, and Hugging Face is now seeing fine-tunes, GGUF quants, and Ollama recipes within hours of each release. They still trail closed models on the hardest evals, but for 80% of product use cases (and 100% of regulated-data ones) they're the default option, not the fallback.",
+        body: "Kimi K3.1 Pro (Moonshot, Oct 2026) scored 55 on the Artificial Analysis index: ahead of Claude Fable 5.1, GPT-6 Astra and Gemini 4 Argon (all 53), behind only Claude Opus 5.5 (58). It's API-only today, with full weights promised by Nov 4. Price: $2 in / $10 out per million tokens, half of Opus 5.5. That's the first time a soon-to-be-open model has ranked this high against the frontier. The lag between closed and open is now measured in weeks.",
         takeaway: "Open is the default now. Pick closed only when the eval gap is real for your task.",
-        source: { name: "Hugging Face", url: "https://huggingface.co/blog/deepseekv4" },
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Oct/23/kimi-k31-pro/" },
         category: "news",
-        addedAt: "2026-05-12",
+        addedAt: "2026-10-26",
         bodyByAgeBand: {
-          teen: "Free-to-download models like Llama, DeepSeek, Qwen, Granite, Mistral kept catching up in 2026. DeepSeek-V4 even shipped with a million-token context — enough for an agent to read a whole codebase in one go. You can run them on your own laptop or server, change them, fine-tune them. They aren't best-in-class on the hardest stuff yet, but for most apps they work fine — and they're free.",
+          teen: "In October 2026, a Chinese lab called Moonshot released Kimi K3.1 Pro. On one popular leaderboard it beat almost every big closed model from Google, OpenAI and Anthropic, losing only to Claude Opus 5.5. Moonshot says it will publish the full model for anyone to download by November 4. Free-to-download models used to be a year behind. Now they're weeks behind.",
         },
       }),
       spark("Llama 4 ships open MoE", {

@@ -212,6 +212,27 @@ export const aiPm: Topic = {
           timestamp: "00:00:00",
         },
       }),
+      spark("3Blue1Brown: clarity is cheap, motivation isn't", {
+        type: "youtubenugget",
+        quote:
+          "Even if in theory the AIs are better at explaining stuff, people will still want to learn from humans because education is not rate limited by the clarity of explanation, it's rate limited by motivation.",
+        takeaway:
+          "AI made explanations nearly free. If you're building for learners, the unsolved problem worth picking is why someone keeps going, not how clearly you explain.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=LKrwhjOI8Nc",
+          videoTitle: "There's never been a better time to go into math",
+          channelName: "3Blue1Brown",
+          publishedAt: "2026-10-16",
+          // Verified against the video page: lengthSeconds 2444 = 40:44.
+          durationMinutes: 41,
+          timestamp: "34:17",
+        },
+        ctaPrompt:
+          "Take one AI feature on your roadmap that 'explains' something. Write one sentence on why a user would come back to it tomorrow. If you can't, that's the problem to solve first.",
+        category: "principle",
+        addedAt: "2026-10-26",
+      }),
       spark("Pattern match", {
         type: "patternmatch",
         prompt: "Match the AI feature to its dominant risk",
