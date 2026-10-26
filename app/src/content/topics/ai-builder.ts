@@ -350,6 +350,15 @@ export const aiBuilder: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      spark("Skills go vendor-neutral", {
+        type: "microread",
+        title: "Agent Skills joins MCP at the Linux Foundation",
+        body: "Agent Skills is the folder format for teaching an agent a task: a SKILL.md with instructions, plus any scripts or references it needs, loaded only when relevant. In Oct 2026 Anthropic donated the standard to the Agentic AI Foundation, the Linux Foundation body it co-founded with Block and OpenAI, and the same home as MCP. A skill you write once should now run in any agent that adopts the spec, not just Claude Code.",
+        takeaway: "MCP gives the agent tools; skills give it know-how. Both are now neutral standards, so writing them is not vendor lock-in.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Oct/22/donating-agent-skills/" },
+        category: "news",
+        addedAt: "2026-10-26",
+      }),
       spark("Ask for HTML, not Markdown", {
         type: "microread",
         title: "The unreasonable effectiveness of HTML",
