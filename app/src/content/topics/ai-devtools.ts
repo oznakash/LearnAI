@@ -656,6 +656,17 @@ export const aiDevtools: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      // Added 2026-11-09 by the daily steward from Simon Willison's Atom feed
+      // (post dated 2026-11-09).
+      spark("Fold the agent's essay", {
+        type: "microread",
+        title: "Hide the agent's PR essay behind <details>",
+        body: "Agent-written PR descriptions are accurate, thorough, and read like slop: reviewers see the wall of text and skip it. Simon Willison's fix: write one short human paragraph on top (what this PR is for, and whether it deserves attention, plus a screenshot if it helps). Paste the full agent write-up below inside a <details><summary> block, which GitHub Markdown renders collapsed. He uses the model name as the summary, so it's clear who wrote what.",
+        takeaway: "Human intro on top, agent essay folded underneath.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Nov/9/details-summary/" },
+        category: "pattern",
+        addedAt: "2026-11-09",
+      }),
       spark("Pattern match: review roles", {
         type: "patternmatch",
         prompt: "Match each reviewer to its strength",
@@ -811,11 +822,11 @@ export const aiDevtools: Topic = {
       spark("Datasette Agent: agents that extend themselves", {
         type: "microread",
         title: "Plug-in architecture for a database agent",
-        body: "Simon Willison shipped Datasette Agent — an AI assistant that runs SQL on Datasette databases via natural language. The live demo runs on Gemini 3.1 Flash-Lite ('cheap, fast, fine at SQLite'). What's interesting isn't the chatbot — it's the plugin system. Capabilities like chart generation (Observable Plot), image creation, and sandboxed code execution all land as plugins. The kicker Simon names: Claude Code and OpenAI Codex are *very good* at writing new Datasette Agent plugins when you hand them the repo as reference. The agent ecosystem extends itself.",
-        takeaway: "Build extensibility for the agent first; let the agent (and other agents) write the extensions.",
-        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/May/21/datasette-agent/" },
+        body: "Datasette Agent is Simon Willison's AI assistant that answers questions about your Datasette databases by writing SQL. The interesting part has always been the plugin system: charts, image generation, and sandboxed code execution all ship as plugins, and Claude Code or Codex can write new ones when you hand them the repo. Release 0.5a0 (Nov 2026) adds the panel: the agent chat now docks next to any table or query page. Pair it with datasette-apps and you can prompt a database-backed app into existence, then keep changing it from the chat beside it.",
+        takeaway: "Build extensibility for the agent first; then put the agent next to what it's building.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Nov/3/datasette-agent/" },
         category: "tooling",
-        addedAt: "2026-05-25",
+        addedAt: "2026-11-09",
       }),
     ]),
     level(T, 8, "Agent feedback loops", "Watch and adjust.", 6, [

@@ -737,6 +737,31 @@ export const aiTrends: Topic = {
         ],
         explain: "Risk scales with how core the loop is.",
       }),
+      // Added 2026-11-09 by the daily steward from the Two Minute Papers
+      // channel Atom feed. Video verified: lengthSeconds 348 (5:48),
+      // published 2026-11-07. Quote taken from the video's own captions,
+      // 02:31-03:28, lightly trimmed. Paper context cross-checked against
+      // simonwillison.net/2026/Nov/3/qwen-can-interpret-model-weights/.
+      spark("Models editing models: read the fine print", {
+        type: "youtubenugget",
+        quote:
+          "Misunderstanding one that I see going around is that Astra taught this AI mathematics. Not quite. Instead, it essentially helped unblock it... It does these three things, but in separate experiments, mostly on small AI systems, each with its own custom setup.",
+        takeaway:
+          "GPT-6 Astra reading and editing raw weights (Qwen's MATH-500 score went from about 8% to 48%) is real, but it removed a reasoning-loop bug in small models; it didn't teach them math.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=GJ6PMUm5oTA",
+          videoTitle: "OpenAI's Astra Just Opened The Black Box Of AI",
+          channelName: "Two Minute Papers",
+          publishedAt: "2026-11-07",
+          durationMinutes: 6,
+          timestamp: "02:31",
+        },
+        ctaPrompt:
+          "Next time a headline says a model 'improved another model', look for three things before you repeat it: which model, how big, and whether all the results came from the same setup.",
+        category: "frontier",
+        addedAt: "2026-11-09",
+      }),
     ]),
     level(T, 7, "AI search rewrites the web", "From links to answers.", 4, [
       spark("Search 2.0", {
