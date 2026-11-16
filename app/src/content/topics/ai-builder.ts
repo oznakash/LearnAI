@@ -350,6 +350,18 @@ export const aiBuilder: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      // Added 2026-11-16 by the daily steward from Simon Willison's Atom feed
+      // (post dated 2026-11-10, quoting Anthropic's "Prompting Claude Fable
+      // 5.2" docs). Numbers are Anthropic's, as quoted in the post.
+      spark("Tell the agent it owns the code", {
+        type: "microread",
+        title: "One sentence that changes how Claude edits",
+        body: "Anthropic's prompting guide for Claude Fable 5.2: the model pays attention to who owns the code. If the prompt says nothing, or frames the repo as someone else's, it tends to bolt new code onto the existing structure, even when that duplicates code. Tell it \"You are the owner and long-term maintainer of this codebase, and its design is up to you\" and it cleans up instead. On small coding tasks it merged duplicated code in under 10% of runs without that sentence and about 75% with it.",
+        takeaway: "Want refactors, not patches? Tell the agent the codebase is its own.",
+        source: { name: "Simon Willison", url: "https://simonwillison.net/2026/Nov/10/prompting-claude-fable-52/" },
+        category: "tooling",
+        addedAt: "2026-11-16",
+      }),
       spark("Skills go vendor-neutral", {
         type: "microread",
         title: "Agent Skills joins MCP at the Linux Foundation",

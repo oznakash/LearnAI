@@ -404,13 +404,17 @@ export const openSource: Topic = {
         category: "tooling",
         addedAt: "2026-05-01",
       }),
+      // Refreshed 2026-11-16 by the daily steward. The previous version had
+      // no source and predated the v1.0.0 release. Facts below are from the
+      // ggml-org post on the Hugging Face blog (RSS feed, 2026-11-13).
       spark("llama.cpp magic", {
         type: "microread",
-        title: "Why a Mac runs Llama 70B",
-        body: "Georgi Gerganov's llama.cpp shipped a quantized C++ inference engine that runs Llama-class models on CPU + Apple Silicon GPU + plain CUDA. The GGUF format it pioneered is now the standard for local model weights. If you've ever run an LLM on a MacBook, thank llama.cpp.",
-        takeaway: "llama.cpp + GGUF = the reason local LLMs are mainstream.",
+        title: "llama.cpp hits v1.0.0",
+        body: "llama.cpp is the C/C++ engine behind most local LLMs: quantized GGUF weights running on laptops, phones, and servers. After 3.5 years it shipped v1.0.0 (Nov 2026) for both llama.cpp and its tensor library ggml. The point is stability: breaking changes to the public C API now bump the major version, so apps built on it know when an upgrade can break them. It supports 150+ model architecture variants, and hardware backends can load at runtime.",
+        takeaway: "Local AI's core engine now has a stable, versioned API you can build a product on.",
+        source: { name: "Hugging Face", url: "https://huggingface.co/blog/ggml-org/llama-cpp-v1" },
         category: "tooling",
-        addedAt: "2026-05-01",
+        addedAt: "2026-11-16",
       }),
       spark("Ollama for dev", {
         type: "tip",
