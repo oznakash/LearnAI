@@ -739,13 +739,20 @@ export const memorySafety: Topic = {
         category: "pattern",
         addedAt: "2026-05-01",
       }),
+      // Refreshed 2026-11-23 by the daily steward. The previous version had
+      // no source and only covered hosted sandboxes. The external-sandbox
+      // pattern below is from Simon Willison's post (Atom feed, 2026-11-17).
       spark("Sandbox code execution", {
         type: "microread",
         title: "Never exec on your host",
-        body: "If your agent runs Python or shell, run it in a sandbox: gVisor, Firecracker microVMs (used by E2B, Modal, Daytona), Docker with seccomp. No host filesystem access, no host network, time-bounded, memory-capped. e2b.dev and modal.com are drop-in. Letting an LLM exec on your host because 'it's just a sandbox prompt' is how you brick prod.",
-        takeaway: "Sandbox or don't. Firecracker, gVisor, E2B.",
+        body: "If your agent runs Python or shell, that code shouldn't touch your machine. The classic answer still holds: gVisor, Firecracker microVMs (E2B, Modal, Daytona), or Docker with seccomp. Simon Willison's newer twist is the external sandbox: the agent stays outside, and every exec call goes to a localhost sandbox API (Alpine Linux in WebAssembly, Apple Containers, or QEMU). Point Claude Code or Codex at it. Add an outbound allow-list proxy, and swap in credentials at the proxy so the agent never holds the real secret.",
+        takeaway: "Sandbox or don't. Agent outside, code inside, secrets never in reach.",
+        source: {
+          name: "Simon Willison",
+          url: "https://simonwillison.net/2026/Nov/17/external-sandboxes-for-coding-agents/",
+        },
         category: "tooling",
-        addedAt: "2026-05-01",
+        addedAt: "2026-11-23",
       }),
       spark("Pattern match: gates", {
         type: "patternmatch",
