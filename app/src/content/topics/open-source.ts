@@ -442,6 +442,18 @@ export const openSource: Topic = {
         category: "principle",
         addedAt: "2025-10-01",
       }),
+      // Added 2026-11-23 by the daily steward from the Hugging Face blog
+      // RSS feed (post published 2026-11-18). Numbers are from the post's
+      // final results table on an M5 MacBook with 32 GB.
+      spark("Stream the experts", {
+        type: "microread",
+        title: "A 180B MoE on a 32 GB laptop",
+        body: "In a mixture-of-experts model, the experts are 90%+ of the weights, but each token only uses a few (Qwen3.8-Flash-Next picks 10 of 512 per layer). So to run a model bigger than your RAM, keep the hot experts in a cache and stream the rest from SSD as the router picks them. A Hugging Face engineer ran that 180B model on a 32 GB MacBook in Transformers this way: 3-bit experts on disk, a 12 GiB cache, about 14 tok/s, within 6% of the dedicated Strata engine. If the experts already fit in RAM, llama.cpp is still hard to beat.",
+        takeaway: "Big MoE, small machine: cache the hot experts, stream the rest from disk.",
+        source: { name: "Hugging Face", url: "https://huggingface.co/blog/moe-expert-streaming" },
+        category: "tooling",
+        addedAt: "2026-11-23",
+      }),
       spark("Groq + Cerebras: speed-only plays", {
         type: "microread",
         title: "Custom silicon for OSS",

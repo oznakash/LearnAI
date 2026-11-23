@@ -42,6 +42,28 @@ export const llmsCognition: Topic = {
         category: "principle",
         addedAt: "2026-06-22",
       }),
+      // Added 2026-11-23 by the daily steward. Feed-verified: URL, title and
+      // publish date from the 3Blue1Brown channel Atom feed; runtime from the
+      // video page (lengthSeconds 2245 = 37:25). Captions were not fetchable
+      // this run, so the paraphrase follows the video's own chapter list
+      // ("Reframing pretraining" 20:26, "Arithmetic codes in action" 22:41).
+      spark("3Blue1Brown: your loss is a file size", {
+        type: "youtubenugget",
+        quote:
+          "Arithmetic coding turns any model's next-token probabilities into an actual compressor: a token the model gave probability p costs about -log2(p) bits to store. Add that up over a text and the compressed size is the model's total surprise. So pretraining, seen this way, is a race to shrink the file the internet compresses to.",
+        takeaway: "Lower training loss literally means a smaller compressed file. Prediction and compression are one number.",
+        source: {
+          platform: "youtube",
+          videoUrl: "https://www.youtube.com/watch?v=qbsb9DpdZ6s",
+          videoTitle: "This algorithm changed how I think about compression | Information theory, part 3",
+          channelName: "3Blue1Brown",
+          publishedAt: "2026-11-17",
+          durationMinutes: 37,
+          timestamp: "20:26",
+        },
+        category: "principle",
+        addedAt: "2026-11-23",
+      }),
       spark("Not every LM is next-token", {
         type: "microread",
         title: "Diffusion language models break the loop",
